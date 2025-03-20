@@ -46,6 +46,12 @@ const productFormSchema = z.object({
   maxStock: z.coerce.number().int().positive({
     message: "El stock máximo debe ser un número entero positivo.",
   }),
+  initialStock: z.coerce.number().nonnegative({
+    message: "La cantidad inicial debe ser un número no negativo.",
+  }),
+  warehouse: z.string({
+    required_error: "Por favor seleccione un almacén.",
+  }),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -65,6 +71,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const isEditing = !!initialData;
   const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
   const [units, setUnits] = useState<{id: string, name: string}[]>([]);
+  const [warehouses, setWarehouses] = useState<{id: string, name: string}[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -87,6 +94,15 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         if (unitsError) throw unitsError;
         
         setUnits(unitsData.map(unit => ({ id: unit.id, name: unit.nombre })));
+
+        // Obtener almacenes
+        const { data: warehousesData, error: warehousesError } = await supabase
+          .from("almacenes")
+          .select("id, nombre");
+        
+        if (warehousesError) throw warehousesError;
+        
+        setWarehouses(warehousesData.map(warehouse => ({ id: warehouse.id, name: warehouse.nombre })));
       } catch (error) {
         console.error("Error fetching data:", error);
         toast({
@@ -110,6 +126,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     salePrice: 0,
     minStock: 0,
     maxStock: 0,
+    initialStock: 0,
+    warehouse: "",
   };
 
   const form = useForm<ProductFormValues>({
@@ -281,6 +299,54 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     placeholder="0"
                   />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="initialStock"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Cantidad Inicial</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="1"
+                    min="0"
+                    {...field}
+                    placeholder="0"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="warehouse"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Almacén</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un almacén" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {warehouses.map((warehouse) => (
+                      <SelectItem key={warehouse.id} value={warehouse.id}>
+                        {warehouse.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

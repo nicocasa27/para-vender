@@ -325,6 +325,19 @@ export const ProductTable = () => {
                       
                       if (error) throw error;
                       
+                      // Registrar inventario inicial si se especificó
+                      if (data.initialStock > 0 && data.warehouse) {
+                        const { error: inventoryError } = await supabase
+                          .from("inventario")
+                          .insert({
+                            producto_id: newProduct[0].id,
+                            almacen_id: data.warehouse,
+                            cantidad: data.initialStock
+                          });
+                        
+                        if (inventoryError) throw inventoryError;
+                      }
+                      
                       // Obtener datos para mostrar el producto
                       const { data: productData, error: productError } = await supabase
                         .from("productos")
@@ -338,6 +351,9 @@ export const ProductTable = () => {
                       
                       if (productError) throw productError;
                       
+                      // Obtener el almacén para el stock inicial
+                      const warehouse = stores.find(store => store.id === data.warehouse)?.name || "";
+                      
                       // Agregar a la lista de productos
                       const newProductWithStock = {
                         id: productData.id,
@@ -346,7 +362,7 @@ export const ProductTable = () => {
                         unidad: productData.unidades ? productData.unidades.nombre : "Unidad",
                         precio_compra: productData.precio_compra,
                         precio_venta: productData.precio_venta,
-                        stock: {},
+                        stock: data.initialStock > 0 ? { [warehouse]: data.initialStock } : {},
                         stock_minimo: productData.stock_minimo,
                         stock_maximo: productData.stock_maximo,
                       };
