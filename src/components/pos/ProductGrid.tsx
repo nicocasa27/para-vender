@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Search, Filter, ShoppingCart, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -43,12 +44,12 @@ interface Almacen {
 
 interface ProductGridProps {
   onProductSelect: (product: { id: string; name: string; price: number; stock: number }) => void;
+  selectedStore: string;
 }
 
-export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => {
+export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect, selectedStore }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("todas");
-  const [selectedStore, setSelectedStore] = useState("todos");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -96,6 +97,8 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
 
   useEffect(() => {
     const fetchProductos = async () => {
+      if (!selectedStore) return;
+      
       setCargando(true);
       try {
         const { data, error } = await supabase
@@ -117,26 +120,16 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
             data.map(async (producto) => {
               let stockTotal = 0;
 
-              if (selectedStore !== "todos") {
-                const { data: inventarioData, error: inventarioError } = await supabase
-                  .from("inventario")
-                  .select("cantidad")
-                  .eq("producto_id", producto.id)
-                  .eq("almacen_id", selectedStore)
-                  .single();
+              // Get inventory for the selected store
+              const { data: inventarioData, error: inventarioError } = await supabase
+                .from("inventario")
+                .select("cantidad")
+                .eq("producto_id", producto.id)
+                .eq("almacen_id", selectedStore)
+                .single();
 
-                if (!inventarioError && inventarioData) {
-                  stockTotal = inventarioData.cantidad;
-                }
-              } else {
-                const { data: inventarioData, error: inventarioError } = await supabase
-                  .from("inventario")
-                  .select("cantidad")
-                  .eq("producto_id", producto.id);
-
-                if (!inventarioError && inventarioData) {
-                  stockTotal = inventarioData.reduce((sum, item) => sum + Number(item.cantidad), 0);
-                }
+              if (!inventarioError && inventarioData) {
+                stockTotal = Number(inventarioData.cantidad);
               }
 
               return {
@@ -214,23 +207,6 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
               {categorias.map((categoria) => (
                 <SelectItem key={categoria.id} value={categoria.nombre.toLowerCase()}>
                   {categoria.nombre}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <Select
-            value={selectedStore}
-            onValueChange={setSelectedStore}
-          >
-            <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder="Almacenes" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos los almacenes</SelectItem>
-              {almacenes.map((almacen) => (
-                <SelectItem key={almacen.id} value={almacen.id}>
-                  {almacen.nombre}
                 </SelectItem>
               ))}
             </SelectContent>
