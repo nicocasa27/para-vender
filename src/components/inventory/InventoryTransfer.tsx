@@ -245,6 +245,10 @@ export function InventoryTransfer() {
         p_producto_id: data.product,
         p_almacen_id: data.sourceStore,
         p_cantidad: -data.quantity
+      } as {
+        p_producto_id: string;
+        p_almacen_id: string;
+        p_cantidad: number;
       });
       
       if (sourceError) throw sourceError;
@@ -254,6 +258,10 @@ export function InventoryTransfer() {
         p_producto_id: data.product,
         p_almacen_id: data.targetStore,
         p_cantidad: data.quantity
+      } as {
+        p_producto_id: string;
+        p_almacen_id: string;
+        p_cantidad: number;
       });
       
       if (targetError) throw targetError;
