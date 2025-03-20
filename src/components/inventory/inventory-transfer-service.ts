@@ -110,8 +110,8 @@ export const transferInventory = async (
   
   console.log("Source params:", sourceParams);
   
-  // Fixed: Use unknown as the return type to satisfy the constraint
-  const { error: sourceError } = await supabase.rpc<UpdateInventoryReturn>(
+  // Fixed: Use both type parameters to specify the return type and params type
+  const { error: sourceError } = await supabase.rpc<UpdateInventoryReturn, UpdateInventoryParams>(
     "update_inventory", 
     sourceParams
   );
@@ -131,8 +131,8 @@ export const transferInventory = async (
   
   console.log("Target params:", targetParams);
   
-  // Fixed: Use unknown as the return type to satisfy the constraint
-  const { error: targetError } = await supabase.rpc<UpdateInventoryReturn>(
+  // Fixed: Use both type parameters to specify the return type and params type
+  const { error: targetError } = await supabase.rpc<UpdateInventoryReturn, UpdateInventoryParams>(
     "update_inventory", 
     targetParams
   );
