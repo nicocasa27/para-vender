@@ -27,6 +27,6 @@ export interface UpdateInventoryParams {
   p_cantidad: number;
 }
 
-// After examining the update_inventory SQL function, it doesn't return a value
-// Using unknown as a type to satisfy the generic constraint in supabase.rpc
-export type UpdateInventoryReturn = unknown;
+// After examining the update_inventory SQL function, it returns void
+// We'll use a more appropriate type that works with Supabase's generics
+export type UpdateInventoryReturn = Record<string, never>;

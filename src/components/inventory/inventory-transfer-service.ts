@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Store, 
@@ -110,8 +109,7 @@ export const transferInventory = async (
   
   console.log("Source params:", sourceParams);
   
-  // Fixed: Use both type parameters to specify the return type and params type
-  const { error: sourceError } = await supabase.rpc<UpdateInventoryReturn, UpdateInventoryParams>(
+  const { error: sourceError } = await supabase.rpc<UpdateInventoryReturn>(
     "update_inventory", 
     sourceParams
   );
@@ -131,8 +129,7 @@ export const transferInventory = async (
   
   console.log("Target params:", targetParams);
   
-  // Fixed: Use both type parameters to specify the return type and params type
-  const { error: targetError } = await supabase.rpc<UpdateInventoryReturn, UpdateInventoryParams>(
+  const { error: targetError } = await supabase.rpc<UpdateInventoryReturn>(
     "update_inventory", 
     targetParams
   );
