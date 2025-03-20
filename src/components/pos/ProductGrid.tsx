@@ -28,7 +28,6 @@ interface Producto {
   categoria: string;
   precio_venta: number;
   stock: number;
-  imagen: string;
   unidad: string;
 }
 
@@ -146,7 +145,6 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
                 categoria: producto.categorias?.nombre || "Sin categoría",
                 precio_venta: Number(producto.precio_venta),
                 stock: stockTotal,
-                imagen: "/placeholder.svg",
                 unidad: producto.unidades?.abreviatura || "u",
               };
             })
@@ -275,27 +273,13 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
                 )}
                 onClick={() => handleProductClick(producto)}
               >
-                <CardContent className="p-0">
-                  <div className="aspect-square relative">
-                    <img
-                      src={producto.imagen}
-                      alt={producto.nombre}
-                      className="object-cover w-full h-full rounded-t-lg"
-                    />
-                    {producto.stock <= 0 && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-t-lg">
-                        <span className="text-white font-semibold">Sin Existencias</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <div className="font-medium truncate">{producto.nombre}</div>
-                    <div className="mt-1 flex justify-between items-center">
-                      <span className="text-lg font-bold">${producto.precio_venta.toFixed(2)}</span>
-                      <Badge variant="outline">
-                        Stock: {producto.stock} {producto.unidad}
-                      </Badge>
-                    </div>
+                <CardContent className="p-4">
+                  <div className="font-medium truncate mb-2">{producto.nombre}</div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-bold">${producto.precio_venta.toFixed(2)}</span>
+                    <Badge variant={producto.stock <= 0 ? "destructive" : "outline"}>
+                      {producto.stock <= 0 ? "Sin stock" : `${producto.stock} ${producto.unidad}`}
+                    </Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -312,13 +296,6 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
                 )}
                 onClick={() => handleProductClick(producto)}
               >
-                <div className="h-12 w-12 rounded-md bg-primary/10 flex items-center justify-center mr-3">
-                  <img
-                    src={producto.imagen}
-                    alt={producto.nombre}
-                    className="object-cover w-full h-full rounded-md"
-                  />
-                </div>
                 <div className="flex-1 mr-4">
                   <div className="font-medium">{producto.nombre}</div>
                   <div className="text-sm text-muted-foreground">{producto.categoria}</div>
