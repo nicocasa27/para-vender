@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,6 +59,12 @@ interface TransferHistory {
   producto: string;
   cantidad: number;
   notas: string | null;
+}
+
+type UpdateInventoryParams = {
+  p_producto_id: string;
+  p_almacen_id: string;
+  p_cantidad: number;
 }
 
 const transferFormSchema = z.object({
@@ -140,7 +145,6 @@ export function InventoryTransfer() {
   const fetchProductsInStore = async (storeId: string) => {
     setIsLoading(true);
     try {
-      // Fetch products with inventory in the selected store
       const { data, error } = await supabase
         .from("inventario")
         .select(`
@@ -227,7 +231,6 @@ export function InventoryTransfer() {
   const handleTransfer = async (data: TransferFormValues) => {
     if (!selectedProduct) return;
     
-    // Check if quantity is not greater than available stock
     if (data.quantity > selectedProduct.stock) {
       toast({
         title: "Error",
@@ -239,34 +242,26 @@ export function InventoryTransfer() {
     
     setIsLoading(true);
     try {
-      // Start a transaction
-      // 1. Reduce inventory in source store
-      const { error: sourceError } = await supabase.rpc("update_inventory", { 
+      const sourceParams: UpdateInventoryParams = {
         p_producto_id: data.product,
         p_almacen_id: data.sourceStore,
         p_cantidad: -data.quantity
-      } as {
-        p_producto_id: string;
-        p_almacen_id: string;
-        p_cantidad: number;
-      });
+      };
+      
+      const { error: sourceError } = await supabase.rpc("update_inventory", sourceParams);
       
       if (sourceError) throw sourceError;
       
-      // 2. Increase inventory in target store
-      const { error: targetError } = await supabase.rpc("update_inventory", { 
+      const targetParams: UpdateInventoryParams = {
         p_producto_id: data.product,
         p_almacen_id: data.targetStore,
         p_cantidad: data.quantity
-      } as {
-        p_producto_id: string;
-        p_almacen_id: string;
-        p_cantidad: number;
-      });
+      };
+      
+      const { error: targetError } = await supabase.rpc("update_inventory", targetParams);
       
       if (targetError) throw targetError;
       
-      // 3. Register the movement
       const { error: movementError } = await supabase
         .from("movimientos")
         .insert({
@@ -285,7 +280,6 @@ export function InventoryTransfer() {
         description: `Se han transferido ${data.quantity} unidades correctamente.`,
       });
       
-      // Reset form and refresh data
       form.reset();
       setSelectedSourceStore(null);
       setSelectedProduct(null);
