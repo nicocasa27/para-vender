@@ -2,6 +2,8 @@
 import { ProductTable } from "@/components/inventory/ProductTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { StoreManagement } from "@/components/inventory/StoreManagement";
+import { InventoryTransfer } from "@/components/inventory/InventoryTransfer";
 
 const Inventory = () => {
   return (
@@ -14,9 +16,10 @@ const Inventory = () => {
       </div>
 
       <Tabs defaultValue="products" className="w-full flex-1 flex flex-col">
-        <TabsList className="grid w-full grid-cols-3 sm:w-fit">
+        <TabsList className="grid w-full grid-cols-4 sm:w-fit">
           <TabsTrigger value="products">Productos</TabsTrigger>
           <TabsTrigger value="categories">Categorías</TabsTrigger>
+          <TabsTrigger value="stores">Sucursales</TabsTrigger>
           <TabsTrigger value="transfers">Transferencias</TabsTrigger>
         </TabsList>
         <TabsContent value="products" className="mt-4 flex-1 flex">
@@ -29,10 +32,15 @@ const Inventory = () => {
             La gestión de categorías estará disponible en la próxima actualización.
           </div>
         </TabsContent>
-        <TabsContent value="transfers" className="mt-4 flex-1">
-          <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-            La funcionalidad de transferencia de stock estará disponible en la próxima actualización.
-          </div>
+        <TabsContent value="stores" className="mt-4 flex-1 flex">
+          <ScrollArea className="flex-1">
+            <StoreManagement />
+          </ScrollArea>
+        </TabsContent>
+        <TabsContent value="transfers" className="mt-4 flex-1 flex">
+          <ScrollArea className="flex-1">
+            <InventoryTransfer />
+          </ScrollArea>
         </TabsContent>
       </Tabs>
     </div>
