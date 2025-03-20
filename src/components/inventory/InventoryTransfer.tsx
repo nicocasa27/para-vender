@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,6 +59,12 @@ interface TransferHistory {
   producto: string;
   cantidad: number;
   notas: string | null;
+}
+
+interface UpdateInventoryParams {
+  p_producto_id: string;
+  p_almacen_id: string;
+  p_cantidad: number;
 }
 
 const transferFormSchema = z.object({
@@ -237,14 +242,15 @@ export function InventoryTransfer() {
     
     setIsLoading(true);
     try {
-      // Use explicit typed parameters for the RPC calls
-      const { error: sourceError } = await supabase.rpc(
+      const sourceParams: UpdateInventoryParams = {
+        p_producto_id: data.product,
+        p_almacen_id: data.sourceStore,
+        p_cantidad: -data.quantity
+      };
+      
+      const { error: sourceError } = await supabase.rpc<void>(
         "update_inventory", 
-        {
-          p_producto_id: data.product,
-          p_almacen_id: data.sourceStore,
-          p_cantidad: -data.quantity
-        }
+        sourceParams
       );
       
       if (sourceError) {
@@ -252,13 +258,15 @@ export function InventoryTransfer() {
         throw sourceError;
       }
       
-      const { error: targetError } = await supabase.rpc(
+      const targetParams: UpdateInventoryParams = {
+        p_producto_id: data.product,
+        p_almacen_id: data.targetStore,
+        p_cantidad: data.quantity
+      };
+      
+      const { error: targetError } = await supabase.rpc<void>(
         "update_inventory", 
-        {
-          p_producto_id: data.product,
-          p_almacen_id: data.targetStore,
-          p_cantidad: data.quantity
-        }
+        targetParams
       );
       
       if (targetError) {
