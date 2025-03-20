@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Store, 
@@ -109,7 +110,7 @@ export const transferInventory = async (
   
   console.log("Source params:", sourceParams);
   
-  const { error: sourceError } = await supabase.rpc<UpdateInventoryReturn>(
+  const { error: sourceError } = await supabase.rpc<UpdateInventoryReturn, UpdateInventoryParams>(
     "update_inventory", 
     sourceParams
   );
@@ -129,7 +130,7 @@ export const transferInventory = async (
   
   console.log("Target params:", targetParams);
   
-  const { error: targetError } = await supabase.rpc<UpdateInventoryReturn>(
+  const { error: targetError } = await supabase.rpc<UpdateInventoryReturn, UpdateInventoryParams>(
     "update_inventory", 
     targetParams
   );
