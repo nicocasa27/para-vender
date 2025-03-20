@@ -27,6 +27,5 @@ export interface UpdateInventoryParams {
   p_cantidad: number;
 }
 
-// After examining the update_inventory SQL function, it returns void
-// We'll use a more appropriate type that works with Supabase's generics
-export type UpdateInventoryReturn = Record<string, never>;
+// Since the update_inventory SQL function returns void, we'll use void as the return type
+export type UpdateInventoryReturn = void;
