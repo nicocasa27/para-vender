@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { Search, Filter, ShoppingCart, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -57,7 +57,6 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
   const [cargando, setCargando] = useState(true);
   const { toast } = useToast();
 
-  // Cargar categorías
   useEffect(() => {
     const fetchCategorias = async () => {
       try {
@@ -77,7 +76,6 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
     fetchCategorias();
   }, [toast]);
 
-  // Cargar almacenes
   useEffect(() => {
     const fetchAlmacenes = async () => {
       try {
@@ -97,12 +95,10 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
     fetchAlmacenes();
   }, [toast]);
 
-  // Cargar productos con información de categoría y unidad
   useEffect(() => {
     const fetchProductos = async () => {
       setCargando(true);
       try {
-        // Obtener productos con join a categoría y unidad
         const { data, error } = await supabase
           .from("productos")
           .select(`
@@ -118,12 +114,10 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
         if (error) throw error;
 
         if (data) {
-          // Obtener inventario para cada producto
           const productosConStock = await Promise.all(
             data.map(async (producto) => {
               let stockTotal = 0;
 
-              // Si hay almacén seleccionado, obtenemos el stock de ese almacén
               if (selectedStore !== "todos") {
                 const { data: inventarioData, error: inventarioError } = await supabase
                   .from("inventario")
@@ -136,7 +130,6 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
                   stockTotal = inventarioData.cantidad;
                 }
               } else {
-                // De lo contrario, sumamos el stock de todos los almacenes
                 const { data: inventarioData, error: inventarioError } = await supabase
                   .from("inventario")
                   .select("cantidad")
@@ -176,7 +169,6 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
     fetchProductos();
   }, [selectedStore, toast]);
 
-  // Filtrar productos basado en búsqueda y categoría
   const filteredProductos = productos.filter((producto) => {
     const matchesSearch = producto.nombre
       .toLowerCase()
@@ -187,7 +179,6 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
     return matchesSearch && matchesCategory;
   });
 
-  // Función para manejar el clic en un producto
   const handleProductClick = (producto: Producto) => {
     if (producto.stock > 0) {
       onProductSelect({
@@ -261,7 +252,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto pb-4">
+      <ScrollArea className="flex-1">
         {cargando ? (
           <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
@@ -274,7 +265,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
             <p className="text-sm">Intente con otros términos de búsqueda o categoría</p>
           </div>
         ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 p-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {filteredProductos.map((producto) => (
               <Card
                 key={producto.id}
@@ -311,7 +302,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
             ))}
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 p-1">
             {filteredProductos.map((producto) => (
               <div
                 key={producto.id}
@@ -342,7 +333,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
             ))}
           </div>
         )}
-      </div>
+      </ScrollArea>
     </div>
   );
 };
