@@ -110,7 +110,7 @@ export const transferInventory = async (
   
   console.log("Source params:", sourceParams);
   
-  // Use 'any' type to avoid TypeScript constraints
+  // Use proper type arguments for RPC call
   const { error: sourceError } = await supabase.rpc<UpdateInventoryReturn, UpdateInventoryParams>(
     "update_inventory", 
     sourceParams
@@ -131,7 +131,7 @@ export const transferInventory = async (
   
   console.log("Target params:", targetParams);
   
-  // Use 'any' type to avoid TypeScript constraints
+  // Use proper type arguments for RPC call
   const { error: targetError } = await supabase.rpc<UpdateInventoryReturn, UpdateInventoryParams>(
     "update_inventory", 
     targetParams

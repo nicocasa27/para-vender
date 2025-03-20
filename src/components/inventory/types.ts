@@ -28,5 +28,5 @@ export interface UpdateInventoryParams {
 }
 
 // Define a type for the return value of update_inventory
-// Based on SQL definition, it returns void, so we'll use any here to avoid type constraints
-export type UpdateInventoryReturn = any;
+// Based on SQL definition, it returns void, so we'll use null here
+export type UpdateInventoryReturn = null;
