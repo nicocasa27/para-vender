@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -248,7 +249,8 @@ export function InventoryTransfer() {
         p_cantidad: -data.quantity
       };
       
-      const { error: sourceError } = await supabase.rpc<void>(
+      // Fix: Provide both type parameters to supabase.rpc
+      const { error: sourceError } = await supabase.rpc<void, UpdateInventoryParams>(
         "update_inventory", 
         sourceParams
       );
@@ -264,7 +266,8 @@ export function InventoryTransfer() {
         p_cantidad: data.quantity
       };
       
-      const { error: targetError } = await supabase.rpc<void>(
+      // Fix: Provide both type parameters to supabase.rpc
+      const { error: targetError } = await supabase.rpc<void, UpdateInventoryParams>(
         "update_inventory", 
         targetParams
       );
