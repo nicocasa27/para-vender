@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Filter, ShoppingCart, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -19,118 +19,185 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
-// Dummy data for products
-const products = [
-  {
-    id: 1,
-    name: "iPhone 13 Pro",
-    category: "Electronics",
-    price: 1299.99,
-    stock: 15,
-    image: "/placeholder.svg",
-  },
-  {
-    id: 2,
-    name: "MacBook Air",
-    category: "Electronics",
-    price: 999.99,
-    stock: 7,
-    image: "/placeholder.svg",
-  },
-  {
-    id: 3,
-    name: "AirPods Pro",
-    category: "Electronics",
-    price: 249.99,
-    stock: 3,
-    image: "/placeholder.svg",
-  },
-  {
-    id: 4,
-    name: "iPad Air",
-    category: "Electronics",
-    price: 599.99,
-    stock: 6,
-    image: "/placeholder.svg",
-  },
-  {
-    id: 5,
-    name: "Apple Watch",
-    category: "Electronics",
-    price: 399.99,
-    stock: 11,
-    image: "/placeholder.svg",
-  },
-  {
-    id: 6,
-    name: "T-Shirt",
-    category: "Clothing",
-    price: 19.99,
-    stock: 25,
-    image: "/placeholder.svg",
-  },
-  {
-    id: 7,
-    name: "Jeans",
-    category: "Clothing",
-    price: 49.99,
-    stock: 18,
-    image: "/placeholder.svg",
-  },
-  {
-    id: 8,
-    name: "Sneakers",
-    category: "Clothing",
-    price: 89.99,
-    stock: 13,
-    image: "/placeholder.svg",
-  },
-  {
-    id: 9,
-    name: "Water Bottle",
-    category: "Food & Beverages",
-    price: 1.99,
-    stock: 50,
-    image: "/placeholder.svg",
-  },
-  {
-    id: 10,
-    name: "Coffee Beans",
-    category: "Food & Beverages",
-    price: 12.99,
-    stock: 32,
-    image: "/placeholder.svg",
-  },
-];
+interface Producto {
+  id: string;
+  nombre: string;
+  categoria: string;
+  precio_venta: number;
+  stock: number;
+  imagen: string;
+  unidad: string;
+}
 
-// Categories
-const categories = [
-  { id: "all", name: "All" },
-  { id: "electronics", name: "Electronics" },
-  { id: "clothing", name: "Clothing" },
-  { id: "food", name: "Food & Beverages" },
-];
+interface Categoria {
+  id: string;
+  nombre: string;
+}
+
+interface Almacen {
+  id: string;
+  nombre: string;
+}
 
 interface ProductGridProps {
-  onProductSelect: (product: typeof products[0]) => void;
+  onProductSelect: (product: { id: string; name: string; price: number; stock: number }) => void;
 }
 
 export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("todas");
+  const [selectedStore, setSelectedStore] = useState("todos");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [almacenes, setAlmacenes] = useState<Almacen[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const { toast } = useToast();
 
-  // Filter products based on search and category
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name
+  // Cargar categorías
+  useEffect(() => {
+    const fetchCategorias = async () => {
+      try {
+        const { data, error } = await supabase.from("categorias").select("id, nombre");
+        if (error) throw error;
+        setCategorias(data || []);
+      } catch (error) {
+        console.error("Error al cargar categorías:", error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las categorías",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchCategorias();
+  }, [toast]);
+
+  // Cargar almacenes
+  useEffect(() => {
+    const fetchAlmacenes = async () => {
+      try {
+        const { data, error } = await supabase.from("almacenes").select("id, nombre");
+        if (error) throw error;
+        setAlmacenes(data || []);
+      } catch (error) {
+        console.error("Error al cargar almacenes:", error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los almacenes",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchAlmacenes();
+  }, [toast]);
+
+  // Cargar productos con información de categoría y unidad
+  useEffect(() => {
+    const fetchProductos = async () => {
+      setCargando(true);
+      try {
+        // Obtener productos con join a categoría y unidad
+        const { data, error } = await supabase
+          .from("productos")
+          .select(`
+            id, 
+            nombre, 
+            precio_venta,
+            stock_minimo,
+            stock_maximo,
+            categorias(id, nombre),
+            unidades(id, nombre, abreviatura)
+          `);
+
+        if (error) throw error;
+
+        if (data) {
+          // Obtener inventario para cada producto
+          const productosConStock = await Promise.all(
+            data.map(async (producto) => {
+              let stockTotal = 0;
+
+              // Si hay almacén seleccionado, obtenemos el stock de ese almacén
+              if (selectedStore !== "todos") {
+                const { data: inventarioData, error: inventarioError } = await supabase
+                  .from("inventario")
+                  .select("cantidad")
+                  .eq("producto_id", producto.id)
+                  .eq("almacen_id", selectedStore)
+                  .single();
+
+                if (!inventarioError && inventarioData) {
+                  stockTotal = inventarioData.cantidad;
+                }
+              } else {
+                // De lo contrario, sumamos el stock de todos los almacenes
+                const { data: inventarioData, error: inventarioError } = await supabase
+                  .from("inventario")
+                  .select("cantidad")
+                  .eq("producto_id", producto.id);
+
+                if (!inventarioError && inventarioData) {
+                  stockTotal = inventarioData.reduce((sum, item) => sum + Number(item.cantidad), 0);
+                }
+              }
+
+              return {
+                id: producto.id,
+                nombre: producto.nombre,
+                categoria: producto.categorias?.nombre || "Sin categoría",
+                precio_venta: Number(producto.precio_venta),
+                stock: stockTotal,
+                imagen: "/placeholder.svg",
+                unidad: producto.unidades?.abreviatura || "u",
+              };
+            })
+          );
+
+          setProductos(productosConStock);
+        }
+      } catch (error) {
+        console.error("Error al cargar productos:", error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los productos",
+          variant: "destructive",
+        });
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    fetchProductos();
+  }, [selectedStore, toast]);
+
+  // Filtrar productos basado en búsqueda y categoría
+  const filteredProductos = productos.filter((producto) => {
+    const matchesSearch = producto.nombre
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     const matchesCategory =
-      selectedCategory === "all" ||
-      product.category.toLowerCase().includes(selectedCategory.toLowerCase());
+      selectedCategory === "todas" ||
+      producto.categoria.toLowerCase() === selectedCategory.toLowerCase();
     return matchesSearch && matchesCategory;
   });
+
+  // Función para manejar el clic en un producto
+  const handleProductClick = (producto: Producto) => {
+    if (producto.stock > 0) {
+      onProductSelect({
+        id: producto.id,
+        name: producto.nombre,
+        price: producto.precio_venta,
+        stock: producto.stock
+      });
+    }
+  };
 
   return (
     <div className="space-y-4 animate-fade-in h-full flex flex-col">
@@ -140,7 +207,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search products..."
+              placeholder="Buscar productos..."
               className="pl-9"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -151,16 +218,35 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
             onValueChange={setSelectedCategory}
           >
             <SelectTrigger className="w-full sm:w-40">
-              <SelectValue />
+              <SelectValue placeholder="Categorías" />
             </SelectTrigger>
             <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
+              <SelectItem value="todas">Todas las categorías</SelectItem>
+              {categorias.map((categoria) => (
+                <SelectItem key={categoria.id} value={categoria.nombre.toLowerCase()}>
+                  {categoria.nombre}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          
+          <Select
+            value={selectedStore}
+            onValueChange={setSelectedStore}
+          >
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue placeholder="Almacenes" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos los almacenes</SelectItem>
+              {almacenes.map((almacen) => (
+                <SelectItem key={almacen.id} value={almacen.id}>
+                  {almacen.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
           <Tabs 
             defaultValue="grid" 
             value={viewMode} 
@@ -168,50 +254,55 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
             className="w-full sm:w-auto"
           >
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="grid">Grid</TabsTrigger>
-              <TabsTrigger value="list">List</TabsTrigger>
+              <TabsTrigger value="grid">Cuadrícula</TabsTrigger>
+              <TabsTrigger value="list">Lista</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto pb-4">
-        {filteredProducts.length === 0 ? (
+        {cargando ? (
+          <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+            <p className="mt-4 text-lg font-medium">Cargando productos...</p>
+          </div>
+        ) : filteredProductos.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
             <Package className="h-12 w-12 mb-3" />
-            <p className="text-lg font-medium">No products found</p>
-            <p className="text-sm">Try a different search term or category</p>
+            <p className="text-lg font-medium">No se encontraron productos</p>
+            <p className="text-sm">Intente con otros términos de búsqueda o categoría</p>
           </div>
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {filteredProducts.map((product) => (
+            {filteredProductos.map((producto) => (
               <Card
-                key={product.id}
+                key={producto.id}
                 className={cn(
                   "cursor-pointer transition-all duration-200 hover:shadow-md",
-                  product.stock <= 0 && "opacity-60"
+                  producto.stock <= 0 && "opacity-60"
                 )}
-                onClick={() => product.stock > 0 && onProductSelect(product)}
+                onClick={() => handleProductClick(producto)}
               >
                 <CardContent className="p-0">
                   <div className="aspect-square relative">
                     <img
-                      src={product.image}
-                      alt={product.name}
+                      src={producto.imagen}
+                      alt={producto.nombre}
                       className="object-cover w-full h-full rounded-t-lg"
                     />
-                    {product.stock <= 0 && (
+                    {producto.stock <= 0 && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-t-lg">
-                        <span className="text-white font-semibold">Out of Stock</span>
+                        <span className="text-white font-semibold">Sin Existencias</span>
                       </div>
                     )}
                   </div>
                   <div className="p-4">
-                    <div className="font-medium truncate">{product.name}</div>
+                    <div className="font-medium truncate">{producto.nombre}</div>
                     <div className="mt-1 flex justify-between items-center">
-                      <span className="text-lg font-bold">${product.price.toFixed(2)}</span>
+                      <span className="text-lg font-bold">${producto.precio_venta.toFixed(2)}</span>
                       <Badge variant="outline">
-                        Stock: {product.stock}
+                        Stock: {producto.stock} {producto.unidad}
                       </Badge>
                     </div>
                   </div>
@@ -221,30 +312,30 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect }) => 
           </div>
         ) : (
           <div className="space-y-2">
-            {filteredProducts.map((product) => (
+            {filteredProductos.map((producto) => (
               <div
-                key={product.id}
+                key={producto.id}
                 className={cn(
                   "flex items-center p-3 rounded-lg border cursor-pointer hover:bg-accent/20 transition-colors",
-                  product.stock <= 0 && "opacity-60"
+                  producto.stock <= 0 && "opacity-60"
                 )}
-                onClick={() => product.stock > 0 && onProductSelect(product)}
+                onClick={() => handleProductClick(producto)}
               >
                 <div className="h-12 w-12 rounded-md bg-primary/10 flex items-center justify-center mr-3">
                   <img
-                    src={product.image}
-                    alt={product.name}
+                    src={producto.imagen}
+                    alt={producto.nombre}
                     className="object-cover w-full h-full rounded-md"
                   />
                 </div>
                 <div className="flex-1 mr-4">
-                  <div className="font-medium">{product.name}</div>
-                  <div className="text-sm text-muted-foreground">{product.category}</div>
+                  <div className="font-medium">{producto.nombre}</div>
+                  <div className="text-sm text-muted-foreground">{producto.categoria}</div>
                 </div>
                 <div className="flex items-center">
-                  <div className="font-bold mr-4">${product.price.toFixed(2)}</div>
-                  <Badge variant={product.stock <= 0 ? "destructive" : "outline"}>
-                    {product.stock <= 0 ? "Out of stock" : `${product.stock} left`}
+                  <div className="font-bold mr-4">${producto.precio_venta.toFixed(2)}</div>
+                  <Badge variant={producto.stock <= 0 ? "destructive" : "outline"}>
+                    {producto.stock <= 0 ? "Sin existencias" : `${producto.stock} ${producto.unidad}`}
                   </Badge>
                 </div>
               </div>
