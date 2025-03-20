@@ -49,9 +49,7 @@ const productFormSchema = z.object({
   initialStock: z.coerce.number().nonnegative({
     message: "La cantidad inicial debe ser un número no negativo.",
   }),
-  warehouse: z.string({
-    required_error: "Por favor seleccione un almacén.",
-  }),
+  warehouse: z.string().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -60,15 +58,16 @@ interface ProductFormProps {
   initialData?: ProductFormValues;
   onSubmit: (data: ProductFormValues) => void;
   isSubmitting?: boolean;
+  isEditing?: boolean;
 }
 
 export const ProductForm: React.FC<ProductFormProps> = ({
   initialData,
   onSubmit,
   isSubmitting = false,
+  isEditing = false,
 }) => {
   const { toast } = useToast();
-  const isEditing = !!initialData;
   const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
   const [units, setUnits] = useState<{id: string, name: string}[]>([]);
   const [warehouses, setWarehouses] = useState<{id: string, name: string}[]>([]);
@@ -304,53 +303,57 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="initialStock"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Cantidad Inicial</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="1"
-                    min="0"
-                    {...field}
-                    placeholder="0"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {!isEditing && (
+            <>
+              <FormField
+                control={form.control}
+                name="initialStock"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cantidad Inicial</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="1"
+                        min="0"
+                        {...field}
+                        placeholder="0"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <FormField
-            control={form.control}
-            name="warehouse"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Almacén</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un almacén" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {warehouses.map((warehouse) => (
-                      <SelectItem key={warehouse.id} value={warehouse.id}>
-                        {warehouse.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              <FormField
+                control={form.control}
+                name="warehouse"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Almacén</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccione un almacén" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {warehouses.map((warehouse) => (
+                          <SelectItem key={warehouse.id} value={warehouse.id}>
+                            {warehouse.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          )}
         </div>
 
         <div className="flex justify-end space-x-2">

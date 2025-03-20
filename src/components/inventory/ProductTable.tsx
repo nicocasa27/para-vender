@@ -54,7 +54,9 @@ interface ProductWithStock {
   id: string;
   nombre: string;
   categoria: string;
+  categoria_id: string;
   unidad: string;
+  unidad_id: string;
   precio_compra: number;
   precio_venta: number;
   stock: {
@@ -74,6 +76,8 @@ export const ProductTable = () => {
   const [selectedStore, setSelectedStore] = useState("all");
   const [page, setPage] = useState(1);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<ProductWithStock | null>(null);
   const { toast } = useToast();
   const itemsPerPage = 5;
 
@@ -112,8 +116,8 @@ export const ProductTable = () => {
           .from("productos")
           .select(`
             id, nombre, precio_compra, precio_venta, stock_minimo, stock_maximo,
-            categorias(nombre),
-            unidades(nombre)
+            categoria_id, categorias(nombre),
+            unidad_id, unidades(nombre)
           `);
         
         if (productsError) throw productsError;
@@ -143,7 +147,9 @@ export const ProductTable = () => {
               id: product.id,
               nombre: product.nombre,
               categoria: product.categorias ? product.categorias.nombre : "Sin categoría",
+              categoria_id: product.categoria_id,
               unidad: product.unidades ? product.unidades.nombre : "Unidad",
+              unidad_id: product.unidad_id,
               precio_compra: product.precio_compra,
               precio_venta: product.precio_venta,
               stock: stockByStore,
@@ -202,6 +208,11 @@ export const ProductTable = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleEditProduct = (product: ProductWithStock) => {
+    setSelectedProduct(product);
+    setIsEditDialogOpen(true);
   };
 
   const getTotalStock = (product: ProductWithStock) => {
@@ -359,7 +370,9 @@ export const ProductTable = () => {
                         id: productData.id,
                         nombre: productData.nombre,
                         categoria: productData.categorias ? productData.categorias.nombre : "Sin categoría",
+                        categoria_id: data.category,
                         unidad: productData.unidades ? productData.unidades.nombre : "Unidad",
+                        unidad_id: data.unit,
                         precio_compra: productData.precio_compra,
                         precio_venta: productData.precio_venta,
                         stock: data.initialStock > 0 ? { [warehouse]: data.initialStock } : {},
@@ -470,7 +483,7 @@ export const ProductTable = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditProduct(product)}>
                             <Edit className="mr-2 h-4 w-4" />
                             Editar
                           </DropdownMenuItem>
@@ -530,6 +543,89 @@ export const ProductTable = () => {
           </div>
         </div>
       </Card>
+
+      {/* Dialog para editar productos */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[625px]">
+          <DialogHeader>
+            <DialogTitle>Editar Producto</DialogTitle>
+            <DialogDescription>
+              Modifique los detalles del producto. Haga clic en actualizar cuando termine.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedProduct && (
+            <ProductForm
+              initialData={{
+                name: selectedProduct.nombre,
+                category: selectedProduct.categoria_id,
+                unit: selectedProduct.unidad_id,
+                purchasePrice: selectedProduct.precio_compra,
+                salePrice: selectedProduct.precio_venta,
+                minStock: selectedProduct.stock_minimo,
+                maxStock: selectedProduct.stock_maximo,
+                initialStock: 0, // No se usa para edición
+                warehouse: "", // No se usa para edición
+              }}
+              onSubmit={async (data) => {
+                if (!selectedProduct) return;
+
+                try {
+                  // Actualizar el producto
+                  const { error } = await supabase
+                    .from("productos")
+                    .update({
+                      nombre: data.name,
+                      categoria_id: data.category,
+                      unidad_id: data.unit,
+                      precio_compra: data.purchasePrice,
+                      precio_venta: data.salePrice,
+                      stock_minimo: data.minStock,
+                      stock_maximo: data.maxStock
+                    })
+                    .eq("id", selectedProduct.id);
+                  
+                  if (error) throw error;
+                  
+                  // Actualizar el estado local
+                  setProducts(prev => prev.map(product => {
+                    if (product.id === selectedProduct.id) {
+                      return {
+                        ...product,
+                        nombre: data.name,
+                        categoria_id: data.category,
+                        categoria: categories.find(cat => cat.id === data.category)?.name || "Sin categoría",
+                        unidad_id: data.unit,
+                        unidad: product.unidad,
+                        precio_compra: data.purchasePrice,
+                        precio_venta: data.salePrice,
+                        stock_minimo: data.minStock,
+                        stock_maximo: data.maxStock
+                      };
+                    }
+                    return product;
+                  }));
+                  
+                  toast({
+                    title: "Producto actualizado",
+                    description: "El producto ha sido actualizado correctamente.",
+                  });
+                } catch (error) {
+                  console.error("Error updating product:", error);
+                  toast({
+                    title: "Error",
+                    description: "No se pudo actualizar el producto. Intente nuevamente.",
+                    variant: "destructive",
+                  });
+                }
+                
+                setIsEditDialogOpen(false);
+                setSelectedProduct(null);
+              }}
+              isEditing={true}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
