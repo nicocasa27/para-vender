@@ -110,8 +110,8 @@ export const transferInventory = async (
   
   console.log("Source params:", sourceParams);
   
-  // Use proper type arguments for RPC call
-  const { error: sourceError } = await supabase.rpc<UpdateInventoryReturn, UpdateInventoryParams>(
+  // Fixed: Use unknown as the return type to satisfy the constraint
+  const { error: sourceError } = await supabase.rpc<UpdateInventoryReturn>(
     "update_inventory", 
     sourceParams
   );
@@ -131,8 +131,8 @@ export const transferInventory = async (
   
   console.log("Target params:", targetParams);
   
-  // Use proper type arguments for RPC call
-  const { error: targetError } = await supabase.rpc<UpdateInventoryReturn, UpdateInventoryParams>(
+  // Fixed: Use unknown as the return type to satisfy the constraint
+  const { error: targetError } = await supabase.rpc<UpdateInventoryReturn>(
     "update_inventory", 
     targetParams
   );

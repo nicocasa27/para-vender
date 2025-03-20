@@ -27,6 +27,6 @@ export interface UpdateInventoryParams {
   p_cantidad: number;
 }
 
-// Define a type for the return value of update_inventory
-// Based on SQL definition, it returns void, so we'll use void here
-export type UpdateInventoryReturn = void;
+// After examining the update_inventory SQL function, it doesn't return a value
+// Using unknown as a type to satisfy the generic constraint in supabase.rpc
+export type UpdateInventoryReturn = unknown;
