@@ -68,6 +68,10 @@ interface UpdateInventoryParams {
   p_cantidad: number;
 }
 
+// Define a type for the return value of update_inventory
+// Based on SQL definition, it returns void, so we'll use null here
+type UpdateInventoryReturn = null;
+
 const transferFormSchema = z.object({
   sourceStore: z.string({
     required_error: "Seleccione la sucursal de origen",
@@ -243,14 +247,18 @@ export function InventoryTransfer() {
     
     setIsLoading(true);
     try {
+      console.log("Starting transfer process...");
+      
       const sourceParams: UpdateInventoryParams = {
         p_producto_id: data.product,
         p_almacen_id: data.sourceStore,
         p_cantidad: -data.quantity
       };
       
-      // Fix: Provide both type parameters to supabase.rpc
-      const { error: sourceError } = await supabase.rpc<void, UpdateInventoryParams>(
+      console.log("Source params:", sourceParams);
+      
+      // Fix: Use the correct return type (null) instead of void
+      const { error: sourceError } = await supabase.rpc<UpdateInventoryReturn, UpdateInventoryParams>(
         "update_inventory", 
         sourceParams
       );
@@ -260,14 +268,18 @@ export function InventoryTransfer() {
         throw sourceError;
       }
       
+      console.log("Source update successful, proceeding with target update");
+      
       const targetParams: UpdateInventoryParams = {
         p_producto_id: data.product,
         p_almacen_id: data.targetStore,
         p_cantidad: data.quantity
       };
       
-      // Fix: Provide both type parameters to supabase.rpc
-      const { error: targetError } = await supabase.rpc<void, UpdateInventoryParams>(
+      console.log("Target params:", targetParams);
+      
+      // Fix: Use the correct return type (null) instead of void
+      const { error: targetError } = await supabase.rpc<UpdateInventoryReturn, UpdateInventoryParams>(
         "update_inventory", 
         targetParams
       );
@@ -276,6 +288,8 @@ export function InventoryTransfer() {
         console.error("Target error:", targetError);
         throw targetError;
       }
+      
+      console.log("Target update successful, recording the movement");
       
       const { error: movementError } = await supabase
         .from("movimientos")
@@ -292,6 +306,8 @@ export function InventoryTransfer() {
         console.error("Movement error:", movementError);
         throw movementError;
       }
+
+      console.log("Transfer process completed successfully");
 
       toast({
         title: "Transferencia exitosa",
