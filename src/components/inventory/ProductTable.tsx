@@ -18,8 +18,6 @@ import {
 } from "@/components/ui/table";
 import { 
   ChevronDown, 
-  ChevronRight, 
-  ChevronLeft, 
   MoreHorizontal, 
   Search,
   Package,
@@ -49,6 +47,15 @@ import { ProductForm } from "./ProductForm";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface ProductWithStock {
   id: string;
@@ -75,11 +82,14 @@ export const ProductTable = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStore, setSelectedStore] = useState("all");
   const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isStockDialogOpen, setIsStockDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductWithStock | null>(null);
+  const [newStockQuantity, setNewStockQuantity] = useState(0);
+  const [selectedStockWarehouse, setSelectedStockWarehouse] = useState("");
   const { toast } = useToast();
-  const itemsPerPage = 5;
 
   useEffect(() => {
     async function fetchData() {
@@ -215,6 +225,102 @@ export const ProductTable = () => {
     setIsEditDialogOpen(true);
   };
 
+  const handleStockUpdate = (product: ProductWithStock) => {
+    setSelectedProduct(product);
+    setNewStockQuantity(0);
+    setSelectedStockWarehouse("");
+    setIsStockDialogOpen(true);
+  };
+
+  const saveStockUpdate = async () => {
+    if (!selectedProduct || !selectedStockWarehouse || newStockQuantity <= 0) {
+      toast({
+        title: "Error",
+        description: "Por favor ingrese una cantidad válida y seleccione un almacén.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Verificar si ya existe un registro de inventario para este producto y almacén
+      const { data: existingInventory, error: checkError } = await supabase
+        .from("inventario")
+        .select("id, cantidad")
+        .eq("producto_id", selectedProduct.id)
+        .eq("almacen_id", selectedStockWarehouse)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      // Crear registro de movimiento
+      const { error: movementError } = await supabase
+        .from("movimientos")
+        .insert({
+          producto_id: selectedProduct.id,
+          tipo: "entrada",
+          cantidad: newStockQuantity,
+          almacen_destino_id: selectedStockWarehouse,
+          notas: "Actualización manual de inventario"
+        });
+
+      if (movementError) throw movementError;
+
+      if (existingInventory) {
+        // Actualizar registro existente
+        const newTotal = Number(existingInventory.cantidad) + Number(newStockQuantity);
+        const { error: updateError } = await supabase
+          .from("inventario")
+          .update({ cantidad: newTotal, updated_at: new Date().toISOString() })
+          .eq("id", existingInventory.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Crear nuevo registro de inventario
+        const { error: insertError } = await supabase
+          .from("inventario")
+          .insert({
+            producto_id: selectedProduct.id,
+            almacen_id: selectedStockWarehouse,
+            cantidad: newStockQuantity
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      // Actualizar estado local
+      setProducts(prevProducts => {
+        return prevProducts.map(product => {
+          if (product.id === selectedProduct.id) {
+            const warehouseName = stores.find(store => store.id === selectedStockWarehouse)?.name || "";
+            const updatedStock = { ...product.stock };
+            
+            if (warehouseName) {
+              updatedStock[warehouseName] = (updatedStock[warehouseName] || 0) + newStockQuantity;
+            }
+            
+            return { ...product, stock: updatedStock };
+          }
+          return product;
+        });
+      });
+
+      toast({
+        title: "Stock actualizado",
+        description: "El inventario ha sido actualizado correctamente.",
+      });
+
+      setIsStockDialogOpen(false);
+    } catch (error) {
+      console.error("Error updating stock:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el inventario. Intente nuevamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getTotalStock = (product: ProductWithStock) => {
     return Object.values(product.stock).reduce((acc, curr) => acc + Number(curr), 0);
   };
@@ -248,6 +354,52 @@ export const ProductTable = () => {
     (page - 1) * itemsPerPage,
     page * itemsPerPage
   );
+
+  // Generar array de páginas para la paginación
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxPagesToShow = 5; // Número máximo de páginas a mostrar
+    
+    if (totalPages <= maxPagesToShow) {
+      // Si hay menos páginas que el máximo, mostrar todas
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      // Siempre mostrar la primera página
+      pageNumbers.push(1);
+      
+      let startPage = Math.max(2, page - 1);
+      let endPage = Math.min(totalPages - 1, page + 1);
+      
+      // Ajustar si estamos al principio o al final
+      if (page <= 2) {
+        endPage = 3;
+      } else if (page >= totalPages - 1) {
+        startPage = totalPages - 2;
+      }
+      
+      // Agregar elipsis si es necesario
+      if (startPage > 2) {
+        pageNumbers.push('ellipsis-start');
+      }
+      
+      // Agregar páginas del medio
+      for (let i = startPage; i <= endPage; i++) {
+        pageNumbers.push(i);
+      }
+      
+      // Agregar elipsis si es necesario
+      if (endPage < totalPages - 1) {
+        pageNumbers.push('ellipsis-end');
+      }
+      
+      // Siempre mostrar la última página
+      pageNumbers.push(totalPages);
+    }
+    
+    return pageNumbers;
+  };
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -487,6 +639,10 @@ export const ProductTable = () => {
                             <Edit className="mr-2 h-4 w-4" />
                             Editar
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleStockUpdate(product)}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Agregar Stock
+                          </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-destructive"
                             onClick={() => handleDeleteProduct(product.id)}
@@ -516,31 +672,64 @@ export const ProductTable = () => {
           </Table>
         </div>
         <div className="flex items-center justify-between px-4 py-4">
-          <div className="text-sm text-muted-foreground">
-            Mostrando {Math.min(filteredProducts.length, page * itemsPerPage) - ((page - 1) * itemsPerPage)} de{" "}
-            {filteredProducts.length} productos
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+          <div className="flex items-center gap-2">
             <div className="text-sm text-muted-foreground">
-              Página {page} de {Math.max(1, totalPages)}
+              Mostrar
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages || totalPages === 0}
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(value) => {
+                setItemsPerPage(parseInt(value));
+                setPage(1); // Reset to first page when changing items per page
+              }}
             >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+              <SelectTrigger className="w-16">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="text-sm text-muted-foreground">
+              productos por página
+            </div>
           </div>
+          
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+              
+              {getPageNumbers().map((pageNumber, index) => (
+                <PaginationItem key={index}>
+                  {pageNumber === 'ellipsis-start' || pageNumber === 'ellipsis-end' ? (
+                    <PaginationEllipsis />
+                  ) : (
+                    <PaginationLink 
+                      isActive={page === pageNumber}
+                      onClick={() => typeof pageNumber === 'number' && setPage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </PaginationLink>
+                  )}
+                </PaginationItem>
+              ))}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className={page === totalPages || totalPages === 0 ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       </Card>
 
@@ -624,6 +813,74 @@ export const ProductTable = () => {
               isEditing={true}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para agregar stock */}
+      <Dialog open={isStockDialogOpen} onOpenChange={setIsStockDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Agregar Stock</DialogTitle>
+            <DialogDescription>
+              Agregue stock al producto seleccionado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <h3 className="text-lg font-medium">
+                {selectedProduct?.nombre}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Stock actual: {selectedProduct ? getTotalStock(selectedProduct) : 0} {selectedProduct?.unidad}
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="quantity" className="text-sm font-medium">
+                Cantidad a agregar
+              </label>
+              <Input
+                id="quantity"
+                type="number"
+                value={newStockQuantity}
+                onChange={(e) => setNewStockQuantity(Number(e.target.value))}
+                min="1"
+                step="1"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="warehouse" className="text-sm font-medium">
+                Almacén
+              </label>
+              <Select
+                value={selectedStockWarehouse}
+                onValueChange={setSelectedStockWarehouse}
+              >
+                <SelectTrigger id="warehouse">
+                  <SelectValue placeholder="Seleccione un almacén" />
+                </SelectTrigger>
+                <SelectContent>
+                  {stores.filter(store => store.id !== "all").map((store) => (
+                    <SelectItem key={store.id} value={store.id}>
+                      {store.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsStockDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={saveStockUpdate}>
+              Guardar
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
