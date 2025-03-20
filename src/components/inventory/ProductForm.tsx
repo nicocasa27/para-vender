@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -22,51 +22,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const productFormSchema = z.object({
   name: z.string().min(2, {
-    message: "Product name must be at least 2 characters.",
+    message: "El nombre del producto debe tener al menos 2 caracteres.",
   }),
   category: z.string({
-    required_error: "Please select a category.",
+    required_error: "Por favor seleccione una categoría.",
   }),
   unit: z.string({
-    required_error: "Please select a unit type.",
+    required_error: "Por favor seleccione una unidad.",
   }),
   purchasePrice: z.coerce.number().positive({
-    message: "Purchase price must be positive.",
+    message: "El precio de compra debe ser positivo.",
   }),
   salePrice: z.coerce.number().positive({
-    message: "Sale price must be positive.",
+    message: "El precio de venta debe ser positivo.",
   }),
   minStock: z.coerce.number().int().nonnegative({
-    message: "Minimum stock must be a non-negative integer.",
+    message: "El stock mínimo debe ser un número entero no negativo.",
   }),
   maxStock: z.coerce.number().int().positive({
-    message: "Maximum stock must be a positive integer.",
+    message: "El stock máximo debe ser un número entero positivo.",
   }),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
-
-// Dummy data for categories and units
-const categories = [
-  { id: "electronics", name: "Electronics" },
-  { id: "clothing", name: "Clothing" },
-  { id: "food", name: "Food & Beverages" },
-  { id: "furniture", name: "Furniture" },
-  { id: "other", name: "Other" },
-];
-
-const units = [
-  { id: "unit", name: "Unit" },
-  { id: "kg", name: "Kilogram" },
-  { id: "g", name: "Gram" },
-  { id: "l", name: "Liter" },
-  { id: "ml", name: "Milliliter" },
-  { id: "m", name: "Meter" },
-  { id: "cm", name: "Centimeter" },
-];
 
 interface ProductFormProps {
   initialData?: ProductFormValues;
@@ -81,6 +63,44 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 }) => {
   const { toast } = useToast();
   const isEditing = !!initialData;
+  const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
+  const [units, setUnits] = useState<{id: string, name: string}[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // Obtener categorías
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from("categorias")
+          .select("id, nombre");
+        
+        if (categoriesError) throw categoriesError;
+        
+        setCategories(categoriesData.map(cat => ({ id: cat.id, name: cat.nombre })));
+        
+        // Obtener unidades
+        const { data: unitsData, error: unitsError } = await supabase
+          .from("unidades")
+          .select("id, nombre");
+        
+        if (unitsError) throw unitsError;
+        
+        setUnits(unitsData.map(unit => ({ id: unit.id, name: unit.nombre })));
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los datos. Intente nuevamente.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchData();
+  }, [toast]);
 
   const defaultValues: Partial<ProductFormValues> = initialData || {
     name: "",
@@ -101,6 +121,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     onSubmit(data);
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <Form {...form}>
       <form
@@ -113,9 +141,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Product Name</FormLabel>
+                <FormLabel>Nombre del Producto</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Enter product name" />
+                  <Input {...field} placeholder="Ingrese nombre del producto" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -127,14 +155,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             name="category"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Category</FormLabel>
+                <FormLabel>Categoría</FormLabel>
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
+                      <SelectValue placeholder="Seleccione una categoría" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -155,14 +183,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             name="unit"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Unit Type</FormLabel>
+                <FormLabel>Tipo de Unidad</FormLabel>
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a unit type" />
+                      <SelectValue placeholder="Seleccione un tipo de unidad" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -183,7 +211,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             name="purchasePrice"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Purchase Price</FormLabel>
+                <FormLabel>Precio de Compra</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -203,7 +231,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             name="salePrice"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Sale Price</FormLabel>
+                <FormLabel>Precio de Venta</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -223,7 +251,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             name="minStock"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Minimum Stock</FormLabel>
+                <FormLabel>Stock Mínimo</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -243,7 +271,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             name="maxStock"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Maximum Stock</FormLabel>
+                <FormLabel>Stock Máximo</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -265,13 +293,13 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             type="button"
             onClick={() => form.reset(defaultValues)}
           >
-            Reset
+            Restablecer
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
-            {isEditing ? "Update Product" : "Add Product"}
+            {isEditing ? "Actualizar Producto" : "Agregar Producto"}
           </Button>
         </div>
       </form>
