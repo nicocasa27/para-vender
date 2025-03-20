@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,12 +60,6 @@ interface TransferHistory {
   producto: string;
   cantidad: number;
   notas: string | null;
-}
-
-type UpdateInventoryParams = {
-  p_producto_id: string;
-  p_almacen_id: string;
-  p_cantidad: number;
 }
 
 const transferFormSchema = z.object({
@@ -242,25 +237,34 @@ export function InventoryTransfer() {
     
     setIsLoading(true);
     try {
-      const sourceParams: UpdateInventoryParams = {
-        p_producto_id: data.product,
-        p_almacen_id: data.sourceStore,
-        p_cantidad: -data.quantity
-      };
+      // Use explicit typed parameters for the RPC calls
+      const { error: sourceError } = await supabase.rpc(
+        "update_inventory", 
+        {
+          p_producto_id: data.product,
+          p_almacen_id: data.sourceStore,
+          p_cantidad: -data.quantity
+        }
+      );
       
-      const { error: sourceError } = await supabase.rpc("update_inventory", sourceParams);
+      if (sourceError) {
+        console.error("Source error:", sourceError);
+        throw sourceError;
+      }
       
-      if (sourceError) throw sourceError;
+      const { error: targetError } = await supabase.rpc(
+        "update_inventory", 
+        {
+          p_producto_id: data.product,
+          p_almacen_id: data.targetStore,
+          p_cantidad: data.quantity
+        }
+      );
       
-      const targetParams: UpdateInventoryParams = {
-        p_producto_id: data.product,
-        p_almacen_id: data.targetStore,
-        p_cantidad: data.quantity
-      };
-      
-      const { error: targetError } = await supabase.rpc("update_inventory", targetParams);
-      
-      if (targetError) throw targetError;
+      if (targetError) {
+        console.error("Target error:", targetError);
+        throw targetError;
+      }
       
       const { error: movementError } = await supabase
         .from("movimientos")
@@ -273,7 +277,10 @@ export function InventoryTransfer() {
           notas: data.notes || null,
         });
       
-      if (movementError) throw movementError;
+      if (movementError) {
+        console.error("Movement error:", movementError);
+        throw movementError;
+      }
 
       toast({
         title: "Transferencia exitosa",
