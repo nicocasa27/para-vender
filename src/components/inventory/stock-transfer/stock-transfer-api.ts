@@ -88,26 +88,34 @@ export const executeStockTransfer = async (
   console.log("Starting stock transfer process...");
   
   try {
-    // 1. Reduce inventory in source store
-    const { error: sourceError } = await supabase
+    // 1. Get current quantity in source store
+    const { data: sourceInventory, error: sourceError } = await supabase
       .from("inventario")
-      .select("cantidad")
+      .select("id, cantidad")
       .eq("producto_id", productId)
       .eq("almacen_id", sourceStoreId)
       .single();
       
     if (sourceError) throw sourceError;
     
+    // 2. Update source inventory (decrement)
+    const newSourceQuantity = await supabase.rpc(
+      "decrement", 
+      { 
+        current_value: sourceInventory.cantidad,
+        x: quantity 
+      }
+    );
+    
     const { error: sourceUpdateError } = await supabase
       .from("inventario")
-      .update({ cantidad: supabase.rpc("decrement", { x: quantity }) })
-      .eq("producto_id", productId)
-      .eq("almacen_id", sourceStoreId);
+      .update({ cantidad: newSourceQuantity.data })
+      .eq("id", sourceInventory.id);
     
     if (sourceUpdateError) throw sourceUpdateError;
     console.log("Source inventory reduced successfully");
     
-    // 2. Check if product exists in target store
+    // 3. Check if product exists in target store
     const { data: targetInventory, error: targetCheckError } = await supabase
       .from("inventario")
       .select("id, cantidad")
@@ -118,15 +126,23 @@ export const executeStockTransfer = async (
     if (targetCheckError) throw targetCheckError;
     
     if (targetInventory) {
-      // Update existing inventory
+      // 4a. Update existing target inventory (increment)
+      const newTargetQuantity = await supabase.rpc(
+        "increment", 
+        { 
+          current_value: targetInventory.cantidad,
+          x: quantity 
+        }
+      );
+      
       const { error: targetUpdateError } = await supabase
         .from("inventario")
-        .update({ cantidad: supabase.rpc("increment", { x: quantity }) })
+        .update({ cantidad: newTargetQuantity.data })
         .eq("id", targetInventory.id);
       
       if (targetUpdateError) throw targetUpdateError;
     } else {
-      // Create new inventory record
+      // 4b. Create new inventory record
       const { error: targetInsertError } = await supabase
         .from("inventario")
         .insert({
@@ -140,7 +156,7 @@ export const executeStockTransfer = async (
     
     console.log("Target inventory increased successfully");
     
-    // 3. Record the movement
+    // 5. Record the movement
     const { error: movementError } = await supabase
       .from("movimientos")
       .insert({
