@@ -8,8 +8,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import { TransferForm } from "./TransferForm";
-import { TransferHistoryList } from "./TransferHistoryList";
+import { StockTransferForm } from "./stock-transfer/StockTransferForm";
+import { TransferHistory } from "./stock-transfer/TransferHistory";
 
 export function InventoryTransfer() {
   const [refreshHistoryToggle, setRefreshHistoryToggle] = useState(false);
@@ -28,7 +28,7 @@ export function InventoryTransfer() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <TransferForm onTransferSuccess={handleTransferSuccess} />
+          <StockTransferForm onTransferSuccess={handleTransferSuccess} />
         </CardContent>
       </Card>
 
@@ -40,7 +40,7 @@ export function InventoryTransfer() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <TransferHistoryList key={refreshHistoryToggle.toString()} />
+          <TransferHistory key={refreshHistoryToggle.toString()} />
         </CardContent>
       </Card>
     </div>

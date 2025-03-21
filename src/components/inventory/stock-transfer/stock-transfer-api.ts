@@ -89,29 +89,55 @@ export const executeStockTransfer = async (
   
   try {
     // 1. Reduce inventory in source store
-    const { error: sourceError } = await supabase.rpc(
-      "update_inventory",
-      {
-        p_producto_id: productId,
-        p_almacen_id: sourceStoreId,
-        p_cantidad: -quantity
-      }
-    );
-    
+    const { error: sourceError } = await supabase
+      .from("inventario")
+      .select("cantidad")
+      .eq("producto_id", productId)
+      .eq("almacen_id", sourceStoreId)
+      .single();
+      
     if (sourceError) throw sourceError;
+    
+    const { error: sourceUpdateError } = await supabase
+      .from("inventario")
+      .update({ cantidad: supabase.rpc("decrement", { x: quantity }) })
+      .eq("producto_id", productId)
+      .eq("almacen_id", sourceStoreId);
+    
+    if (sourceUpdateError) throw sourceUpdateError;
     console.log("Source inventory reduced successfully");
     
-    // 2. Increase inventory in target store
-    const { error: targetError } = await supabase.rpc(
-      "update_inventory",
-      {
-        p_producto_id: productId,
-        p_almacen_id: targetStoreId,
-        p_cantidad: quantity
-      }
-    );
+    // 2. Check if product exists in target store
+    const { data: targetInventory, error: targetCheckError } = await supabase
+      .from("inventario")
+      .select("id, cantidad")
+      .eq("producto_id", productId)
+      .eq("almacen_id", targetStoreId)
+      .maybeSingle();
     
-    if (targetError) throw targetError;
+    if (targetCheckError) throw targetCheckError;
+    
+    if (targetInventory) {
+      // Update existing inventory
+      const { error: targetUpdateError } = await supabase
+        .from("inventario")
+        .update({ cantidad: supabase.rpc("increment", { x: quantity }) })
+        .eq("id", targetInventory.id);
+      
+      if (targetUpdateError) throw targetUpdateError;
+    } else {
+      // Create new inventory record
+      const { error: targetInsertError } = await supabase
+        .from("inventario")
+        .insert({
+          producto_id: productId,
+          almacen_id: targetStoreId,
+          cantidad: quantity
+        });
+      
+      if (targetInsertError) throw targetInsertError;
+    }
+    
     console.log("Target inventory increased successfully");
     
     // 3. Record the movement
