@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -238,6 +237,8 @@ export const ProductTable = () => {
     }
 
     try {
+      setIsLoading(true);
+      
       const { data: existingInventory, error: checkError } = await supabase
         .from("inventario")
         .select("id, cantidad")
@@ -265,7 +266,6 @@ export const ProductTable = () => {
 
       if (updateResult.error) throw updateResult.error;
 
-      // Add movement record
       const { error: movementError } = await supabase
         .from("movimientos")
         .insert({
@@ -278,7 +278,6 @@ export const ProductTable = () => {
 
       if (movementError) throw movementError;
 
-      // Update the products state
       setProducts((prevProducts) => {
         return prevProducts.map((product) => {
           if (product.id === selectedProduct.id) {
@@ -311,32 +310,28 @@ export const ProductTable = () => {
         description: "No se pudo actualizar el inventario. Intente nuevamente.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Filter products based on selected filters and search term
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.nombre.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "all" || product.categoria_id === selectedCategory;
     
-    // Always include all products regardless of store, since we want to show availability
     return matchesSearch && matchesCategory;
   });
 
-  // Calculate pagination
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const paginatedProducts = filteredProducts.slice(
     (page - 1) * itemsPerPage,
     page * itemsPerPage
   );
 
-  // Get the current store name for the selected store
   const currentStoreName = stores.find(store => store.id === selectedStore)?.name || "";
 
-  // Handle form submission for adding a new product
   const handleAddProductSubmit = async (data: any) => {
     try {
-      // First, add the product to the productos table
       const { data: newProduct, error: productError } = await supabase
         .from("productos")
         .insert({
@@ -353,7 +348,6 @@ export const ProductTable = () => {
 
       if (productError) throw productError;
 
-      // Then, if there's initial stock, add it to the inventory
       if (data.initialStock > 0 && data.warehouse) {
         const { error: inventoryError } = await supabase
           .from("inventario")
@@ -365,7 +359,6 @@ export const ProductTable = () => {
 
         if (inventoryError) throw inventoryError;
 
-        // Add movement record for initial stock
         const { error: movementError } = await supabase
           .from("movimientos")
           .insert({
@@ -379,7 +372,6 @@ export const ProductTable = () => {
         if (movementError) throw movementError;
       }
 
-      // Update the UI with the new product
       const warehouseName = stores.find(store => store.id === data.warehouse)?.name || "";
       
       const newProductWithStock: ProductWithStock = {
@@ -413,7 +405,6 @@ export const ProductTable = () => {
     }
   };
 
-  // Handle form submission for updating an existing product
   const handleEditProductSubmit = async (data: any) => {
     if (!selectedProduct) return;
 
@@ -433,7 +424,6 @@ export const ProductTable = () => {
 
       if (error) throw error;
 
-      // Update the products state
       setProducts(prevProducts => {
         return prevProducts.map(product => {
           if (product.id === selectedProduct.id) {
@@ -604,7 +594,9 @@ export const ProductTable = () => {
                       <TableCell>{product.unidad}</TableCell>
                       <TableCell>${product.precio_compra.toFixed(2)}</TableCell>
                       <TableCell>${product.precio_venta.toFixed(2)}</TableCell>
-                      <TableCell>{stockInSelectedStore}</TableCell>
+                      <TableCell>
+                        {stockInSelectedStore} {product.unidad}
+                      </TableCell>
                       {selectedStore !== "all" && (
                         <TableCell>
                           {isAvailableInStore ? (
@@ -692,7 +684,6 @@ export const ProductTable = () => {
         )}
       </Card>
 
-      {/* Edit Product Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
@@ -722,7 +713,6 @@ export const ProductTable = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Stock Update Dialog */}
       <Dialog open={isStockDialogOpen} onOpenChange={setIsStockDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -733,13 +723,16 @@ export const ProductTable = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <h3 className="font-semibold">{selectedProduct?.nombre}</h3>
+              <h3 className="font-semibold">{selectedProduct?.nombre} 
+                {selectedProduct && <span className="text-sm text-muted-foreground ml-2">({selectedProduct.unidad})</span>}
+              </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-sm font-medium leading-none">Almacén</label>
                   <Select
                     value={selectedStockWarehouse}
                     onValueChange={setSelectedStockWarehouse}
+                    disabled={isLoading}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione Almacén" />
@@ -756,20 +749,37 @@ export const ProductTable = () => {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium leading-none">Cantidad a añadir</label>
+                  <label className="text-sm font-medium leading-none">Cantidad a añadir ({selectedProduct?.unidad})</label>
                   <Input
                     type="number"
                     min="1"
                     value={newStockQuantity}
                     onChange={(e) => setNewStockQuantity(Number(e.target.value))}
+                    disabled={isLoading}
                   />
                 </div>
               </div>
               <div className="pt-4 flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsStockDialogOpen(false)}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsStockDialogOpen(false)}
+                  disabled={isLoading}
+                >
                   Cancelar
                 </Button>
-                <Button onClick={saveStockUpdate}>Guardar</Button>
+                <Button 
+                  onClick={saveStockUpdate}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    "Guardar"
+                  )}
+                </Button>
               </div>
             </div>
           </div>
