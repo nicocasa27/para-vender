@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,80 +14,131 @@ import {
   Cell,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchTopSellingProducts, TopSellingProduct } from "@/services/analytics";
 import { useToast } from "@/hooks/use-toast";
 
+// New simple types
 type TimeRange = "daily" | "weekly" | "monthly";
+type ProductSales = { name: string; value: number };
 
 export const SalesChart = () => {
   const [timeRange, setTimeRange] = useState<TimeRange>("monthly");
-  const [selectedStore, setSelectedStore] = useState<string | null>(null);
-  const [chartData, setChartData] = useState<TopSellingProduct[]>([]);
+  const [selectedStore, setSelectedStore] = useState<string>("all");
+  const [chartData, setChartData] = useState<ProductSales[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [stores, setStores] = useState<{id: string, nombre: string}[]>([]);
   const { toast } = useToast();
 
-  // Fetch stores
+  // Fetch stores on component mount
   useEffect(() => {
-    const fetchStores = async () => {
-      const { data, error } = await supabase
-        .from('almacenes')
-        .select('id, nombre');
-      
-      if (error) {
+    async function fetchStores() {
+      try {
+        const { data, error } = await supabase
+          .from('almacenes')
+          .select('id, nombre');
+        
+        if (error) throw error;
+        setStores(data || []);
+      } catch (error) {
         console.error('Error fetching stores:', error);
         toast({
           title: "Error",
           description: "No se pudieron cargar las tiendas",
           variant: "destructive",
         });
-        return;
       }
-      
-      if (data) {
-        setStores(data);
-      }
-    };
+    }
     
     fetchStores();
   }, [toast]);
 
-  // Fetch top selling products based on timeRange and selectedStore
-  const fetchProductSalesData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      console.log(`Fetching data with timeRange: ${timeRange}, store: ${selectedStore || 'all'}`);
-      const data = await fetchTopSellingProducts(timeRange, selectedStore);
-      console.log('Fetched data:', data);
-      setChartData(data);
-    } catch (error) {
-      console.error('Error fetching product sales data:', error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los datos de ventas",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+  // Fetch top selling products whenever filters change
+  useEffect(() => {
+    async function fetchTopSellingProducts() {
+      setIsLoading(true);
+      try {
+        console.log(`Fetching data with timeRange: ${timeRange}, store: ${selectedStore}`);
+        
+        // Build the query
+        let query = supabase
+          .from('detalles_venta')
+          .select(`
+            cantidad,
+            producto_id,
+            productos:producto_id(nombre),
+            ventas:venta_id(created_at, almacen_id)
+          `);
+        
+        // Apply time filter
+        const now = new Date();
+        let startDate = new Date();
+        
+        if (timeRange === 'daily') {
+          // Last 24 hours
+          startDate.setDate(now.getDate() - 1);
+        } else if (timeRange === 'weekly') {
+          // Last 7 days
+          startDate.setDate(now.getDate() - 7);
+        } else {
+          // Last 30 days
+          startDate.setMonth(now.getMonth() - 1);
+        }
+        
+        const isoStartDate = startDate.toISOString();
+        query = query.gte('ventas.created_at', isoStartDate);
+        
+        // Filter by store if not "all"
+        if (selectedStore !== "all") {
+          query = query.eq('ventas.almacen_id', selectedStore);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        
+        console.log(`Retrieved ${data?.length || 0} sales records`);
+        
+        // Process data to get top products
+        const productSales: Record<string, ProductSales> = {};
+        
+        data?.forEach(sale => {
+          const productId = sale.producto_id;
+          const productName = sale.productos?.nombre || 'Producto Desconocido';
+          const quantity = Number(sale.cantidad) || 0;
+          
+          if (!productSales[productId]) {
+            productSales[productId] = {
+              name: productName,
+              value: 0
+            };
+          }
+          
+          productSales[productId].value += quantity;
+        });
+        
+        // Convert to array, sort by quantity sold, and get top 10
+        const topProducts = Object.values(productSales)
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 10);
+        
+        console.log(`Processed ${topProducts.length} top products`);
+        setChartData(topProducts);
+      } catch (error) {
+        console.error('Error fetching product sales data:', error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los datos de ventas",
+          variant: "destructive",
+        });
+        setChartData([]);
+      } finally {
+        setIsLoading(false);
+      }
     }
+
+    fetchTopSellingProducts();
   }, [timeRange, selectedStore, toast]);
 
-  // Refetch data when timeRange or selectedStore changes
-  useEffect(() => {
-    fetchProductSalesData();
-  }, [timeRange, selectedStore, fetchProductSalesData]);
-
-  // Handle time range change
-  const handleTimeRangeChange = (value: string) => {
-    setTimeRange(value as TimeRange);
-  };
-
-  // Handle store selection change
-  const handleStoreChange = (value: string) => {
-    setSelectedStore(value === "all" ? null : value);
-  };
-
-  // Colors for the bars
+  // Colors for bars
   const COLORS = [
     'hsl(var(--primary))',
     'hsl(var(--secondary))',
@@ -107,8 +158,11 @@ export const SalesChart = () => {
         <CardTitle className="text-base font-medium">Productos Más Vendidos</CardTitle>
         <div className="flex items-center gap-2">
           <Select
-            value={selectedStore || "all"}
-            onValueChange={handleStoreChange}
+            value={selectedStore}
+            onValueChange={(value) => {
+              console.log("Store selected:", value);
+              setSelectedStore(value);
+            }}
           >
             <SelectTrigger className="w-[180px] h-8">
               <SelectValue placeholder="Tienda" />
@@ -123,7 +177,10 @@ export const SalesChart = () => {
           <Tabs
             defaultValue="monthly"
             value={timeRange}
-            onValueChange={handleTimeRangeChange}
+            onValueChange={(value) => {
+              console.log("Time range selected:", value);
+              setTimeRange(value as TimeRange);
+            }}
           >
             <TabsList className="grid grid-cols-3 h-8">
               <TabsTrigger value="daily" className="text-xs">Diario</TabsTrigger>

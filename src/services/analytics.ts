@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export type SalesByCategory = {
@@ -20,11 +21,6 @@ export type SalesData = {
 export type InventoryData = {
   date: string;
   level: number;
-};
-
-export type TopSellingProduct = {
-  name: string;
-  value: number;
 };
 
 // Fetch sales data by category
@@ -282,90 +278,6 @@ export async function fetchInventoryLevels(): Promise<InventoryData[]> {
     return inventoryData;
   } catch (error) {
     console.error('Error in fetchInventoryLevels:', error);
-    return [];
-  }
-}
-
-// New function to fetch top selling products
-export async function fetchTopSellingProducts(timeRange: 'daily' | 'weekly' | 'monthly' = 'monthly', storeId: string | null = null): Promise<TopSellingProduct[]> {
-  try {
-    console.log(`fetchTopSellingProducts called with timeRange: ${timeRange}, storeId: ${storeId || 'all'}`);
-    
-    // Get sales data with product details
-    let query = supabase
-      .from('detalles_venta')
-      .select(`
-        cantidad,
-        subtotal,
-        producto_id,
-        venta_id,
-        productos:producto_id(nombre),
-        ventas:venta_id(created_at, almacen_id)
-      `);
-    
-    // Apply time filter based on timeRange
-    const now = new Date();
-    let startDate = new Date();
-    
-    if (timeRange === 'daily') {
-      // Last 24 hours
-      startDate.setDate(now.getDate() - 1);
-    } else if (timeRange === 'weekly') {
-      // Last 7 days
-      startDate.setDate(now.getDate() - 7);
-    } else {
-      // Last 30 days
-      startDate.setMonth(now.getMonth() - 1);
-    }
-    
-    const isoStartDate = startDate.toISOString();
-    console.log(`Date filter: ${isoStartDate} to now`);
-    
-    // Filter by date
-    query = query.gte('ventas.created_at', isoStartDate);
-    
-    // Filter by store if specified
-    if (storeId) {
-      console.log(`Filtering by store: ${storeId}`);
-      query = query.eq('ventas.almacen_id', storeId);
-    }
-    
-    const { data: salesData, error } = await query;
-    
-    if (error) {
-      console.error('Error fetching top selling products:', error);
-      return [];
-    }
-    
-    console.log(`Retrieved ${salesData?.length || 0} sales records`);
-    
-    // Process the sales data to get top selling products
-    const productSales: Record<string, { name: string; value: number }> = {};
-    
-    salesData?.forEach(sale => {
-      const productId = sale.producto_id;
-      const productName = sale.productos?.nombre || 'Producto Desconocido';
-      const quantity = Number(sale.cantidad) || 0;
-      
-      if (!productSales[productId]) {
-        productSales[productId] = {
-          name: productName,
-          value: 0
-        };
-      }
-      
-      productSales[productId].value += quantity;
-    });
-    
-    // Convert to array and sort by quantity sold
-    const topProducts = Object.values(productSales)
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10); // Get top 10 products
-    
-    console.log(`Returning ${topProducts.length} top products`);
-    return topProducts;
-  } catch (error) {
-    console.error('Error in fetchTopSellingProducts:', error);
     return [];
   }
 }
