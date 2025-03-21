@@ -1,14 +1,14 @@
 
 import * as z from "zod";
 
-export const transferFormSchema = z.object({
-  sourceStore: z.string({
+export const stockTransferSchema = z.object({
+  sourceStoreId: z.string({
     required_error: "Seleccione la sucursal de origen",
   }),
-  targetStore: z.string({
+  targetStoreId: z.string({
     required_error: "Seleccione la sucursal de destino",
   }),
-  product: z.string({
+  productId: z.string({
     required_error: "Seleccione el producto a transferir",
   }),
   quantity: z.coerce.number()
@@ -16,9 +16,9 @@ export const transferFormSchema = z.object({
       message: "La cantidad debe ser un número positivo",
     }),
   notes: z.string().optional(),
-}).refine(data => data.sourceStore !== data.targetStore, {
+}).refine(data => data.sourceStoreId !== data.targetStoreId, {
   message: "Las sucursales de origen y destino deben ser diferentes",
-  path: ["targetStore"],
+  path: ["targetStoreId"],
 });
 
-export type TransferFormValues = z.infer<typeof transferFormSchema>;
+export type StockTransferFormValues = z.infer<typeof stockTransferSchema>;

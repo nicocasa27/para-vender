@@ -24,28 +24,28 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-import { transferFormSchema, TransferFormValues } from "./transfer-form-schema";
-import { fetchStores, fetchProductsInStore, transferInventory } from "./inventory-transfer-service";
-import { Store, Product } from "./types";
+import { StoreData, ProductStock } from "./types";
+import { stockTransferSchema, StockTransferFormValues } from "./validation-schema";
+import { getStores, getProductsInStore, executeStockTransfer } from "./stock-transfer-api";
 
-interface TransferFormProps {
+interface StockTransferFormProps {
   onTransferSuccess: () => void;
 }
 
-export function TransferForm({ onTransferSuccess }: TransferFormProps) {
-  const [stores, setStores] = useState<Store[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [selectedSourceStore, setSelectedSourceStore] = useState<string | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps) {
+  const [stores, setStores] = useState<StoreData[]>([]);
+  const [products, setProducts] = useState<ProductStock[]>([]);
+  const [sourceStore, setSourceStore] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<ProductStock | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm<TransferFormValues>({
-    resolver: zodResolver(transferFormSchema),
+  const form = useForm<StockTransferFormValues>({
+    resolver: zodResolver(stockTransferSchema),
     defaultValues: {
-      sourceStore: "",
-      targetStore: "",
-      product: "",
+      sourceStoreId: "",
+      targetStoreId: "",
+      productId: "",
       quantity: 1,
       notes: "",
     },
@@ -56,16 +56,16 @@ export function TransferForm({ onTransferSuccess }: TransferFormProps) {
   }, []);
 
   useEffect(() => {
-    if (selectedSourceStore) {
-      loadProductsForStore(selectedSourceStore);
+    if (sourceStore) {
+      loadProductsForStore(sourceStore);
     } else {
       setProducts([]);
     }
-  }, [selectedSourceStore]);
+  }, [sourceStore]);
 
   const loadStores = async () => {
     try {
-      const storesData = await fetchStores();
+      const storesData = await getStores();
       setStores(storesData);
     } catch (error) {
       toast({
@@ -79,7 +79,7 @@ export function TransferForm({ onTransferSuccess }: TransferFormProps) {
   const loadProductsForStore = async (storeId: string) => {
     setIsLoading(true);
     try {
-      const productsData = await fetchProductsInStore(storeId);
+      const productsData = await getProductsInStore(storeId);
       setProducts(productsData);
     } catch (error) {
       toast({
@@ -92,7 +92,7 @@ export function TransferForm({ onTransferSuccess }: TransferFormProps) {
     }
   };
 
-  const handleTransfer = async (data: TransferFormValues) => {
+  const handleTransfer = async (data: StockTransferFormValues) => {
     if (!selectedProduct) return;
     
     if (data.quantity > selectedProduct.stock) {
@@ -106,10 +106,10 @@ export function TransferForm({ onTransferSuccess }: TransferFormProps) {
     
     setIsLoading(true);
     try {
-      await transferInventory(
-        data.product,
-        data.sourceStore,
-        data.targetStore,
+      await executeStockTransfer(
+        data.productId,
+        data.sourceStoreId,
+        data.targetStoreId,
         data.quantity,
         data.notes
       );
@@ -120,10 +120,11 @@ export function TransferForm({ onTransferSuccess }: TransferFormProps) {
       });
       
       form.reset();
-      setSelectedSourceStore(null);
+      setSourceStore(null);
       setSelectedProduct(null);
       onTransferSuccess();
     } catch (error) {
+      console.error("Transfer error:", error);
       toast({
         title: "Error",
         description: "No se pudo completar la transferencia. Intente nuevamente.",
@@ -139,14 +140,14 @@ export function TransferForm({ onTransferSuccess }: TransferFormProps) {
       <form onSubmit={form.handleSubmit(handleTransfer)} className="space-y-6">
         <FormField
           control={form.control}
-          name="sourceStore"
+          name="sourceStoreId"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Sucursal de Origen</FormLabel>
               <Select 
                 onValueChange={(value) => {
                   field.onChange(value);
-                  setSelectedSourceStore(value);
+                  setSourceStore(value);
                 }}
                 value={field.value}
               >
@@ -174,7 +175,7 @@ export function TransferForm({ onTransferSuccess }: TransferFormProps) {
 
         <FormField
           control={form.control}
-          name="targetStore"
+          name="targetStoreId"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Sucursal de Destino</FormLabel>
@@ -189,7 +190,7 @@ export function TransferForm({ onTransferSuccess }: TransferFormProps) {
                     <SelectItem 
                       key={store.id} 
                       value={store.id}
-                      disabled={store.id === selectedSourceStore}
+                      disabled={store.id === sourceStore}
                     >
                       {store.nombre}
                     </SelectItem>
@@ -203,7 +204,7 @@ export function TransferForm({ onTransferSuccess }: TransferFormProps) {
 
         <FormField
           control={form.control}
-          name="product"
+          name="productId"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Producto</FormLabel>
@@ -214,7 +215,7 @@ export function TransferForm({ onTransferSuccess }: TransferFormProps) {
                   setSelectedProduct(product);
                 }}
                 value={field.value}
-                disabled={!selectedSourceStore || isLoading}
+                disabled={!sourceStore || isLoading}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -231,7 +232,7 @@ export function TransferForm({ onTransferSuccess }: TransferFormProps) {
                 <SelectContent>
                   {products.length === 0 ? (
                     <div className="p-2 text-center text-muted-foreground">
-                      {selectedSourceStore 
+                      {sourceStore 
                         ? "No hay productos con stock en esta sucursal" 
                         : "Seleccione una sucursal primero"}
                     </div>

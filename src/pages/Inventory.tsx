@@ -3,7 +3,7 @@ import { ProductTable } from "@/components/inventory/ProductTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StoreManagement } from "@/components/inventory/StoreManagement";
-import { InventoryTransfer } from "@/components/inventory/InventoryTransfer";
+import { StockTransferManager } from "@/components/inventory/stock-transfer/StockTransferManager";
 
 const Inventory = () => {
   return (
@@ -39,7 +39,7 @@ const Inventory = () => {
         </TabsContent>
         <TabsContent value="transfers" className="mt-4 flex-1 flex">
           <ScrollArea className="flex-1">
-            <InventoryTransfer />
+            <StockTransferManager />
           </ScrollArea>
         </TabsContent>
       </Tabs>

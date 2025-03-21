@@ -12,11 +12,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { fetchTransferHistory } from "./inventory-transfer-service";
-import { TransferHistory } from "./types";
+import { getRecentTransfers } from "./stock-transfer-api";
+import { TransferRecord } from "./types";
 
-export function TransferHistoryList() {
-  const [transferHistory, setTransferHistory] = useState<TransferHistory[]>([]);
+export function TransferHistory() {
+  const [transferRecords, setTransferRecords] = useState<TransferRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -27,8 +27,8 @@ export function TransferHistoryList() {
   const loadTransferHistory = async () => {
     setIsLoading(true);
     try {
-      const history = await fetchTransferHistory();
-      setTransferHistory(history);
+      const history = await getRecentTransfers();
+      setTransferRecords(history);
     } catch (error) {
       toast({
         title: "Error",
@@ -47,7 +47,7 @@ export function TransferHistoryList() {
           <Loader2 className="h-8 w-8 animate-spin mb-2" />
           <p>Cargando historial...</p>
         </div>
-      ) : transferHistory.length === 0 ? (
+      ) : transferRecords.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground">
           <Package className="h-12 w-12 mb-2" />
           <p className="text-base">No hay transferencias registradas</p>
@@ -64,7 +64,7 @@ export function TransferHistoryList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transferHistory.map((transfer) => (
+            {transferRecords.map((transfer) => (
               <TableRow key={transfer.id}>
                 <TableCell>{transfer.fecha}</TableCell>
                 <TableCell>{transfer.producto}</TableCell>
