@@ -333,6 +333,163 @@ export const ProductTable = () => {
   // Get the current store name for the selected store
   const currentStoreName = stores.find(store => store.id === selectedStore)?.name || "";
 
+  // Handle form submission for adding a new product
+  const handleAddProductSubmit = async (data: any) => {
+    try {
+      // First, add the product to the productos table
+      const { data: newProduct, error: productError } = await supabase
+        .from("productos")
+        .insert({
+          nombre: data.name,
+          categoria_id: data.category,
+          unidad_id: data.unit,
+          precio_compra: data.purchasePrice,
+          precio_venta: data.salePrice,
+          stock_minimo: data.minStock,
+          stock_maximo: data.maxStock,
+        })
+        .select()
+        .single();
+
+      if (productError) throw productError;
+
+      // Then, if there's initial stock, add it to the inventory
+      if (data.initialStock > 0 && data.warehouse) {
+        const { error: inventoryError } = await supabase
+          .from("inventario")
+          .insert({
+            producto_id: newProduct.id,
+            almacen_id: data.warehouse,
+            cantidad: data.initialStock,
+          });
+
+        if (inventoryError) throw inventoryError;
+
+        // Add movement record for initial stock
+        const { error: movementError } = await supabase
+          .from("movimientos")
+          .insert({
+            producto_id: newProduct.id,
+            tipo: "entrada",
+            cantidad: data.initialStock,
+            almacen_destino_id: data.warehouse,
+            notas: "Stock inicial",
+          });
+
+        if (movementError) throw movementError;
+      }
+
+      // Update the UI with the new product
+      const warehouseName = stores.find(store => store.id === data.warehouse)?.name || "";
+      
+      const newProductWithStock: ProductWithStock = {
+        id: newProduct.id,
+        nombre: data.name,
+        categoria: categories.find(cat => cat.id === data.category)?.name || "Sin categoría",
+        categoria_id: data.category,
+        unidad: units.find(unit => unit.id === data.unit)?.name || "Unidad",
+        unidad_id: data.unit,
+        precio_compra: data.purchasePrice,
+        precio_venta: data.salePrice,
+        stock: warehouseName ? { [warehouseName]: data.initialStock } : {},
+        stock_minimo: data.minStock,
+        stock_maximo: data.maxStock,
+      };
+
+      setProducts(prev => [...prev, newProductWithStock]);
+      setIsAddDialogOpen(false);
+
+      toast({
+        title: "Producto agregado",
+        description: "El producto ha sido agregado correctamente.",
+      });
+    } catch (error) {
+      console.error("Error adding product:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo agregar el producto. Intente nuevamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle form submission for updating an existing product
+  const handleEditProductSubmit = async (data: any) => {
+    if (!selectedProduct) return;
+
+    try {
+      const { error } = await supabase
+        .from("productos")
+        .update({
+          nombre: data.name,
+          categoria_id: data.category,
+          unidad_id: data.unit,
+          precio_compra: data.purchasePrice,
+          precio_venta: data.salePrice,
+          stock_minimo: data.minStock,
+          stock_maximo: data.maxStock,
+        })
+        .eq("id", selectedProduct.id);
+
+      if (error) throw error;
+
+      // Update the products state
+      setProducts(prevProducts => {
+        return prevProducts.map(product => {
+          if (product.id === selectedProduct.id) {
+            return {
+              ...product,
+              nombre: data.name,
+              categoria: categories.find(cat => cat.id === data.category)?.name || "Sin categoría",
+              categoria_id: data.category,
+              unidad: units.find(unit => unit.id === data.unit)?.name || "Unidad",
+              unidad_id: data.unit,
+              precio_compra: data.purchasePrice,
+              precio_venta: data.salePrice,
+              stock_minimo: data.minStock,
+              stock_maximo: data.maxStock,
+            };
+          }
+          return product;
+        });
+      });
+
+      setIsEditDialogOpen(false);
+      
+      toast({
+        title: "Producto actualizado",
+        description: "El producto ha sido actualizado correctamente.",
+      });
+    } catch (error) {
+      console.error("Error updating product:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el producto. Intente nuevamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const [units, setUnits] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    async function fetchUnits() {
+      try {
+        const { data: unitsData, error: unitsError } = await supabase
+          .from("unidades")
+          .select("id, nombre");
+        
+        if (unitsError) throw unitsError;
+        
+        setUnits(unitsData.map(unit => ({ id: unit.id, name: unit.nombre })));
+      } catch (error) {
+        console.error("Error fetching units:", error);
+      }
+    }
+    
+    fetchUnits();
+  }, []);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -390,7 +547,10 @@ export const ProductTable = () => {
                   Complete los detalles del producto y presione guardar cuando termine.
                 </DialogDescription>
               </DialogHeader>
-              <ProductForm onSuccess={() => setIsAddDialogOpen(false)} />
+              <ProductForm 
+                onSubmit={handleAddProductSubmit} 
+                isSubmitting={isLoading}
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -543,8 +703,20 @@ export const ProductTable = () => {
           </DialogHeader>
           {selectedProduct && (
             <ProductForm 
-              productId={selectedProduct.id} 
-              onSuccess={() => setIsEditDialogOpen(false)} 
+              initialData={{
+                name: selectedProduct.nombre,
+                category: selectedProduct.categoria_id,
+                unit: selectedProduct.unidad_id,
+                purchasePrice: selectedProduct.precio_compra,
+                salePrice: selectedProduct.precio_venta,
+                minStock: selectedProduct.stock_minimo,
+                maxStock: selectedProduct.stock_maximo,
+                initialStock: 0,
+                warehouse: "",
+              }}
+              onSubmit={handleEditProductSubmit}
+              isSubmitting={isLoading}
+              isEditing={true}
             />
           )}
         </DialogContent>
