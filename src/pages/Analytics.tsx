@@ -133,291 +133,293 @@ const Analytics = () => {
         </div>
       </div>
 
-      <TabsContent value="sales" className="m-0">
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="transition-all duration-300 hover:shadow-elevation">
-            <CardHeader>
-              <CardTitle className="text-lg font-medium">Ingresos y Ganancias</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={salesData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="date" className="text-xs" />
-                    <YAxis className="text-xs" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: "hsl(var(--card))",
-                        borderColor: "hsl(var(--border))",
-                        borderRadius: "var(--radius)",
-                      }}
-                      formatter={(value) => [`$${value.toLocaleString()}`, '']}
-                      labelFormatter={(label) => `Mes: ${label}`}
-                    />
-                    <Legend />
-                    <Bar dataKey="revenue" name="Ingresos" fill="hsl(var(--primary))" />
-                    <Bar dataKey="profit" name="Ganancias" fill="hsl(var(--accent-foreground))" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+      <div>
+        {activeTab === "sales" && (
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="transition-all duration-300 hover:shadow-elevation">
+              <CardHeader>
+                <CardTitle className="text-lg font-medium">Ingresos y Ganancias</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={salesData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="date" className="text-xs" />
+                      <YAxis className="text-xs" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: "hsl(var(--card))",
+                          borderColor: "hsl(var(--border))",
+                          borderRadius: "var(--radius)",
+                        }}
+                        formatter={(value) => [`$${value.toLocaleString()}`, '']}
+                        labelFormatter={(label) => `Mes: ${label}`}
+                      />
+                      <Legend />
+                      <Bar dataKey="revenue" name="Ingresos" fill="hsl(var(--primary))" />
+                      <Bar dataKey="profit" name="Ganancias" fill="hsl(var(--accent-foreground))" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="transition-all duration-300 hover:shadow-elevation">
-            <CardHeader>
-              <CardTitle className="text-lg font-medium">Tendencia de Ventas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={salesData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="date" className="text-xs" />
-                    <YAxis className="text-xs" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: "hsl(var(--card))",
-                        borderColor: "hsl(var(--border))",
-                        borderRadius: "var(--radius)",
-                      }}
-                      formatter={(value) => [`$${value.toLocaleString()}`, '']}
-                      labelFormatter={(label) => `Mes: ${label}`}
-                    />
-                    <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="revenue" 
-                      name="Ingresos"
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={2}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </TabsContent>
+            <Card className="transition-all duration-300 hover:shadow-elevation">
+              <CardHeader>
+                <CardTitle className="text-lg font-medium">Tendencia de Ventas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={salesData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="date" className="text-xs" />
+                      <YAxis className="text-xs" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: "hsl(var(--card))",
+                          borderColor: "hsl(var(--border))",
+                          borderRadius: "var(--radius)",
+                        }}
+                        formatter={(value) => [`$${value.toLocaleString()}`, '']}
+                        labelFormatter={(label) => `Mes: ${label}`}
+                      />
+                      <Legend />
+                      <Line 
+                        type="monotone" 
+                        dataKey="revenue" 
+                        name="Ingresos"
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-      <TabsContent value="products" className="m-0">
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="transition-all duration-300 hover:shadow-elevation">
-            <CardHeader>
-              <CardTitle className="text-lg font-medium">Distribución por Categoría</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={categoryData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {categoryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ 
-                        backgroundColor: "hsl(var(--card))",
-                        borderColor: "hsl(var(--border))",
-                        borderRadius: "var(--radius)",
-                      }}
-                      formatter={(value) => [`${value}%`, 'Porcentaje']}
-                      labelFormatter={(label) => `Categoría: ${label}`}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+        {activeTab === "products" && (
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="transition-all duration-300 hover:shadow-elevation">
+              <CardHeader>
+                <CardTitle className="text-lg font-medium">Distribución por Categoría</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={categoryData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ 
+                          backgroundColor: "hsl(var(--card))",
+                          borderColor: "hsl(var(--border))",
+                          borderRadius: "var(--radius)",
+                        }}
+                        formatter={(value) => [`${value}%`, 'Porcentaje']}
+                        labelFormatter={(label) => `Categoría: ${label}`}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="transition-all duration-300 hover:shadow-elevation">
-            <CardHeader>
-              <CardTitle className="text-lg font-medium">Ventas por Categoría</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={categoryData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="name" className="text-xs" />
-                    <YAxis className="text-xs" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: "hsl(var(--card))",
-                        borderColor: "hsl(var(--border))",
-                        borderRadius: "var(--radius)",
-                      }}
-                      formatter={(value) => [`${value}%`, 'Porcentaje']}
-                    />
-                    <Bar dataKey="value" name="Ventas" fill="hsl(var(--primary))">
-                      {categoryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </TabsContent>
+            <Card className="transition-all duration-300 hover:shadow-elevation">
+              <CardHeader>
+                <CardTitle className="text-lg font-medium">Ventas por Categoría</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={categoryData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="name" className="text-xs" />
+                      <YAxis className="text-xs" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: "hsl(var(--card))",
+                          borderColor: "hsl(var(--border))",
+                          borderRadius: "var(--radius)",
+                        }}
+                        formatter={(value) => [`${value}%`, 'Porcentaje']}
+                      />
+                      <Bar dataKey="value" name="Ventas" fill="hsl(var(--primary))">
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-      <TabsContent value="stores" className="m-0">
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="transition-all duration-300 hover:shadow-elevation">
-            <CardHeader>
-              <CardTitle className="text-lg font-medium">Comparativa de Tiendas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={storeData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="name" className="text-xs" />
-                    <YAxis className="text-xs" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: "hsl(var(--card))",
-                        borderColor: "hsl(var(--border))",
-                        borderRadius: "var(--radius)",
-                      }}
-                      formatter={(value) => [`$${value.toLocaleString()}`, '']}
-                    />
-                    <Legend />
-                    <Bar dataKey="sales" name="Ventas" fill="hsl(var(--primary))" />
-                    <Bar dataKey="profit" name="Ganancias" fill="hsl(var(--accent-foreground))" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+        {activeTab === "stores" && (
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="transition-all duration-300 hover:shadow-elevation">
+              <CardHeader>
+                <CardTitle className="text-lg font-medium">Comparativa de Tiendas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={storeData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="name" className="text-xs" />
+                      <YAxis className="text-xs" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: "hsl(var(--card))",
+                          borderColor: "hsl(var(--border))",
+                          borderRadius: "var(--radius)",
+                        }}
+                        formatter={(value) => [`$${value.toLocaleString()}`, '']}
+                      />
+                      <Legend />
+                      <Bar dataKey="sales" name="Ventas" fill="hsl(var(--primary))" />
+                      <Bar dataKey="profit" name="Ganancias" fill="hsl(var(--accent-foreground))" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="transition-all duration-300 hover:shadow-elevation">
-            <CardHeader>
-              <CardTitle className="text-lg font-medium">Rendimiento por Tienda</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={storeData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="sales"
-                      nameKey="name"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {storeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ 
-                        backgroundColor: "hsl(var(--card))",
-                        borderColor: "hsl(var(--border))",
-                        borderRadius: "var(--radius)",
-                      }}
-                      formatter={(value) => [`$${value.toLocaleString()}`, 'Ventas']}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </TabsContent>
+            <Card className="transition-all duration-300 hover:shadow-elevation">
+              <CardHeader>
+                <CardTitle className="text-lg font-medium">Rendimiento por Tienda</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={storeData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="sales"
+                        nameKey="name"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {storeData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ 
+                          backgroundColor: "hsl(var(--card))",
+                          borderColor: "hsl(var(--border))",
+                          borderRadius: "var(--radius)",
+                        }}
+                        formatter={(value) => [`$${value.toLocaleString()}`, 'Ventas']}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-      <TabsContent value="inventory" className="m-0">
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="transition-all duration-300 hover:shadow-elevation">
-            <CardHeader>
-              <CardTitle className="text-lg font-medium">Niveles de Inventario</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={inventoryData}>
-                    <defs>
-                      <linearGradient id="colorLevel" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="date" className="text-xs" />
-                    <YAxis className="text-xs" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: "hsl(var(--card))",
-                        borderColor: "hsl(var(--border))",
-                        borderRadius: "var(--radius)",
-                      }}
-                      formatter={(value) => [`${value} unidades`, 'Nivel']}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="level" 
-                      name="Nivel de Inventario"
-                      stroke="hsl(var(--primary))" 
-                      fillOpacity={1} 
-                      fill="url(#colorLevel)" 
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+        {activeTab === "inventory" && (
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="transition-all duration-300 hover:shadow-elevation">
+              <CardHeader>
+                <CardTitle className="text-lg font-medium">Niveles de Inventario</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={inventoryData}>
+                      <defs>
+                        <linearGradient id="colorLevel" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="date" className="text-xs" />
+                      <YAxis className="text-xs" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: "hsl(var(--card))",
+                          borderColor: "hsl(var(--border))",
+                          borderRadius: "var(--radius)",
+                        }}
+                        formatter={(value) => [`${value} unidades`, 'Nivel']}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="level" 
+                        name="Nivel de Inventario"
+                        stroke="hsl(var(--primary))" 
+                        fillOpacity={1} 
+                        fill="url(#colorLevel)" 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="transition-all duration-300 hover:shadow-elevation">
-            <CardHeader>
-              <CardTitle className="text-lg font-medium">Tendencia de Inventario</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={inventoryData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="date" className="text-xs" />
-                    <YAxis className="text-xs" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: "hsl(var(--card))",
-                        borderColor: "hsl(var(--border))",
-                        borderRadius: "var(--radius)",
-                      }}
-                      formatter={(value) => [`${value} unidades`, 'Nivel']}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="level" 
-                      name="Nivel de Inventario"
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={2}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </TabsContent>
+            <Card className="transition-all duration-300 hover:shadow-elevation">
+              <CardHeader>
+                <CardTitle className="text-lg font-medium">Tendencia de Inventario</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={inventoryData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="date" className="text-xs" />
+                      <YAxis className="text-xs" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: "hsl(var(--card))",
+                          borderColor: "hsl(var(--border))",
+                          borderRadius: "var(--radius)",
+                        }}
+                        formatter={(value) => [`${value} unidades`, 'Nivel']}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="level" 
+                        name="Nivel de Inventario"
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
