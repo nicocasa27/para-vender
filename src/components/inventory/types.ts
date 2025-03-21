@@ -27,5 +27,6 @@ export interface UpdateInventoryParams {
   p_cantidad: number;
 }
 
-// Since the update_inventory SQL function returns void, we'll use void as the return type
-export type UpdateInventoryReturn = void;
+// El tipo de retorno para la función RPC update_inventory
+// Usamos Record<string, never> que es compatible con los tipos de Supabase
+export type UpdateInventoryReturn = Record<string, never>;

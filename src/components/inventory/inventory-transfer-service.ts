@@ -102,6 +102,7 @@ export const transferInventory = async (
 ): Promise<void> => {
   console.log("Starting transfer process...");
   
+  // Reducir inventario en almacén de origen
   const sourceParams: UpdateInventoryParams = {
     p_producto_id: productId,
     p_almacen_id: sourceStoreId,
@@ -110,10 +111,9 @@ export const transferInventory = async (
   
   console.log("Source params:", sourceParams);
   
-  const { error: sourceError } = await supabase.rpc<UpdateInventoryReturn, UpdateInventoryParams>(
-    "update_inventory", 
-    sourceParams
-  );
+  // Utilizamos la opción correcta de tipo para supabase.rpc
+  const { error: sourceError } = await supabase
+    .rpc("update_inventory", sourceParams);
   
   if (sourceError) {
     console.error("Source error:", sourceError);
@@ -122,6 +122,7 @@ export const transferInventory = async (
   
   console.log("Source update successful, proceeding with target update");
   
+  // Aumentar inventario en almacén de destino
   const targetParams: UpdateInventoryParams = {
     p_producto_id: productId,
     p_almacen_id: targetStoreId,
@@ -130,10 +131,9 @@ export const transferInventory = async (
   
   console.log("Target params:", targetParams);
   
-  const { error: targetError } = await supabase.rpc<UpdateInventoryReturn, UpdateInventoryParams>(
-    "update_inventory", 
-    targetParams
-  );
+  // Utilizamos la opción correcta de tipo para supabase.rpc
+  const { error: targetError } = await supabase
+    .rpc("update_inventory", targetParams);
   
   if (targetError) {
     console.error("Target error:", targetError);
@@ -142,6 +142,7 @@ export const transferInventory = async (
   
   console.log("Target update successful, recording the movement");
   
+  // Registrar el movimiento en la tabla de movimientos
   const { error: movementError } = await supabase
     .from("movimientos")
     .insert({
