@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -82,7 +81,7 @@ export const ProductTable = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStore, setSelectedStore] = useState("all");
   const [page, setPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isStockDialogOpen, setIsStockDialogOpen] = useState(false);
@@ -332,69 +331,63 @@ export const ProductTable = () => {
     return "normal";
   };
 
-  // Filtrar productos basados en búsqueda, categoría y almacén
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.nombre
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
+    
     const matchesCategory =
       selectedCategory === "all" ||
-      product.categoria.toLowerCase() === categories.find(cat => cat.id === selectedCategory)?.name.toLowerCase();
+      product.categoria_id === selectedCategory;
+    
     const matchesStore =
       selectedStore === "all" ||
-      product.stock[
-        stores.find((store) => store.id === selectedStore)?.name || ""
-      ] !== undefined;
+      Object.entries(product.stock).some(([storeName, quantity]) => {
+        const storeId = stores.find(s => s.name === storeName)?.id;
+        return storeId === selectedStore && quantity > 0;
+      });
+    
     return matchesSearch && matchesCategory && matchesStore;
   });
 
-  // Paginar productos
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const paginatedProducts = filteredProducts.slice(
     (page - 1) * itemsPerPage,
     page * itemsPerPage
   );
 
-  // Generar array de páginas para la paginación
   const getPageNumbers = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5; // Número máximo de páginas a mostrar
+    const maxPagesToShow = 5;
     
     if (totalPages <= maxPagesToShow) {
-      // Si hay menos páginas que el máximo, mostrar todas
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
       }
     } else {
-      // Siempre mostrar la primera página
       pageNumbers.push(1);
       
       let startPage = Math.max(2, page - 1);
       let endPage = Math.min(totalPages - 1, page + 1);
       
-      // Ajustar si estamos al principio o al final
       if (page <= 2) {
         endPage = 3;
       } else if (page >= totalPages - 1) {
         startPage = totalPages - 2;
       }
       
-      // Agregar elipsis si es necesario
       if (startPage > 2) {
         pageNumbers.push('ellipsis-start');
       }
       
-      // Agregar páginas del medio
       for (let i = startPage; i <= endPage; i++) {
         pageNumbers.push(i);
       }
       
-      // Agregar elipsis si es necesario
       if (endPage < totalPages - 1) {
         pageNumbers.push('ellipsis-end');
       }
       
-      // Siempre mostrar la última página
       pageNumbers.push(totalPages);
     }
     
@@ -472,7 +465,6 @@ export const ProductTable = () => {
                 <ProductForm
                   onSubmit={async (data) => {
                     try {
-                      // Insertar nuevo producto
                       const { data: newProduct, error } = await supabase
                         .from("productos")
                         .insert({
@@ -488,7 +480,6 @@ export const ProductTable = () => {
                       
                       if (error) throw error;
                       
-                      // Registrar inventario inicial si se especificó
                       if (data.initialStock > 0 && data.warehouse) {
                         const { error: inventoryError } = await supabase
                           .from("inventario")
@@ -501,7 +492,6 @@ export const ProductTable = () => {
                         if (inventoryError) throw inventoryError;
                       }
                       
-                      // Obtener datos para mostrar el producto
                       const { data: productData, error: productError } = await supabase
                         .from("productos")
                         .select(`
@@ -514,10 +504,8 @@ export const ProductTable = () => {
                       
                       if (productError) throw productError;
                       
-                      // Obtener el almacén para el stock inicial
                       const warehouse = stores.find(store => store.id === data.warehouse)?.name || "";
                       
-                      // Agregar a la lista de productos
                       const newProductWithStock = {
                         id: productData.id,
                         nombre: productData.nombre,
@@ -680,7 +668,7 @@ export const ProductTable = () => {
               value={itemsPerPage.toString()}
               onValueChange={(value) => {
                 setItemsPerPage(parseInt(value));
-                setPage(1); // Reset to first page when changing items per page
+                setPage(1);
               }}
             >
               <SelectTrigger className="w-16">
@@ -733,7 +721,6 @@ export const ProductTable = () => {
         </div>
       </Card>
 
-      {/* Dialog para editar productos */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[625px]">
           <DialogHeader>
@@ -752,14 +739,13 @@ export const ProductTable = () => {
                 salePrice: selectedProduct.precio_venta,
                 minStock: selectedProduct.stock_minimo,
                 maxStock: selectedProduct.stock_maximo,
-                initialStock: 0, // No se usa para edición
-                warehouse: "", // No se usa para edición
+                initialStock: 0,
+                warehouse: "",
               }}
               onSubmit={async (data) => {
                 if (!selectedProduct) return;
 
                 try {
-                  // Actualizar el producto
                   const { error } = await supabase
                     .from("productos")
                     .update({
@@ -775,7 +761,6 @@ export const ProductTable = () => {
                   
                   if (error) throw error;
                   
-                  // Actualizar el estado local
                   setProducts(prev => prev.map(product => {
                     if (product.id === selectedProduct.id) {
                       return {
@@ -816,7 +801,6 @@ export const ProductTable = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog para agregar stock */}
       <Dialog open={isStockDialogOpen} onOpenChange={setIsStockDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
