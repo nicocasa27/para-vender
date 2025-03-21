@@ -1,4 +1,5 @@
 
+
 export interface Store {
   id: string;
   nombre: string;
@@ -27,6 +28,7 @@ export interface UpdateInventoryParams {
   p_cantidad: number;
 }
 
-// El tipo de retorno para la función RPC update_inventory
-// Usamos Record<string, never> que es compatible con los tipos de Supabase
-export type UpdateInventoryReturn = Record<string, never>;
+// Tipo correcto para función RPC sin retorno
+// No necesitamos genéricos para este caso
+export type UpdateInventoryReturn = void;
+

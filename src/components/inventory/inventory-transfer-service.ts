@@ -4,8 +4,7 @@ import {
   Store, 
   Product, 
   TransferHistory, 
-  UpdateInventoryParams,
-  UpdateInventoryReturn
+  UpdateInventoryParams
 } from "./types";
 
 export const fetchStores = async (): Promise<Store[]> => {
@@ -111,7 +110,7 @@ export const transferInventory = async (
   
   console.log("Source params:", sourceParams);
   
-  // Utilizamos la opción correcta de tipo para supabase.rpc
+  // Llamar al procedimiento RPC sin especificar tipos genéricos
   const { error: sourceError } = await supabase
     .rpc("update_inventory", sourceParams);
   
@@ -131,7 +130,7 @@ export const transferInventory = async (
   
   console.log("Target params:", targetParams);
   
-  // Utilizamos la opción correcta de tipo para supabase.rpc
+  // Llamar al procedimiento RPC sin especificar tipos genéricos
   const { error: targetError } = await supabase
     .rpc("update_inventory", targetParams);
   
@@ -161,3 +160,4 @@ export const transferInventory = async (
 
   console.log("Transfer process completed successfully");
 };
+
