@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const productFormSchema = z.object({
@@ -141,7 +141,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -366,7 +366,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader className="mr-2 h-4 w-4 animate-spin" />
             )}
             {isEditing ? "Actualizar Producto" : "Agregar Producto"}
           </Button>
