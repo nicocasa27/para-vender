@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -25,7 +26,6 @@ import {
   AreaChart,
   Area,
 } from "recharts";
-import { SalesChart } from "@/components/dashboard/SalesChart";
 import { 
   fetchSalesByCategory, 
   fetchStorePerformance, 
@@ -51,6 +51,32 @@ const Analytics = () => {
   const [salesTrend, setSalesTrend] = useState<SalesData[]>([]);
   const [inventoryLevels, setInventoryLevels] = useState<InventoryData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Cargar datos reales al montar el componente
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const [categoriesData, storesData, salesData, inventoryData] = await Promise.all([
+          fetchSalesByCategory(),
+          fetchStorePerformance(),
+          fetchSalesTrend(),
+          fetchInventoryLevels()
+        ]);
+
+        setSalesByCategory(categoriesData);
+        setStorePerformance(storesData);
+        setSalesTrend(salesData);
+        setInventoryLevels(inventoryData);
+      } catch (error) {
+        console.error("Error cargando datos de análisis:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   // Formatear valores monetarios
   const formatCurrency = (value: number) => {
@@ -110,11 +136,6 @@ const Analytics = () => {
             </SelectContent>
           </Select>
         </div>
-      </div>
-
-      {/* Add the SalesChart at the top of the analytics page */}
-      <div className="mb-6">
-        <SalesChart />
       </div>
 
       {isLoading ? (
