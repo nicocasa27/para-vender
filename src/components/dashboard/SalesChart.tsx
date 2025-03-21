@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchTopSellingProducts, TopSellingProduct } from "@/services/analytics";
+import { useToast } from "@/hooks/use-toast";
 
 type TimeRange = "daily" | "weekly" | "monthly";
 
@@ -24,6 +25,7 @@ export const SalesChart = () => {
   const [chartData, setChartData] = useState<TopSellingProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [stores, setStores] = useState<{id: string, nombre: string}[]>([]);
+  const { toast } = useToast();
 
   // Fetch stores
   useEffect(() => {
@@ -34,6 +36,11 @@ export const SalesChart = () => {
       
       if (error) {
         console.error('Error fetching stores:', error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las tiendas",
+          variant: "destructive",
+        });
         return;
       }
       
@@ -43,24 +50,42 @@ export const SalesChart = () => {
     };
     
     fetchStores();
-  }, []);
+  }, [toast]);
 
   // Fetch top selling products based on timeRange and selectedStore
-  useEffect(() => {
-    const fetchProductSales = async () => {
-      setIsLoading(true);
-      try {
-        const data = await fetchTopSellingProducts(timeRange, selectedStore);
-        setChartData(data);
-      } catch (error) {
-        console.error('Error fetching product sales data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchProductSalesData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      console.log(`Fetching data with timeRange: ${timeRange}, store: ${selectedStore || 'all'}`);
+      const data = await fetchTopSellingProducts(timeRange, selectedStore);
+      console.log('Fetched data:', data);
+      setChartData(data);
+    } catch (error) {
+      console.error('Error fetching product sales data:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los datos de ventas",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [timeRange, selectedStore, toast]);
 
-    fetchProductSales();
-  }, [timeRange, selectedStore]);
+  // Refetch data when timeRange or selectedStore changes
+  useEffect(() => {
+    fetchProductSalesData();
+  }, [timeRange, selectedStore, fetchProductSalesData]);
+
+  // Handle time range change
+  const handleTimeRangeChange = (value: string) => {
+    setTimeRange(value as TimeRange);
+  };
+
+  // Handle store selection change
+  const handleStoreChange = (value: string) => {
+    setSelectedStore(value === "all" ? null : value);
+  };
 
   // Colors for the bars
   const COLORS = [
@@ -83,9 +108,9 @@ export const SalesChart = () => {
         <div className="flex items-center gap-2">
           <Select
             value={selectedStore || "all"}
-            onValueChange={(value) => setSelectedStore(value === "all" ? null : value)}
+            onValueChange={handleStoreChange}
           >
-            <SelectTrigger className="w-[140px] h-8">
+            <SelectTrigger className="w-[180px] h-8">
               <SelectValue placeholder="Tienda" />
             </SelectTrigger>
             <SelectContent>
@@ -98,7 +123,7 @@ export const SalesChart = () => {
           <Tabs
             defaultValue="monthly"
             value={timeRange}
-            onValueChange={(value) => setTimeRange(value as TimeRange)}
+            onValueChange={handleTimeRangeChange}
           >
             <TabsList className="grid grid-cols-3 h-8">
               <TabsTrigger value="daily" className="text-xs">Diario</TabsTrigger>

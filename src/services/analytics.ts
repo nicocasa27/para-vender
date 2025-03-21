@@ -289,6 +289,8 @@ export async function fetchInventoryLevels(): Promise<InventoryData[]> {
 // New function to fetch top selling products
 export async function fetchTopSellingProducts(timeRange: 'daily' | 'weekly' | 'monthly' = 'monthly', storeId: string | null = null): Promise<TopSellingProduct[]> {
   try {
+    console.log(`fetchTopSellingProducts called with timeRange: ${timeRange}, storeId: ${storeId || 'all'}`);
+    
     // Get sales data with product details
     let query = supabase
       .from('detalles_venta')
@@ -317,11 +319,14 @@ export async function fetchTopSellingProducts(timeRange: 'daily' | 'weekly' | 'm
     }
     
     const isoStartDate = startDate.toISOString();
+    console.log(`Date filter: ${isoStartDate} to now`);
     
-    // Filter by date and store if specified
+    // Filter by date
     query = query.gte('ventas.created_at', isoStartDate);
     
+    // Filter by store if specified
     if (storeId) {
+      console.log(`Filtering by store: ${storeId}`);
       query = query.eq('ventas.almacen_id', storeId);
     }
     
@@ -331,6 +336,8 @@ export async function fetchTopSellingProducts(timeRange: 'daily' | 'weekly' | 'm
       console.error('Error fetching top selling products:', error);
       return [];
     }
+    
+    console.log(`Retrieved ${salesData?.length || 0} sales records`);
     
     // Process the sales data to get top selling products
     const productSales: Record<string, { name: string; value: number }> = {};
@@ -355,6 +362,7 @@ export async function fetchTopSellingProducts(timeRange: 'daily' | 'weekly' | 'm
       .sort((a, b) => b.value - a.value)
       .slice(0, 10); // Get top 10 products
     
+    console.log(`Returning ${topProducts.length} top products`);
     return topProducts;
   } catch (error) {
     console.error('Error in fetchTopSellingProducts:', error);
