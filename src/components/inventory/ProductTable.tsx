@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -246,4 +247,362 @@ export const ProductTable = () => {
 
       if (checkError) throw checkError;
 
-      const
+      const updateResult = existingInventory
+        ? await supabase
+            .from("inventario")
+            .update({
+              cantidad: existingInventory.cantidad + newStockQuantity,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", existingInventory.id)
+        : await supabase
+            .from("inventario")
+            .insert({
+              producto_id: selectedProduct.id,
+              almacen_id: selectedStockWarehouse,
+              cantidad: newStockQuantity,
+            });
+
+      if (updateResult.error) throw updateResult.error;
+
+      // Add movement record
+      const { error: movementError } = await supabase
+        .from("movimientos")
+        .insert({
+          producto_id: selectedProduct.id,
+          tipo: "entrada",
+          cantidad: newStockQuantity,
+          almacen_destino_id: selectedStockWarehouse,
+          notas: "Actualización manual de inventario",
+        });
+
+      if (movementError) throw movementError;
+
+      // Update the products state
+      setProducts((prevProducts) => {
+        return prevProducts.map((product) => {
+          if (product.id === selectedProduct.id) {
+            const updatedStock = { ...product.stock };
+            const storeName = stores.find((store) => store.id === selectedStockWarehouse)?.name || "";
+            
+            if (storeName) {
+              updatedStock[storeName] = (updatedStock[storeName] || 0) + newStockQuantity;
+            }
+            
+            return {
+              ...product,
+              stock: updatedStock,
+            };
+          }
+          return product;
+        });
+      });
+
+      setIsStockDialogOpen(false);
+      
+      toast({
+        title: "Stock actualizado",
+        description: "El inventario ha sido actualizado correctamente.",
+      });
+    } catch (error) {
+      console.error("Error updating stock:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el inventario. Intente nuevamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Filter products based on selected filters and search term
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || product.categoria_id === selectedCategory;
+    
+    // Always include all products regardless of store, since we want to show availability
+    return matchesSearch && matchesCategory;
+  });
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const paginatedProducts = filteredProducts.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage
+  );
+
+  // Get the current store name for the selected store
+  const currentStoreName = stores.find(store => store.id === selectedStore)?.name || "";
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Buscar productos..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map(category => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedStore} onValueChange={setSelectedStore}>
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {stores.map(store => (
+                <SelectItem key={store.id} value={store.id}>
+                  {store.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="w-full sm:w-auto">
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Producto
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Agregar Nuevo Producto</DialogTitle>
+                <DialogDescription>
+                  Complete los detalles del producto y presione guardar cuando termine.
+                </DialogDescription>
+              </DialogHeader>
+              <ProductForm onSuccess={() => setIsAddDialogOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <Card>
+        {isLoading ? (
+          <div className="flex justify-center items-center h-60">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          </div>
+        ) : paginatedProducts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-60 text-center">
+            <Package className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium">No se encontraron productos</h3>
+            <p className="text-muted-foreground max-w-xs mt-2">
+              No hay productos que coincidan con su búsqueda. Intenta con otros filtros o añade un
+              nuevo producto.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Producto</TableHead>
+                  <TableHead>Categoría</TableHead>
+                  <TableHead>Unidad</TableHead>
+                  <TableHead>Precio Compra</TableHead>
+                  <TableHead>Precio Venta</TableHead>
+                  <TableHead>Stock</TableHead>
+                  {selectedStore !== "all" && (
+                    <TableHead>Disponibilidad</TableHead>
+                  )}
+                  <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedProducts.map((product) => {
+                  const stockInSelectedStore = selectedStore !== "all" 
+                    ? (product.stock[currentStoreName] || 0)
+                    : Object.values(product.stock).reduce((sum, qty) => sum + qty, 0);
+                  
+                  const isLowStock = stockInSelectedStore < product.stock_minimo;
+                  const isAvailableInStore = selectedStore !== "all" && stockInSelectedStore > 0;
+                  
+                  return (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">{product.nombre}</TableCell>
+                      <TableCell>{product.categoria}</TableCell>
+                      <TableCell>{product.unidad}</TableCell>
+                      <TableCell>${product.precio_compra.toFixed(2)}</TableCell>
+                      <TableCell>${product.precio_venta.toFixed(2)}</TableCell>
+                      <TableCell>{stockInSelectedStore}</TableCell>
+                      {selectedStore !== "all" && (
+                        <TableCell>
+                          {isAvailableInStore ? (
+                            <Check className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <X className="h-5 w-5 text-red-500" />
+                          )}
+                        </TableCell>
+                      )}
+                      <TableCell>
+                        <Badge variant={isLowStock ? "destructive" : "outline"}>
+                          {isLowStock ? "Stock Bajo" : "Normal"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Abrir menú</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditProduct(product)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStockUpdate(product)}>
+                              <FileText className="h-4 w-4 mr-2" />
+                              Actualizar Stock
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={() => handleDeleteProduct(product.id)}
+                            >
+                              <Trash className="h-4 w-4 mr-2" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-end space-x-2 py-4 px-4">
+            <div className="flex-1 text-sm text-muted-foreground">
+              Mostrando <strong>{paginatedProducts.length}</strong> de{" "}
+              <strong>{filteredProducts.length}</strong> productos
+            </div>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                    className={page <= 1 ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+                {Array.from({ length: totalPages }).map((_, index) => (
+                  <PaginationItem key={index}>
+                    <PaginationLink
+                      onClick={() => setPage(index + 1)}
+                      isActive={page === index + 1}
+                    >
+                      {index + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+                    className={
+                      page >= totalPages ? "pointer-events-none opacity-50" : ""
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
+      </Card>
+
+      {/* Edit Product Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Editar Producto</DialogTitle>
+            <DialogDescription>
+              Actualice los detalles del producto y presione guardar cuando termine.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedProduct && (
+            <ProductForm 
+              productId={selectedProduct.id} 
+              onSuccess={() => setIsEditDialogOpen(false)} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Stock Update Dialog */}
+      <Dialog open={isStockDialogOpen} onOpenChange={setIsStockDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Actualizar Stock</DialogTitle>
+            <DialogDescription>
+              Introduzca la cantidad a añadir y seleccione el almacén.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <h3 className="font-semibold">{selectedProduct?.nombre}</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium leading-none">Almacén</label>
+                  <Select
+                    value={selectedStockWarehouse}
+                    onValueChange={setSelectedStockWarehouse}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione Almacén" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stores
+                        .filter(store => store.id !== "all")
+                        .map(store => (
+                          <SelectItem key={store.id} value={store.id}>
+                            {store.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium leading-none">Cantidad a añadir</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={newStockQuantity}
+                    onChange={(e) => setNewStockQuantity(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+              <div className="pt-4 flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setIsStockDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={saveStockUpdate}>Guardar</Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
