@@ -20,20 +20,49 @@ type ChartData = {
 
 type TimeRange = "daily" | "weekly" | "monthly";
 
-// Helper function to get last n months
-function getRecentMonths(n: number = 6): string[] {
-  const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth(); // 0-based index
+// Helper function to get the current date in a specific format
+function formatDate(date: Date, format: 'day' | 'week' | 'month'): string {
+  if (format === 'day') {
+    const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    return days[date.getDay()];
+  } else if (format === 'week') {
+    const weekNumber = Math.ceil((date.getDate() + 6 - date.getDay()) / 7);
+    return `Semana ${weekNumber}`;
+  } else {
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return months[date.getMonth()];
+  }
+}
+
+// Helper function to get recent dates (days, weeks, months)
+function getRecentDates(timeRange: TimeRange, count: number): string[] {
+  const dates: string[] = [];
+  const today = new Date();
   
-  const recentMonths: string[] = [];
-  
-  for (let i = 0; i < n; i++) {
-    const monthIndex = (currentMonth - i + 12) % 12;
-    recentMonths.unshift(months[monthIndex]);
+  if (timeRange === 'daily') {
+    // Get the last 'count' days
+    for (let i = count - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(today.getDate() - i);
+      dates.push(formatDate(date, 'day'));
+    }
+  } else if (timeRange === 'weekly') {
+    // Get the last 'count' weeks
+    for (let i = count - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(today.getDate() - (i * 7));
+      dates.push(formatDate(date, 'week'));
+    }
+  } else {
+    // Get the last 'count' months including the current one
+    for (let i = count - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(today.getMonth() - i);
+      dates.push(formatDate(date, 'month'));
+    }
   }
   
-  return recentMonths;
+  return dates;
 }
 
 export const SalesChart = () => {
@@ -45,89 +74,56 @@ export const SalesChart = () => {
     const fetchSalesData = async () => {
       setIsLoading(true);
       try {
-        // Get total inventory value
-        const { data: productos, error: productosError } = await supabase
-          .from('productos')
-          .select('id, precio_venta');
+        // Get actual sales data from the database based on the selected time range
+        const { data: ventas, error: ventasError } = await supabase
+          .from('ventas')
+          .select('id, total, created_at')
+          .order('created_at', { ascending: true });
 
-        if (productosError) {
-          console.error('Error fetching productos:', productosError);
+        if (ventasError) {
+          console.error('Error fetching ventas:', ventasError);
           return;
         }
 
-        const { data: inventario, error: inventarioError } = await supabase
-          .from('inventario')
-          .select('producto_id, cantidad');
-
-        if (inventarioError) {
-          console.error('Error fetching inventario:', inventarioError);
-          return;
-        }
-
-        // Calculate product quantities
-        const productQuantities: Record<string, number> = {};
-        inventario.forEach(item => {
-          if (productQuantities[item.producto_id]) {
-            productQuantities[item.producto_id] += item.cantidad;
-          } else {
-            productQuantities[item.producto_id] = item.cantidad;
-          }
-        });
-
-        // Calculate total value
-        let totalValue = 0;
-        productos.forEach(producto => {
-          const quantity = productQuantities[producto.id] || 0;
-          totalValue += producto.precio_venta * quantity;
-        });
-
-        // Generate time-based data
-        let data: ChartData[] = [];
-        const baseValue = totalValue / (timeRange === 'daily' ? 7 : timeRange === 'weekly' ? 4 : 12);
-
+        // Prepare the date ranges
+        let recentDates: string[];
         if (timeRange === 'daily') {
-          // Get days of the week (starting from current day and going backwards)
-          const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-          const currentDay = new Date().getDay(); // 0 = Sunday, 6 = Saturday
-          
-          // Reorder days array to start from current day going backwards
-          const reorderedDays = [];
-          for (let i = 0; i < 7; i++) {
-            const dayIndex = (currentDay - i + 7) % 7;
-            reorderedDays.unshift(days[dayIndex]);
-          }
-          
-          data = reorderedDays.map((day, index) => ({
-            name: day,
-            value: Math.round(baseValue * (0.8 + Math.random() * 0.4 + (index % 5 === 0 ? 0.2 : 0)))
-          }));
+          recentDates = getRecentDates('daily', 7);
         } else if (timeRange === 'weekly') {
-          // Get recent weeks (backwards from current week)
-          const currentDate = new Date();
-          const currentWeek = Math.ceil((currentDate.getDate() + 6) / 7);
-          
-          data = Array.from({ length: 4 }, (_, i) => {
-            const weekNumber = ((currentWeek - i) + 52) % 52 || 52;
-            return {
-              name: `Semana ${weekNumber}`,
-              value: Math.round(baseValue * (0.85 + Math.random() * 0.3 + (i === 1 ? 0.15 : 0)))
-            };
-          }).reverse();
+          recentDates = getRecentDates('weekly', 4);
         } else {
-          // Get the last 6 months including the current one
-          const recentMonths = getRecentMonths(6);
-          
-          data = recentMonths.map((month, index) => {
-            // Create seasonal patterns
-            const seasonalFactor = 1 + Math.sin(index / 6 * Math.PI) * 0.3;
-            return {
-              name: month,
-              value: Math.round(baseValue * seasonalFactor * (0.85 + Math.random() * 0.3))
-            };
+          recentDates = getRecentDates('monthly', 6);
+        }
+
+        // Initialize chart data with zero values for all dates
+        const initialChartData = recentDates.map(date => ({
+          name: date,
+          value: 0
+        }));
+
+        // If we have sales data, aggregate them by the appropriate time range
+        if (ventas && ventas.length > 0) {
+          ventas.forEach(venta => {
+            const ventaDate = new Date(venta.created_at);
+            let dateKey: string;
+            
+            if (timeRange === 'daily') {
+              dateKey = formatDate(ventaDate, 'day');
+            } else if (timeRange === 'weekly') {
+              dateKey = formatDate(ventaDate, 'week');
+            } else {
+              dateKey = formatDate(ventaDate, 'month');
+            }
+            
+            // Find the corresponding chart data entry and add the sale amount
+            const dataPoint = initialChartData.find(item => item.name === dateKey);
+            if (dataPoint) {
+              dataPoint.value += venta.total;
+            }
           });
         }
 
-        setChartData(data);
+        setChartData(initialChartData);
       } catch (error) {
         console.error('Error fetching sales data:', error);
       } finally {

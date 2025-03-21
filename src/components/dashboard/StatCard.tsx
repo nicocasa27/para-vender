@@ -22,7 +22,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   trend,
   className,
   isLoading = false,
-  periodText = "vs periodo anterior", // Default text
+  periodText = "vs. mes anterior", // Updated default text
 }) => {
   return (
     <Card className={cn("overflow-hidden transition-all duration-300 hover:shadow-elevation", className)}>
