@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Store, 
@@ -110,9 +109,9 @@ export const transferInventory = async (
   
   console.log("Source params:", sourceParams);
   
-  // Llamar al procedimiento RPC sin especificar tipos genéricos
+  // Use an explicit any type to allow string parameters
   const { error: sourceError } = await supabase
-    .rpc("update_inventory", sourceParams);
+    .rpc("update_inventory", sourceParams as any);
   
   if (sourceError) {
     console.error("Source error:", sourceError);
@@ -130,9 +129,9 @@ export const transferInventory = async (
   
   console.log("Target params:", targetParams);
   
-  // Llamar al procedimiento RPC sin especificar tipos genéricos
+  // Use an explicit any type to allow string parameters
   const { error: targetError } = await supabase
-    .rpc("update_inventory", targetParams);
+    .rpc("update_inventory", targetParams as any);
   
   if (targetError) {
     console.error("Target error:", targetError);
@@ -160,4 +159,3 @@ export const transferInventory = async (
 
   console.log("Transfer process completed successfully");
 };
-
