@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Search, Filter, ShoppingCart, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -118,9 +117,6 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect, selec
         if (data) {
           const productosConStock = await Promise.all(
             data.map(async (producto) => {
-              let stockTotal = 0;
-
-              // Get inventory for the selected store
               const { data: inventarioData, error: inventarioError } = await supabase
                 .from("inventario")
                 .select("cantidad")
@@ -128,16 +124,14 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect, selec
                 .eq("almacen_id", selectedStore)
                 .single();
 
-              if (!inventarioError && inventarioData) {
-                stockTotal = Number(inventarioData.cantidad);
-              }
+              const stockEnTienda = !inventarioError && inventarioData ? Number(inventarioData.cantidad) : 0;
 
               return {
                 id: producto.id,
                 nombre: producto.nombre,
                 categoria: producto.categorias?.nombre || "Sin categoría",
                 precio_venta: Number(producto.precio_venta),
-                stock: stockTotal,
+                stock: stockEnTienda,
                 unidad: producto.unidades?.abreviatura || "u",
               };
             })
