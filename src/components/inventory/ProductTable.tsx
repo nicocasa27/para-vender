@@ -26,7 +26,8 @@ import {
   Trash,
   FileText,
   Check,
-  X
+  X,
+  Loader
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -773,7 +774,7 @@ export const ProductTable = () => {
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader className="mr-2 h-4 w-4 animate-spin" />
                       Guardando...
                     </>
                   ) : (
@@ -788,3 +789,4 @@ export const ProductTable = () => {
     </div>
   );
 };
+
