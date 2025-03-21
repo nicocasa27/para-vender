@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +25,9 @@ import {
   Plus,
   Edit,
   Trash,
-  FileText
+  FileText,
+  Check,
+  X
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -138,6 +141,7 @@ export const ProductTable = () => {
               .from("inventario")
               .select(`
                 cantidad,
+                almacen_id,
                 almacenes(id, nombre)
               `)
               .eq("producto_id", product.id);
@@ -330,6 +334,15 @@ export const ProductTable = () => {
     if (totalStock >= product.stock_maximo) return "high";
     return "normal";
   };
+  
+  const isProductAvailableInStore = (product: ProductWithStock, storeId: string) => {
+    if (storeId === "all") return true;
+    
+    const storeName = stores.find(store => store.id === storeId)?.name;
+    if (!storeName) return false;
+    
+    return (product.stock[storeName] || 0) > 0;
+  };
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.nombre
@@ -340,14 +353,8 @@ export const ProductTable = () => {
       selectedCategory === "all" ||
       product.categoria_id === selectedCategory;
     
-    const matchesStore =
-      selectedStore === "all" ||
-      Object.entries(product.stock).some(([storeName, quantity]) => {
-        const storeId = stores.find(s => s.name === storeName)?.id;
-        return storeId === selectedStore && quantity > 0;
-      });
-    
-    return matchesSearch && matchesCategory && matchesStore;
+    // Mostramos todos los productos independientemente de la disponibilidad en la tienda seleccionada
+    return matchesSearch && matchesCategory;
   });
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
@@ -392,6 +399,34 @@ export const ProductTable = () => {
     }
     
     return pageNumbers;
+  };
+
+  const getAvailabilityDisplay = (product: ProductWithStock) => {
+    if (selectedStore === "all") {
+      return (
+        <div className="flex items-center">
+          <Check className="h-4 w-4 text-green-500 mr-1" />
+          <span>Disponible</span>
+        </div>
+      );
+    }
+    
+    const storeName = stores.find(store => store.id === selectedStore)?.name;
+    if (!storeName) return null;
+    
+    const isAvailable = (product.stock[storeName] || 0) > 0;
+    
+    return isAvailable ? (
+      <div className="flex items-center">
+        <Check className="h-4 w-4 text-green-500 mr-1" />
+        <span>Disponible</span>
+      </div>
+    ) : (
+      <div className="flex items-center">
+        <X className="h-4 w-4 text-red-500 mr-1" />
+        <span>No disponible</span>
+      </div>
+    );
   };
 
   return (
@@ -554,13 +589,14 @@ export const ProductTable = () => {
                 <TableHead>Precio</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Estado</TableHead>
+                <TableHead>Disponibilidad</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-6">
+                  <TableCell colSpan={7} className="text-center py-6">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
                       <p className="mt-2 text-sm">Cargando productos...</p>
@@ -614,6 +650,9 @@ export const ProductTable = () => {
                           : "Normal"}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      {getAvailabilityDisplay(product)}
+                    </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -645,7 +684,7 @@ export const ProductTable = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-6">
+                  <TableCell colSpan={7} className="text-center py-6">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <Package className="h-10 w-10 mb-2" />
                       <p className="text-base">No se encontraron productos</p>
