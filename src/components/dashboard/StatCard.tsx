@@ -11,6 +11,7 @@ interface StatCardProps {
   trend?: number;
   className?: string;
   isLoading?: boolean;
+  periodText?: string; // Added period text parameter
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -21,6 +22,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   trend,
   className,
   isLoading = false,
+  periodText = "vs periodo anterior", // Default text
 }) => {
   return (
     <Card className={cn("overflow-hidden transition-all duration-300 hover:shadow-elevation", className)}>
@@ -50,7 +52,7 @@ export const StatCard: React.FC<StatCardProps> = ({
                     {trend > 0 ? "+" : ""}
                     {trend}%
                   </span>
-                  <span className="text-xs text-muted-foreground ml-1">vs periodo anterior</span>
+                  <span className="text-xs text-muted-foreground ml-1">{periodText}</span>
                 </div>
               )}
             </div>

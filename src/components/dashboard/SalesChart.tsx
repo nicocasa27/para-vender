@@ -20,6 +20,22 @@ type ChartData = {
 
 type TimeRange = "daily" | "weekly" | "monthly";
 
+// Helper function to get last n months
+function getRecentMonths(n: number = 6): string[] {
+  const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth(); // 0-based index
+  
+  const recentMonths: string[] = [];
+  
+  for (let i = 0; i < n; i++) {
+    const monthIndex = (currentMonth - i + 12) % 12;
+    recentMonths.unshift(months[monthIndex]);
+  }
+  
+  return recentMonths;
+}
+
 export const SalesChart = () => {
   const [timeRange, setTimeRange] = useState<TimeRange>("monthly");
   const [chartData, setChartData] = useState<ChartData[]>([]);
@@ -70,21 +86,40 @@ export const SalesChart = () => {
         const baseValue = totalValue / (timeRange === 'daily' ? 7 : timeRange === 'weekly' ? 4 : 12);
 
         if (timeRange === 'daily') {
-          const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-          data = days.map((day, index) => ({
+          // Get days of the week (starting from current day and going backwards)
+          const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+          const currentDay = new Date().getDay(); // 0 = Sunday, 6 = Saturday
+          
+          // Reorder days array to start from current day going backwards
+          const reorderedDays = [];
+          for (let i = 0; i < 7; i++) {
+            const dayIndex = (currentDay - i + 7) % 7;
+            reorderedDays.unshift(days[dayIndex]);
+          }
+          
+          data = reorderedDays.map((day, index) => ({
             name: day,
             value: Math.round(baseValue * (0.8 + Math.random() * 0.4 + (index % 5 === 0 ? 0.2 : 0)))
           }));
         } else if (timeRange === 'weekly') {
-          data = Array.from({ length: 4 }, (_, i) => ({
-            name: `Semana ${i + 1}`,
-            value: Math.round(baseValue * (0.85 + Math.random() * 0.3 + (i === 1 ? 0.15 : 0)))
-          }));
+          // Get recent weeks (backwards from current week)
+          const currentDate = new Date();
+          const currentWeek = Math.ceil((currentDate.getDate() + 6) / 7);
+          
+          data = Array.from({ length: 4 }, (_, i) => {
+            const weekNumber = ((currentWeek - i) + 52) % 52 || 52;
+            return {
+              name: `Semana ${weekNumber}`,
+              value: Math.round(baseValue * (0.85 + Math.random() * 0.3 + (i === 1 ? 0.15 : 0)))
+            };
+          }).reverse();
         } else {
-          const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-          data = months.map((month, index) => {
+          // Get the last 6 months including the current one
+          const recentMonths = getRecentMonths(6);
+          
+          data = recentMonths.map((month, index) => {
             // Create seasonal patterns
-            const seasonalFactor = 1 + Math.sin(index / 12 * Math.PI * 2) * 0.3;
+            const seasonalFactor = 1 + Math.sin(index / 6 * Math.PI) * 0.3;
             return {
               name: month,
               value: Math.round(baseValue * seasonalFactor * (0.85 + Math.random() * 0.3))

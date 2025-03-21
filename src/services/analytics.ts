@@ -125,7 +125,25 @@ export async function fetchStorePerformance(): Promise<SalesByStore[]> {
   }
 }
 
-// Generate sales trend data (monthly) based on existing inventory and prices
+// Helper function to get the last n months including the current one
+function getRecentMonths(numberOfMonths: number = 12): string[] {
+  const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth(); // 0-based index (0 = January)
+  
+  const recentMonths: string[] = [];
+  
+  // Start from the current month and go back numberOfMonths-1 times
+  for (let i = 0; i < numberOfMonths; i++) {
+    // Calculate the month index (handle wrapping around to previous year)
+    const monthIndex = (currentMonth - i + 12) % 12;
+    recentMonths.unshift(months[monthIndex]); // Add to the beginning of the array
+  }
+  
+  return recentMonths;
+}
+
+// Generate sales trend data based on existing inventory and prices, using current months
 export async function fetchSalesTrend(): Promise<SalesData[]> {
   try {
     // Get the total inventory value across all stores
@@ -168,14 +186,14 @@ export async function fetchSalesTrend(): Promise<SalesData[]> {
       totalProfit += (producto.precio_venta - producto.precio_compra) * cantidad;
     });
 
-    // Generate 12 months of data based on the total values
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    // Get recent months (last 12 months including current)
+    const recentMonths = getRecentMonths(12);
     const salesData: SalesData[] = [];
 
     // Generate data with realistic variations
-    months.forEach((month, index) => {
+    recentMonths.forEach((month, index) => {
       // Create some variation using the month index (seasonal patterns)
-      const seasonalFactor = 1 + Math.sin(index / 12 * Math.PI * 2) * 0.3;
+      const seasonalFactor = 1 + Math.sin((index / 12) * Math.PI * 2) * 0.3;
       const randomFactor = 0.85 + Math.random() * 0.3; // Random variation of ±15%
       
       const monthRevenue = Math.round((totalRevenue / 12) * seasonalFactor * randomFactor);
@@ -195,7 +213,7 @@ export async function fetchSalesTrend(): Promise<SalesData[]> {
   }
 }
 
-// Fetch inventory levels by week
+// Fetch inventory levels using recent weeks
 export async function fetchInventoryLevels(): Promise<InventoryData[]> {
   try {
     // Get current total inventory level
@@ -211,10 +229,15 @@ export async function fetchInventoryLevels(): Promise<InventoryData[]> {
     // Calculate total inventory
     const totalInventory = inventario.reduce((sum, item) => sum + item.cantidad, 0);
     
-    // Generate 12 weeks of data with realistic variations
+    // Generate 12 weeks of data with realistic variations, starting from current week
     const inventoryData: InventoryData[] = [];
+    const currentDate = new Date();
+    const currentWeek = Math.ceil((currentDate.getDate() + 6) / 7); // Get current week of month
     
-    for (let i = 1; i <= 12; i++) {
+    for (let i = 0; i < 12; i++) {
+      // Calculate week number, with wrapping
+      const weekNumber = ((currentWeek - i) + 52) % 52 || 52;
+      
       // Create some variation with a slight downward trend followed by restocking
       let factor = 1;
       
@@ -235,8 +258,8 @@ export async function fetchInventoryLevels(): Promise<InventoryData[]> {
       // Calculate the inventory level for this week
       const level = Math.round((totalInventory / 12) * factor * randomFactor);
       
-      inventoryData.push({
-        date: `Semana ${i}`,
+      inventoryData.unshift({
+        date: `Semana ${weekNumber}`,
         level
       });
     }
