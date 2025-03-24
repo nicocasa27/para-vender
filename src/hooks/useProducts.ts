@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export interface Product {
   id: string;
@@ -21,7 +22,7 @@ export interface Product {
 }
 
 export function useProducts(selectedStore: string = "all") {
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
   
   const fetchProducts = async () => {
     try {
@@ -36,7 +37,13 @@ export function useProducts(selectedStore: string = "all") {
           unidad_id, unidades(nombre)
         `);
       
-      if (productsError) throw productsError;
+      if (productsError) {
+        console.error("Error fetching products data:", productsError);
+        toast.error("Error al cargar productos", {
+          description: productsError.message
+        });
+        throw productsError;
+      }
       
       if (!productsData || productsData.length === 0) {
         console.log("No products found");
@@ -59,7 +66,13 @@ export function useProducts(selectedStore: string = "all") {
       
       const { data: inventoryData, error: inventoryError } = await inventoryQuery;
       
-      if (inventoryError) throw inventoryError;
+      if (inventoryError) {
+        console.error("Error fetching inventory data:", inventoryError);
+        toast.error("Error al cargar datos de inventario", {
+          description: inventoryError.message
+        });
+        throw inventoryError;
+      }
       
       // Process products with their stock information
       const productsWithStock = productsData.map(product => {
@@ -91,11 +104,11 @@ export function useProducts(selectedStore: string = "all") {
       
       console.log(`Processed ${productsWithStock.length} products with stock information`);
       return productsWithStock;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching products:", error);
-      toast({
+      uiToast({
         title: "Error",
-        description: "No se pudieron cargar los productos",
+        description: error.message || "No se pudieron cargar los productos",
         variant: "destructive",
       });
       return [];

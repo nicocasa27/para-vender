@@ -1,4 +1,3 @@
-
 import { UserWithRoles } from "@/types/auth";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -6,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   Form,
   FormControl,
@@ -46,7 +46,7 @@ interface UserRoleFormProps {
 }
 
 export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleFormProps) {
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
   const { stores } = useStores();
   
   // Initialize form with default values
@@ -77,21 +77,26 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
           almacen_id: values.role === "sales" ? values.almacenId : null,
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error assigning role:", error);
+        uiToast({
+          title: "Error al asignar rol",
+          description: error.message,
+          variant: "destructive",
+        });
+        throw error;
+      }
 
-      toast({
-        title: "Rol asignado",
-        description: "El rol ha sido asignado correctamente",
+      toast.success("Rol asignado", {
+        description: "El rol ha sido asignado correctamente"
       });
 
       form.reset();
       onSuccess();
     } catch (error: any) {
       console.error("Error assigning role:", error);
-      toast({
-        title: "Error",
-        description: error.message || "No se pudo asignar el rol",
-        variant: "destructive",
+      toast.error("Error al asignar rol", {
+        description: error.message || "No se pudo asignar el rol"
       });
     }
   };

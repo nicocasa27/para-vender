@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
-import { Shield, User, Home, LogOut } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Shield, User, Home, LogOut, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -10,12 +11,20 @@ export default function Unauthorized() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
       <div className="text-center space-y-6 max-w-md">
-        <Shield className="h-20 w-20 text-muted-foreground mx-auto" />
+        <Shield className="h-20 w-20 text-destructive mx-auto" />
         <h1 className="text-3xl font-bold tracking-tight">Acceso no autorizado</h1>
         <p className="text-lg text-muted-foreground">
           No tiene los permisos necesarios para acceder a esta página.
           Contacte al administrador si cree que esto es un error.
         </p>
+        
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Error de permisos</AlertTitle>
+          <AlertDescription>
+            Su cuenta no tiene los privilegios necesarios para acceder a este recurso.
+          </AlertDescription>
+        </Alert>
         
         {user ? (
           <div className="bg-muted/50 rounded-lg p-4 text-left text-sm">

@@ -46,7 +46,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       if (!authCheckComplete) {
         setTimeoutReached(true);
         console.log("ProtectedRoute: Authorization check is taking longer than expected");
-        toast("La verificación está tardando más de lo esperado");
+        toast.info("La verificación está tardando más de lo esperado", {
+          duration: 5000
+        });
       }
     }, 1500); // 1.5 second notification
     
@@ -58,7 +60,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         // If timeout is reached and still not authorized, redirect to appropriate page
         if (!user) {
           setIsAuthorized(false);
-          toast.error("No se pudo verificar tu sesión. Por favor inicia sesión nuevamente.");
+          toast.error("No se pudo verificar tu sesión", {
+            description: "Por favor inicia sesión nuevamente."
+          });
         } else if (userRoles.length === 0) {
           setIsAuthorized(false);
           uiToast({
@@ -72,7 +76,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           setIsAuthorized(hasRequiredRole);
           
           if (!hasRequiredRole) {
-            toast.error("No tienes los permisos necesarios para acceder a esta página");
+            toast.error("Acceso denegado", {
+              description: "No tienes los permisos necesarios para acceder a esta página"
+            });
           }
         }
         
@@ -89,7 +95,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           setIsAuthorized(authorized);
           
           if (!authorized) {
-            toast.error("No tienes los permisos necesarios para acceder a esta página");
+            toast.error("Acceso denegado", {
+              description: "No tienes los permisos necesarios para acceder a esta página"
+            });
           }
         } else {
           setIsAuthorized(true); // No specific role required
@@ -127,6 +135,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Not authenticated
   if (!user) {
     console.log("ProtectedRoute: User not authenticated, redirecting to /auth");
+    toast.error("Sesión no válida", {
+      description: "Debes iniciar sesión para acceder a esta página"
+    });
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 

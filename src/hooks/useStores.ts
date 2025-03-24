@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export interface Store {
   id: string;
@@ -10,7 +11,7 @@ export interface Store {
 }
 
 export function useStores() {
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
   
   const { 
     data: stores = [], 
@@ -25,14 +26,20 @@ export function useStores() {
           .select("id, nombre")
           .order("nombre");
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching stores:", error);
+          uiToast({
+            title: "Error",
+            description: "No se pudieron cargar las sucursales: " + error.message,
+            variant: "destructive",
+          });
+          throw error;
+        }
         return data || [];
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching stores:", error);
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar las sucursales",
-          variant: "destructive",
+        toast.error("Error al cargar sucursales", {
+          description: error.message || "No se pudieron cargar las sucursales"
         });
         return [];
       }
