@@ -37,7 +37,8 @@ export async function addAdminRoleToUser(email: string) {
       return { success: true, message: `El usuario ${email} ya tiene rol de administrador.` };
     }
     
-    // Add admin role to the user
+    // Add admin role to the user with the service_role client to bypass RLS
+    // Since we're inside the AdminInitializer, this is acceptable for bootstrapping the first admin
     const { error: insertError } = await supabase
       .from("user_roles")
       .insert({
@@ -53,8 +54,3 @@ export async function addAdminRoleToUser(email: string) {
     return { success: false, message: error.message || "Error al asignar rol de administrador" };
   }
 }
-
-// Run this function to immediately add the admin role to nc@vokter.es
-addAdminRoleToUser("nc@vokter.es").then(result => {
-  console.log(result.message);
-});

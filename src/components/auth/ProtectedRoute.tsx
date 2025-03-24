@@ -2,6 +2,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/types/auth";
+import { useEffect, useState } from "react";
 
 interface ProtectedRouteProps {
   requiredRole?: UserRole;
@@ -12,11 +13,25 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredRole,
   storeId 
 }) => {
-  const { user, loading, hasRole } = useAuth();
+  const { user, loading, hasRole, userRoles } = useAuth();
   const location = useLocation();
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  
+  useEffect(() => {
+    // Only check authorization when user and roles are loaded
+    if (!loading && user) {
+      if (requiredRole) {
+        setIsAuthorized(hasRole(requiredRole, storeId));
+      } else {
+        setIsAuthorized(true); // No specific role required
+      }
+    } else if (!loading && !user) {
+      setIsAuthorized(false);
+    }
+  }, [loading, user, requiredRole, storeId, hasRole, userRoles]);
 
-  // Still loading auth state
-  if (loading) {
+  // Still loading auth state or checking permissions
+  if (loading || isAuthorized === null) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-2">
@@ -32,9 +47,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Check permission if a specific role is required
-  if (requiredRole && !hasRole(requiredRole, storeId)) {
-    // User doesn't have the required role
+  // Not authorized
+  if (!isAuthorized) {
     return <Navigate to="/unauthorized" replace />;
   }
 

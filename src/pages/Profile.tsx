@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,9 +12,16 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Profile() {
   const { user, userRoles } = useAuth();
-  const [fullName, setFullName] = useState(user?.user_metadata?.full_name || "");
+  const [fullName, setFullName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  // Set initial fullName when user data is available
+  useEffect(() => {
+    if (user?.user_metadata?.full_name) {
+      setFullName(user.user_metadata.full_name);
+    }
+  }, [user]);
 
   const handleUpdateProfile = async () => {
     if (!user) return;
@@ -68,6 +75,24 @@ export default function Profile() {
     }
   };
 
+  if (!user) {
+    return (
+      <div className="flex justify-center items-center h-[calc(100vh-8rem)]">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center py-8">
+              <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium">Cargando perfil</h3>
+              <p className="text-muted-foreground mt-2">
+                Por favor espere mientras cargamos su información.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -95,9 +120,9 @@ export default function Profile() {
               </Avatar>
               <div>
                 <h3 className="text-lg font-medium">
-                  {user?.user_metadata?.full_name || "Usuario"}
+                  {user.user_metadata?.full_name || "Usuario"}
                 </h3>
-                <p className="text-sm text-muted-foreground">{user?.email}</p>
+                <p className="text-sm text-muted-foreground">{user.email}</p>
               </div>
             </div>
             <form className="space-y-4">
@@ -111,7 +136,7 @@ export default function Profile() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Correo electrónico</Label>
-                <Input id="email" value={user?.email || ""} disabled />
+                <Input id="email" value={user.email || ""} disabled />
                 <p className="text-xs text-muted-foreground">
                   El correo electrónico no se puede cambiar
                 </p>
@@ -143,7 +168,7 @@ export default function Profile() {
               
               <div>
                 <h3 className="text-lg font-medium mb-3">Roles asignados</h3>
-                {userRoles.length > 0 ? (
+                {userRoles && userRoles.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {userRoles.map((role) => (
                       <div 

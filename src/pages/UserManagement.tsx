@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { UserWithRoles } from "@/types/auth";
@@ -22,14 +22,15 @@ export default function UserManagement() {
   const {
     data: users = [],
     isLoading,
-    refetch
+    refetch,
+    error
   } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
       try {
         console.log("Fetching users...");
         
-        // Get all profiles
+        // Get all profiles with more robust error handling
         const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
           .select("*");
@@ -39,9 +40,14 @@ export default function UserManagement() {
           throw profilesError;
         }
         
-        console.log("Profiles fetched:", profiles?.length || 0);
+        if (!profiles || profiles.length === 0) {
+          console.log("No profiles found");
+          return [];
+        }
         
-        // Get all user roles
+        console.log("Profiles fetched:", profiles.length);
+        
+        // Get all user roles with better error handling
         const { data: roles, error: rolesError } = await supabase
           .from("user_roles")
           .select(`
@@ -61,7 +67,7 @@ export default function UserManagement() {
         console.log("Roles fetched:", roles?.length || 0);
         
         // Combine the data with improved error handling
-        const usersWithRoles: UserWithRoles[] = profiles?.map(profile => {
+        const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
           const userRoles = roles
             ?.filter(r => r.user_id === profile.id)
             .map(role => ({
@@ -75,7 +81,7 @@ export default function UserManagement() {
             full_name: profile.full_name || null,
             roles: userRoles,
           };
-        }) || [];
+        });
         
         console.log("Combined users with roles:", usersWithRoles.length);
         return usersWithRoles;
@@ -86,11 +92,12 @@ export default function UserManagement() {
           description: "No se pudieron cargar los usuarios",
           variant: "destructive",
         });
-        return [];
+        throw error;
       }
     },
     refetchOnWindowFocus: false,
     staleTime: 30000, // 30 seconds before refetching stale data
+    retry: 2,
   });
 
   const handleDeleteRole = async (roleId: string) => {
@@ -136,6 +143,34 @@ export default function UserManagement() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="animate-fade-in space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Gestión de Usuarios</h2>
+            <p className="text-muted-foreground">
+              Administre usuarios y asigne roles
+            </p>
+          </div>
+          <Button onClick={() => refetch()}>Reintentar</Button>
+        </div>
+        
+        <Card className="bg-destructive/10">
+          <CardContent className="pt-6">
+            <div className="text-center py-8">
+              <Shield className="h-12 w-12 text-destructive mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-destructive">Error al cargar usuarios</h3>
+              <p className="text-muted-foreground mt-2">
+                No se pudieron cargar los datos de usuarios. Por favor, intente nuevamente.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="animate-fade-in space-y-6">
       <div className="flex items-center justify-between">
@@ -145,7 +180,9 @@ export default function UserManagement() {
             Administre usuarios y asigne roles
           </p>
         </div>
-        <Button onClick={() => refetch()}>Actualizar</Button>
+        <Button onClick={() => refetch()} disabled={isLoading}>
+          {isLoading ? 'Cargando...' : 'Actualizar'}
+        </Button>
       </div>
 
       <Card>
@@ -166,14 +203,16 @@ export default function UserManagement() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <UserRoleForm 
-          selectedUser={selectedUser}
-          onSuccess={() => {
-            setIsDialogOpen(false);
-            refetch();
-          }}
-          onCancel={() => setIsDialogOpen(false)}
-        />
+        {selectedUser && (
+          <UserRoleForm 
+            selectedUser={selectedUser}
+            onSuccess={() => {
+              setIsDialogOpen(false);
+              refetch();
+            }}
+            onCancel={() => setIsDialogOpen(false)}
+          />
+        )}
       </Dialog>
     </div>
   );

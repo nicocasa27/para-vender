@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,45 +29,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Set up the auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        
-        if (currentSession?.user) {
-          await fetchUserRoles(currentSession.user.id);
-        } else {
-          setUserRoles([]);
-        }
-      }
-    );
-
-    // Check for existing session
-    const initializeAuth = async () => {
-      setLoading(true);
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      if (currentSession?.user) {
-        await fetchUserRoles(currentSession.user.id);
-      }
-      
-      setLoading(false);
-    };
-
-    initializeAuth();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const fetchUserRoles = async (userId: string) => {
+  // Memoize fetchUserRoles to prevent unnecessary recreations
+  const fetchUserRoles = useCallback(async (userId: string) => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('user_roles')
         .select(`
@@ -93,8 +58,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setUserRoles(rolesWithStoreNames);
     } catch (error) {
       console.error('Error in fetchUserRoles:', error);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Set up the auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        console.log("Auth state change:", event);
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        
+        if (currentSession?.user) {
+          await fetchUserRoles(currentSession.user.id);
+        } else {
+          setUserRoles([]);
+          setLoading(false);
+        }
+      }
+    );
+
+    // Check for existing session
+    const initializeAuth = async () => {
+      setLoading(true);
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      
+      if (currentSession?.user) {
+        await fetchUserRoles(currentSession.user.id);
+      } else {
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [fetchUserRoles]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -178,7 +184,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const hasRole = (role: UserRole, storeId?: string): boolean => {
+  // Memoize hasRole to prevent unnecessary recalculations
+  const hasRole = useCallback((role: UserRole, storeId?: string): boolean => {
     // Admin can do anything
     if (userRoles.some(r => r.role === 'admin')) {
       return true;
@@ -202,9 +209,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     
     return false;
-  };
+  }, [userRoles]);
 
-  const value = {
+  // Memoize context value to prevent unnecessary renders
+  const value = useMemo(() => ({
     session,
     user,
     userRoles,
@@ -213,7 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     signUp,
     signOut,
     hasRole,
-  };
+  }), [session, user, userRoles, loading, hasRole]);
 
   return (
     <AuthContext.Provider value={value}>

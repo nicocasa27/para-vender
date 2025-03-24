@@ -1,16 +1,21 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { addAdminRoleToUser } from "@/utils/adminUtils";
 import { useToast } from "@/hooks/use-toast";
 
 export function AdminInitializer() {
-  const [initialized, setInitialized] = useState(false);
+  const initialized = useRef(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!initialized) {
-      // Add nc@vokter.es as admin on component mount
-      addAdminRoleToUser("nc@vokter.es").then(result => {
+    // Only run once and prevent re-initialization
+    if (initialized.current) return;
+    
+    async function initializeAdmin() {
+      try {
+        // Add nc@vokter.es as admin on component mount
+        const result = await addAdminRoleToUser("nc@vokter.es");
+        
         if (result.success) {
           console.log("Admin role management:", result.message);
           // Only show toast if role was newly added (not if user already had the role)
@@ -28,10 +33,17 @@ export function AdminInitializer() {
             variant: "destructive",
           });
         }
-        setInitialized(true);
-      });
+      } catch (error) {
+        console.error("Error initializing admin:", error);
+      } finally {
+        initialized.current = true;
+      }
     }
-  }, [initialized, toast]);
+
+    initializeAdmin();
+    
+    // No dependencies here to ensure this only runs once
+  }, [toast]);
 
   // This component doesn't render anything
   return null;
