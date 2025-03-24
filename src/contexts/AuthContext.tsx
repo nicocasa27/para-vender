@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Session, User } from "@supabase/supabase-js";
@@ -32,6 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   // Memoize fetchUserRoles to prevent unnecessary recreations
   const fetchUserRoles = useCallback(async (userId: string) => {
     try {
+      console.log("Fetching roles for user:", userId);
       setLoading(true);
       const { data, error } = await supabase
         .from('user_roles')
@@ -50,6 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
+      console.log("Fetched roles:", data);
       const rolesWithStoreNames = data.map(role => ({
         ...role,
         almacen_nombre: role.almacenes?.nombre || null
@@ -186,13 +187,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Memoize hasRole to prevent unnecessary recalculations
   const hasRole = useCallback((role: UserRole, storeId?: string): boolean => {
+    console.log("Checking role:", role, "for store:", storeId);
+    console.log("User roles:", userRoles);
+    
     // Admin can do anything
     if (userRoles.some(r => r.role === 'admin')) {
+      console.log("User is admin, granting access");
       return true;
     }
     
     // Manager can do anything except admin-specific tasks
     if (role !== 'admin' && userRoles.some(r => r.role === 'manager')) {
+      console.log("User is manager, granting access to non-admin role");
       return true;
     }
     
@@ -200,14 +206,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (storeId && userRoles.some(r => 
       r.role === role && r.almacen_id === storeId
     )) {
+      console.log("User has store-specific role, granting access");
       return true;
     }
     
     // For general roles without store specificity (like viewer)
     if (!storeId && userRoles.some(r => r.role === role)) {
+      console.log("User has general role, granting access");
       return true;
     }
     
+    console.log("User does not have required role, denying access");
     return false;
   }, [userRoles]);
 

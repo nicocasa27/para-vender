@@ -42,7 +42,7 @@ export function AdminInitializer() {
 
     initializeAdmin();
     
-    // No dependencies here to ensure this only runs once
+    // Include toast in dependencies to avoid lint warnings
   }, [toast]);
 
   // This component doesn't render anything
