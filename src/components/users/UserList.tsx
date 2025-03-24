@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { UserPlus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserRoleBadge } from "./UserRoleBadge";
+import { memo } from "react";
 
 interface UserListProps {
   users: UserWithRoles[];
@@ -12,7 +13,8 @@ interface UserListProps {
   onAddRole: (user: UserWithRoles) => void;
 }
 
-export function UserList({ users, isLoading, onDeleteRole, onAddRole }: UserListProps) {
+// Memoize the component to prevent unnecessary re-renders
+export const UserList = memo(function UserList({ users, isLoading, onDeleteRole, onAddRole }: UserListProps) {
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
@@ -21,7 +23,7 @@ export function UserList({ users, isLoading, onDeleteRole, onAddRole }: UserList
     );
   }
 
-  if (users.length === 0) {
+  if (!users || users.length === 0) {
     return (
       <div className="text-center py-10">
         <Users className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
@@ -53,7 +55,7 @@ export function UserList({ users, isLoading, onDeleteRole, onAddRole }: UserList
                 </div>
               </TableCell>
               <TableCell>
-                {user.roles.length > 0 ? (
+                {user.roles && user.roles.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {user.roles.map((role) => (
                       <UserRoleBadge
@@ -85,4 +87,4 @@ export function UserList({ users, isLoading, onDeleteRole, onAddRole }: UserList
       </Table>
     </div>
   );
-}
+});

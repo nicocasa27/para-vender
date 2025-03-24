@@ -10,85 +10,87 @@ import { Dialog } from "@/components/ui/dialog";
 import { Shield } from "lucide-react";
 import { UserList } from "@/components/users/UserList";
 import { UserRoleForm } from "@/components/users/UserRoleForm";
+import { useQuery } from "@tanstack/react-query";
 
 export default function UserManagement() {
-  const [users, setUsers] = useState<UserWithRoles[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const { hasRole } = useAuth();
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    try {
-      setIsLoading(true);
-      console.log("Fetching users...");
-
-      // Get all profiles which is more reliable than auth.users
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*");
+  // Use React Query for data fetching with caching and optimized refetching
+  const {
+    data: users = [],
+    isLoading,
+    refetch
+  } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      try {
+        console.log("Fetching users...");
         
-      if (profilesError) {
-        console.error("Error fetching profiles:", profilesError);
-        throw profilesError;
+        // Get all profiles
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("*");
+          
+        if (profilesError) {
+          console.error("Error fetching profiles:", profilesError);
+          throw profilesError;
+        }
+        
+        console.log("Profiles fetched:", profiles?.length || 0);
+        
+        // Get all user roles
+        const { data: roles, error: rolesError } = await supabase
+          .from("user_roles")
+          .select(`
+            id,
+            user_id,
+            role,
+            almacen_id,
+            almacenes:almacen_id(nombre)
+          `);
+          
+        if (rolesError) {
+          console.error("Error fetching roles:", rolesError);
+          throw rolesError;
+        }
+        
+        console.log("Roles fetched:", roles?.length || 0);
+        
+        // Combine the data with improved error handling
+        const usersWithRoles = profiles?.map(profile => {
+          const userRoles = roles
+            ?.filter(r => r.user_id === profile.id)
+            .map(role => ({
+              ...role,
+              almacen_nombre: role.almacenes?.nombre || null
+            })) || [];
+          
+          return {
+            id: profile.id,
+            email: profile.email || "",
+            full_name: profile.full_name || null,
+            roles: userRoles,
+          };
+        }) || [];
+        
+        console.log("Combined users with roles:", usersWithRoles.length);
+        return usersWithRoles as UserWithRoles[];
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los usuarios",
+          variant: "destructive",
+        });
+        return [];
       }
-      
-      console.log("Profiles fetched:", profiles);
-      
-      // Get all user roles
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select(`
-          id,
-          user_id,
-          role,
-          almacen_id,
-          almacenes:almacen_id(nombre),
-          created_at
-        `);
-        
-      if (rolesError) {
-        console.error("Error fetching roles:", rolesError);
-        throw rolesError;
-      }
-      
-      console.log("Roles fetched:", roles);
-      
-      // Combine the data
-      const usersWithRoles = profiles.map(profile => {
-        const userRoles = roles
-          .filter(r => r.user_id === profile.id)
-          .map(role => ({
-            ...role,
-            almacen_nombre: role.almacenes?.nombre || null
-          }));
-        
-        return {
-          id: profile.id,
-          email: profile.email || "",
-          full_name: profile.full_name || null,
-          roles: userRoles,
-        };
-      });
-      
-      console.log("Combined users with roles:", usersWithRoles);
-      setUsers(usersWithRoles);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los usuarios",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    refetchOnWindowFocus: false,
+    staleTime: 30000, // 30 seconds before refetching stale data
+  });
 
   const handleDeleteRole = async (roleId: string) => {
     try {
@@ -104,7 +106,7 @@ export default function UserManagement() {
         description: "El rol ha sido eliminado correctamente",
       });
 
-      fetchUsers();
+      refetch();
     } catch (error: any) {
       console.error("Error deleting role:", error);
       toast({
@@ -142,7 +144,7 @@ export default function UserManagement() {
             Administre usuarios y asigne roles
           </p>
         </div>
-        <Button onClick={() => fetchUsers()}>Actualizar</Button>
+        <Button onClick={() => refetch()}>Actualizar</Button>
       </div>
 
       <Card>
@@ -167,7 +169,7 @@ export default function UserManagement() {
           selectedUser={selectedUser}
           onSuccess={() => {
             setIsDialogOpen(false);
-            fetchUsers();
+            refetch();
           }}
           onCancel={() => setIsDialogOpen(false)}
         />

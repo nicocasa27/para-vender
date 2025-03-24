@@ -1,6 +1,7 @@
 
 import { UserRole } from "@/types/auth";
 import { Trash } from "lucide-react";
+import { memo } from "react";
 
 interface UserRoleBadgeProps {
   id: string;
@@ -9,7 +10,8 @@ interface UserRoleBadgeProps {
   onDelete: (roleId: string) => void;
 }
 
-export function UserRoleBadge({ id, role, storeName, onDelete }: UserRoleBadgeProps) {
+// Memoize the component to prevent unnecessary re-renders
+export const UserRoleBadge = memo(function UserRoleBadge({ id, role, storeName, onDelete }: UserRoleBadgeProps) {
   const getRoleBadgeClass = (role: UserRole) => {
     switch (role) {
       case "admin":
@@ -25,6 +27,11 @@ export function UserRoleBadge({ id, role, storeName, onDelete }: UserRoleBadgePr
     }
   };
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent event bubbling
+    onDelete(id);
+  };
+
   return (
     <div
       className={`flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeClass(role)}`}
@@ -35,10 +42,10 @@ export function UserRoleBadge({ id, role, storeName, onDelete }: UserRoleBadgePr
       )}
       <button
         className="ml-1.5 hover:text-destructive"
-        onClick={() => onDelete(id)}
+        onClick={handleDelete}
       >
         <Trash className="h-3 w-3" />
       </button>
     </div>
   );
-}
+});

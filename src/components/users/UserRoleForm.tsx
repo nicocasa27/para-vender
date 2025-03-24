@@ -28,6 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useQuery } from "@tanstack/react-query";
 
 const roleAssignmentSchema = z.object({
   userId: z.string().min(1, "Usuario es requerido"),
@@ -44,8 +45,33 @@ interface UserRoleFormProps {
 }
 
 export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleFormProps) {
-  const [stores, setStores] = useState<{ id: string; nombre: string }[]>([]);
   const { toast } = useToast();
+
+  // Use React Query for fetching stores
+  const { data: stores = [] } = useQuery({
+    queryKey: ['stores'],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from("almacenes")
+          .select("id, nombre")
+          .order("nombre");
+
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        console.error("Error fetching stores:", error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las sucursales",
+          variant: "destructive",
+        });
+        return [];
+      }
+    },
+    staleTime: 60000, // 1 minute cache
+    refetchOnWindowFocus: false,
+  });
 
   const form = useForm<RoleAssignmentValues>({
     resolver: zodResolver(roleAssignmentSchema),
@@ -56,34 +82,12 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
     },
   });
 
+  // Update form when selected user changes
   useEffect(() => {
     if (selectedUser) {
       form.setValue("userId", selectedUser.id);
     }
   }, [selectedUser, form]);
-
-  useEffect(() => {
-    fetchStores();
-  }, []);
-
-  const fetchStores = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("almacenes")
-        .select("id, nombre")
-        .order("nombre");
-
-      if (error) throw error;
-      setStores(data || []);
-    } catch (error) {
-      console.error("Error fetching stores:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar las sucursales",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleAddRole = async (values: RoleAssignmentValues) => {
     try {
