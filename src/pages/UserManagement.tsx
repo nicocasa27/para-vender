@@ -49,6 +49,7 @@ export default function UserManagement() {
             user_id,
             role,
             almacen_id,
+            created_at,
             almacenes:almacen_id(nombre)
           `);
           
@@ -60,7 +61,7 @@ export default function UserManagement() {
         console.log("Roles fetched:", roles?.length || 0);
         
         // Combine the data with improved error handling
-        const usersWithRoles = profiles?.map(profile => {
+        const usersWithRoles: UserWithRoles[] = profiles?.map(profile => {
           const userRoles = roles
             ?.filter(r => r.user_id === profile.id)
             .map(role => ({
@@ -77,7 +78,7 @@ export default function UserManagement() {
         }) || [];
         
         console.log("Combined users with roles:", usersWithRoles.length);
-        return usersWithRoles as UserWithRoles[];
+        return usersWithRoles;
       } catch (error) {
         console.error("Error fetching users:", error);
         toast({

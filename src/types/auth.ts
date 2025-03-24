@@ -9,8 +9,9 @@ export interface UserRoleWithStore {
   user_id: string;
   role: UserRole;
   almacen_id: string | null;
-  almacen_nombre?: string;
-  created_at: string;
+  almacen_nombre?: string | null;
+  created_at?: string;
+  almacenes?: { nombre: string } | null;
 }
 
 export interface UserWithRoles {
