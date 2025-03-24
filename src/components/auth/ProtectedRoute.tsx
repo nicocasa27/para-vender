@@ -1,5 +1,5 @@
 
-import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation, useMatch } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/types/auth";
 import { useEffect, useState } from "react";
@@ -18,6 +18,16 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [authCheckComplete, setAuthCheckComplete] = useState(false);
   
+  // Check if we're on a route that requires special permissions
+  const isUsersRoute = useMatch("/users");
+  const isConfigRoute = useMatch("/config");
+  
+  // Determine the required role based on the current route
+  const effectiveRequiredRole = 
+    isUsersRoute ? "admin" : 
+    isConfigRoute ? "manager" : 
+    requiredRole;
+  
   useEffect(() => {
     // Add a timeout to prevent infinite loading
     const authCheckTimeout = setTimeout(() => {
@@ -35,8 +45,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     // Only check authorization when user and roles are loaded
     if (!loading) {
       if (user) {
-        if (requiredRole) {
-          setIsAuthorized(hasRole(requiredRole, storeId));
+        if (effectiveRequiredRole) {
+          setIsAuthorized(hasRole(effectiveRequiredRole, storeId));
         } else {
           setIsAuthorized(true); // No specific role required
         }
@@ -47,7 +57,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
     
     return () => clearTimeout(authCheckTimeout);
-  }, [loading, user, requiredRole, storeId, hasRole, userRoles, authCheckComplete]);
+  }, [loading, user, effectiveRequiredRole, storeId, hasRole, userRoles, authCheckComplete]);
 
   // Still loading auth state - but with a timeout to prevent infinite loading
   if (loading && !authCheckComplete) {

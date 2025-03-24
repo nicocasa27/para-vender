@@ -59,18 +59,10 @@ const App = () => {
                   <Route path="/analytics" element={<Analytics />} />
                   
                   {/* Admin-only routes */}
-                  <Route path="/users" element={
-                    <ProtectedRoute requiredRole="admin">
-                      <UserManagement />
-                    </ProtectedRoute>
-                  } />
+                  <Route path="/users" element={<UserManagement />} requiredRole="admin" />
                   
                   {/* Manager/Admin routes */}
-                  <Route path="/config" element={
-                    <ProtectedRoute requiredRole="manager">
-                      <Configuration />
-                    </ProtectedRoute>
-                  } />
+                  <Route path="/config" element={<Configuration />} requiredRole="manager" />
                   
                   {/* All authenticated users */}
                   <Route path="/profile" element={<Profile />} />
