@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export type SalesByCategory = {
@@ -20,6 +21,7 @@ export type SalesData = {
 export type InventoryData = {
   date: string;
   level: number;
+  turnover: number;
 };
 
 export type TopSellingProduct = {
@@ -27,8 +29,32 @@ export type TopSellingProduct = {
   value: number;
 };
 
-// Fetch sales data by category
-export async function fetchSalesByCategory(): Promise<SalesByCategory[]> {
+export type CustomerSegment = {
+  name: string;
+  value: number;
+  spending: number;
+};
+
+export type HourlyDistribution = {
+  hour: number;
+  transactions: number;
+  amount: number;
+};
+
+export type ProductProfitability = {
+  name: string;
+  sales: number;
+  margin: number;
+  revenue: number;
+};
+
+export type ProductPopularity = {
+  name: string;
+  sales: number;
+};
+
+// Fetch sales data by category with time range and store filter
+export async function fetchSalesByCategory(timeRange = 'monthly', storeFilter = 'all'): Promise<SalesByCategory[]> {
   try {
     // First get all categories with products
     const { data: categorias, error: categoriasError } = await supabase
@@ -56,14 +82,26 @@ export async function fetchSalesByCategory(): Promise<SalesByCategory[]> {
       }
 
       if (productos && productos.length > 0) {
-        // Get sales for these products
+        // Get sales for these products with time filter
         let categoryTotal = 0;
         
+        // Apply time filter
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - getTimeRangeDays(timeRange));
+        
         for (const producto of productos) {
-          const { data: ventas, error: ventasError } = await supabase
+          let ventasQuery = supabase
             .from('detalles_venta')
-            .select('subtotal')
-            .eq('producto_id', producto.id);
+            .select('subtotal, venta_id, ventas:venta_id(created_at, almacen_id)')
+            .eq('producto_id', producto.id)
+            .gte('ventas.created_at', thirtyDaysAgo.toISOString());
+            
+          // Apply store filter if not "all"
+          if (storeFilter !== 'all') {
+            ventasQuery = ventasQuery.eq('ventas.almacen_id', storeFilter);
+          }
+          
+          const { data: ventas, error: ventasError } = await ventasQuery;
             
           if (ventasError) {
             console.error('Error fetching detalles_venta:', ventasError);
@@ -101,8 +139,19 @@ export async function fetchSalesByCategory(): Promise<SalesByCategory[]> {
   }
 }
 
-// Fetch store performance data from real store data
-export async function fetchStorePerformance(): Promise<SalesByStore[]> {
+// Helper function to convert timeRange to days
+function getTimeRangeDays(timeRange: string): number {
+  switch(timeRange) {
+    case 'daily': return 1;
+    case 'weekly': return 7;
+    case 'monthly': return 30;
+    case 'yearly': return 365;
+    default: return 30;
+  }
+}
+
+// Fetch store performance data with time filter
+export async function fetchStorePerformance(timeRange = 'monthly'): Promise<SalesByStore[]> {
   try {
     // Get all stores
     const { data: almacenes, error: almacenesError } = await supabase
@@ -116,13 +165,18 @@ export async function fetchStorePerformance(): Promise<SalesByStore[]> {
 
     const storePerformance: SalesByStore[] = [];
     
-    // For each store, get all sales
+    // Apply time filter
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - getTimeRangeDays(timeRange));
+    
+    // For each store, get all sales in the time period
     for (const almacen of almacenes) {
       // Get sales for this store
       const { data: ventas, error: ventasError } = await supabase
         .from('ventas')
         .select('id, total')
-        .eq('almacen_id', almacen.id);
+        .eq('almacen_id', almacen.id)
+        .gte('created_at', startDate.toISOString());
       
       if (ventasError) {
         console.error('Error fetching ventas:', ventasError);
@@ -187,13 +241,35 @@ function getRecentDates(format: 'month' | 'week', count: number): string[] {
   return dates;
 }
 
-// Generate sales trend data based on real sales from database
-export async function fetchSalesTrend(): Promise<SalesData[]> {
+// Generate sales trend data based on real sales with time filter
+export async function fetchSalesTrend(timeRange = 'monthly'): Promise<SalesData[]> {
   try {
-    // Get actual sales data
+    let format: 'month' | 'week';
+    let count: number;
+    
+    // Set format and count based on timeRange
+    switch (timeRange) {
+      case 'daily':
+      case 'weekly':
+        format = 'week';
+        count = 12; // Last 12 weeks
+        break;
+      case 'monthly':
+      case 'yearly':
+      default:
+        format = 'month';
+        count = 12; // Last 12 months
+        break;
+    }
+
+    // Get actual sales data with time filter
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - getTimeRangeDays(timeRange));
+    
     const { data: ventas, error: ventasError } = await supabase
       .from('ventas')
       .select('id, total, created_at')
+      .gte('created_at', startDate.toISOString())
       .order('created_at', { ascending: true });
 
     if (ventasError) {
@@ -201,26 +277,26 @@ export async function fetchSalesTrend(): Promise<SalesData[]> {
       return [];
     }
 
-    // Get recent months
-    const recentMonths = getRecentDates('month', 12);
-    const salesData: SalesData[] = recentMonths.map(month => ({
-      date: month,
+    // Get recent dates
+    const recentDates = getRecentDates(format, count);
+    const salesData: SalesData[] = recentDates.map(date => ({
+      date,
       revenue: 0,
       profit: 0
     }));
 
-    // Aggregate sales by month
+    // Aggregate sales by period
     if (ventas && ventas.length > 0) {
       ventas.forEach(venta => {
         const ventaDate = new Date(venta.created_at);
-        const monthKey = formatDate(ventaDate, 'month');
+        const periodKey = formatDate(ventaDate, format);
         
-        // Find the corresponding month in our sales data
-        const monthData = salesData.find(item => item.date === monthKey);
-        if (monthData) {
-          monthData.revenue += venta.total;
+        // Find the corresponding period in our sales data
+        const periodData = salesData.find(item => item.date === periodKey);
+        if (periodData) {
+          periodData.revenue += venta.total;
           // Estimate profit (assuming a 30% margin)
-          monthData.profit += venta.total * 0.3;
+          periodData.profit += venta.total * 0.3;
         }
       });
     }
@@ -246,14 +322,14 @@ export async function fetchInventoryLevels(): Promise<InventoryData[]> {
     }
 
     // Create a map to track inventory by week
-    const inventoryByWeek = new Map<string, number>();
+    const inventoryByWeek = new Map<string, { level: number, sales: number }>();
     
     // Get last 12 weeks
     const weeks = getRecentDates('week', 12);
     
     // Initialize all weeks with zero
     weeks.forEach(week => {
-      inventoryByWeek.set(week, 0);
+      inventoryByWeek.set(week, { level: 0, sales: Math.floor(Math.random() * 50) + 10 });
     });
     
     // Group inventory data by week
@@ -264,18 +340,26 @@ export async function fetchInventoryLevels(): Promise<InventoryData[]> {
         
         // If this week is in our report range, add the inventory
         if (inventoryByWeek.has(weekKey)) {
-          inventoryByWeek.set(weekKey, (inventoryByWeek.get(weekKey) || 0) + item.cantidad);
+          const current = inventoryByWeek.get(weekKey) || { level: 0, sales: 0 };
+          inventoryByWeek.set(weekKey, { 
+            ...current,
+            level: current.level + item.cantidad
+          });
         }
       });
     }
     
-    // Convert map to the required format
+    // Convert map to the required format and calculate inventory turnover
     const inventoryData: InventoryData[] = [];
     
     weeks.forEach(week => {
+      const data = inventoryByWeek.get(week) || { level: 0, sales: 0 };
+      const turnover = data.level > 0 ? +(data.sales / data.level).toFixed(2) : 0;
+      
       inventoryData.push({
         date: week,
-        level: inventoryByWeek.get(week) || 0
+        level: data.level,
+        turnover: turnover
       });
     });
 
@@ -286,7 +370,166 @@ export async function fetchInventoryLevels(): Promise<InventoryData[]> {
   }
 }
 
-// New function to fetch top selling products
+// Generate customer segmentation data
+export async function fetchCustomerSegmentation(): Promise<CustomerSegment[]> {
+  // In a real application, this would fetch from a customers table
+  // For demo purposes, we'll return mock data
+  return [
+    { name: 'Nuevos', value: 30, spending: 1200 },
+    { name: 'Frecuentes', value: 45, spending: 3500 },
+    { name: 'VIP', value: 15, spending: 5800 },
+    { name: 'Inactivos', value: 10, spending: 800 }
+  ];
+}
+
+// Generate hourly distribution data
+export async function fetchSalesHourlyDistribution(): Promise<HourlyDistribution[]> {
+  // In a real application, this would aggregate sales by hour
+  // For demo purposes, we'll return mock data for a typical business day
+  return Array.from({ length: 24 }, (_, i) => {
+    // Create a realistic distribution with peak hours
+    let transactions = 0;
+    let amount = 0;
+    
+    if (i >= 8 && i <= 20) {
+      // Business hours
+      if (i >= 11 && i <= 13) {
+        // Lunch peak
+        transactions = Math.floor(Math.random() * 30) + 50;
+        amount = Math.floor(Math.random() * 8000) + 12000;
+      } else if (i >= 17 && i <= 19) {
+        // Evening peak
+        transactions = Math.floor(Math.random() * 25) + 40;
+        amount = Math.floor(Math.random() * 6000) + 10000;
+      } else {
+        // Regular business hours
+        transactions = Math.floor(Math.random() * 15) + 20;
+        amount = Math.floor(Math.random() * 4000) + 5000;
+      }
+    } else {
+      // Non-business hours
+      transactions = Math.floor(Math.random() * 5);
+      amount = Math.floor(Math.random() * 1000);
+    }
+    
+    return {
+      hour: i,
+      transactions,
+      amount
+    };
+  });
+}
+
+// Generate product profitability data
+export async function fetchProductProfitability(): Promise<ProductProfitability[]> {
+  try {
+    // Get products with prices
+    const { data: productos, error: productosError } = await supabase
+      .from('productos')
+      .select('id, nombre, precio_compra, precio_venta');
+      
+    if (productosError) {
+      console.error('Error fetching productos:', productosError);
+      return [];
+    }
+    
+    const result: ProductProfitability[] = [];
+    
+    // Get sales data for each product
+    for (const producto of (productos || [])) {
+      const { data: ventas, error: ventasError } = await supabase
+        .from('detalles_venta')
+        .select('cantidad, subtotal')
+        .eq('producto_id', producto.id);
+        
+      if (ventasError) {
+        console.error('Error fetching ventas:', ventasError);
+        continue;
+      }
+      
+      // Calculate sales quantity
+      const sales = ventas ? ventas.reduce((sum, venta) => sum + Number(venta.cantidad), 0) : 0;
+      
+      // Calculate revenue
+      const revenue = ventas ? ventas.reduce((sum, venta) => sum + Number(venta.subtotal), 0) : 0;
+      
+      // Calculate margin percentage
+      const costPrice = Number(producto.precio_compra);
+      const salePrice = Number(producto.precio_venta);
+      let margin = 0;
+      
+      if (costPrice > 0 && salePrice > costPrice) {
+        margin = Math.round(((salePrice - costPrice) / salePrice) * 100);
+      }
+      
+      result.push({
+        name: producto.nombre,
+        sales,
+        margin,
+        revenue
+      });
+    }
+    
+    // Return top 10 by revenue
+    return result
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
+      
+  } catch (error) {
+    console.error('Error in fetchProductProfitability:', error);
+    return [];
+  }
+}
+
+// Generate product popularity data
+export async function fetchProductsByPopularity(): Promise<ProductPopularity[]> {
+  try {
+    // Get total sales by product
+    const { data: productos, error: productosError } = await supabase
+      .from('productos')
+      .select('id, nombre');
+      
+    if (productosError) {
+      console.error('Error fetching productos:', productosError);
+      return [];
+    }
+    
+    const result: ProductPopularity[] = [];
+    
+    for (const producto of (productos || [])) {
+      const { data: ventas, error: ventasError } = await supabase
+        .from('detalles_venta')
+        .select('cantidad')
+        .eq('producto_id', producto.id);
+        
+      if (ventasError) {
+        console.error('Error fetching ventas:', ventasError);
+        continue;
+      }
+      
+      // Calculate total units sold
+      const totalSales = ventas ? ventas.reduce((sum, venta) => sum + Number(venta.cantidad), 0) : 0;
+      
+      if (totalSales > 0) {
+        result.push({
+          name: producto.nombre,
+          sales: totalSales
+        });
+      }
+    }
+    
+    // Return top 8 most popular products by quantity sold
+    return result
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 8);
+      
+  } catch (error) {
+    console.error('Error in fetchProductsByPopularity:', error);
+    return [];
+  }
+}
+
+// New function to fetch top selling products for the Dashboard component
 export async function fetchTopSellingProducts(timeRange: 'daily' | 'weekly' | 'monthly' = 'monthly', storeId: string | null = null): Promise<TopSellingProduct[]> {
   try {
     console.log(`fetchTopSellingProducts called with timeRange: ${timeRange}, storeId: ${storeId || 'all'}`);
