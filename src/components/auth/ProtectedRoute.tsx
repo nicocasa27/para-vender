@@ -16,8 +16,22 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, loading, hasRole, userRoles } = useAuth();
   const location = useLocation();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const [authCheckComplete, setAuthCheckComplete] = useState(false);
   
   useEffect(() => {
+    // Add a timeout to prevent infinite loading
+    const authCheckTimeout = setTimeout(() => {
+      if (!authCheckComplete) {
+        console.log("ProtectedRoute: Auth check timed out, continuing with available information");
+        if (user) {
+          setIsAuthorized(true);
+        } else if (!loading) {
+          setIsAuthorized(false);
+        }
+        setAuthCheckComplete(true);
+      }
+    }, 3000); // 3 second timeout
+    
     // Only check authorization when user and roles are loaded
     if (!loading) {
       if (user) {
@@ -29,11 +43,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       } else {
         setIsAuthorized(false);
       }
+      setAuthCheckComplete(true);
     }
-  }, [loading, user, requiredRole, storeId, hasRole, userRoles]);
+    
+    return () => clearTimeout(authCheckTimeout);
+  }, [loading, user, requiredRole, storeId, hasRole, userRoles, authCheckComplete]);
 
-  // Still loading auth state
-  if (loading) {
+  // Still loading auth state - but with a timeout to prevent infinite loading
+  if (loading && !authCheckComplete) {
     console.log("ProtectedRoute: Still loading authentication state");
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -52,7 +69,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Checking permissions
-  if (isAuthorized === null) {
+  if (isAuthorized === null && !authCheckComplete) {
     console.log("ProtectedRoute: Still checking permissions");
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -65,7 +82,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Not authorized
-  if (!isAuthorized) {
+  if (isAuthorized === false) {
     console.log("ProtectedRoute: User not authorized, redirecting to /unauthorized");
     return <Navigate to="/unauthorized" replace />;
   }

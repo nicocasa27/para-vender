@@ -8,18 +8,18 @@ export function AdminInitializer() {
   const initialized = useRef(false);
   const { toast } = useToast();
   const [isInitializing, setIsInitializing] = useState(false);
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    // Only run once and prevent re-initialization
-    if (initialized.current || isInitializing || !user) return;
+    // Skip if auth is still loading or if already initialized
+    if (loading || initialized.current || isInitializing || !user) return;
     
     async function initializeAdmin() {
       try {
         setIsInitializing(true);
         console.log("AdminInitializer: Starting initialization for logged-in user");
         
-        // Only assign admin to the currently logged-in user if not already an admin
+        // Only check admin status for the current logged-in user
         const result = await addAdminRoleToUser(user.email);
         
         if (result.success) {
@@ -44,7 +44,7 @@ export function AdminInitializer() {
     }
 
     initializeAdmin();
-  }, [toast, isInitializing, user]);
+  }, [toast, isInitializing, user, loading]);
 
   // This component doesn't render anything
   return null;

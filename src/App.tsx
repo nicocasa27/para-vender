@@ -19,53 +19,73 @@ import Auth from "./pages/Auth";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
+import { useEffect } from "react";
 
-const queryClient = new QueryClient();
+// Create a client with default options
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1, // Reduce retries to prevent looping
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false, // Disable refetch on window focus
+    },
+  },
+});
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <AdminInitializer />
-          <Routes>
-            {/* Public route */}
-            <Route path="/auth" element={<Auth />} />
-            
-            {/* Protected routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<MainLayout />}>
-                <Route path="/" element={<Index />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/inventory" element={<Inventory />} />
-                <Route path="/pos" element={<PointOfSale />} />
-                <Route path="/analytics" element={<Analytics />} />
-                
-                {/* Admin-only routes */}
-                <Route element={<ProtectedRoute requiredRole="admin" />}>
-                  <Route path="/users" element={<UserManagement />} />
+const App = () => {
+  useEffect(() => {
+    console.log("App mounted");
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <AdminInitializer />
+            <Routes>
+              {/* Public route */}
+              <Route path="/auth" element={<Auth />} />
+              
+              {/* Protected routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<MainLayout />}>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/inventory" element={<Inventory />} />
+                  <Route path="/pos" element={<PointOfSale />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  
+                  {/* Admin-only routes */}
+                  <Route path="/users" element={
+                    <ProtectedRoute requiredRole="admin">
+                      <UserManagement />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Manager/Admin routes */}
+                  <Route path="/config" element={
+                    <ProtectedRoute requiredRole="manager">
+                      <Configuration />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* All authenticated users */}
+                  <Route path="/profile" element={<Profile />} />
                 </Route>
-                
-                {/* Manager/Admin routes */}
-                <Route element={<ProtectedRoute requiredRole="manager" />}>
-                  <Route path="/config" element={<Configuration />} />
-                </Route>
-                
-                {/* All authenticated users */}
-                <Route path="/profile" element={<Profile />} />
               </Route>
-            </Route>
-            
-            {/* Error routes */}
-            <Route path="/unauthorized" element={<Unauthorized />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+              
+              {/* Error routes */}
+              <Route path="/unauthorized" element={<Unauthorized />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

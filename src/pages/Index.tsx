@@ -2,9 +2,17 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
+import { useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { loading } = useAuth();
+  
+  useEffect(() => {
+    // Log the page load
+    console.log("Index page loaded", { loading });
+  }, [loading]);
   
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center">
