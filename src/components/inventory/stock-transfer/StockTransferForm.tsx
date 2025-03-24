@@ -35,8 +35,6 @@ interface StockTransferFormProps {
 export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps) {
   const [stores, setStores] = useState<StoreData[]>([]);
   const [products, setProducts] = useState<ProductStock[]>([]);
-  const [sourceStore, setSourceStore] = useState<string | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<ProductStock | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -51,19 +49,37 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
     },
   });
 
+  // Watch values from the form instead of using separate state
+  const sourceStoreId = form.watch("sourceStoreId");
+  const productId = form.watch("productId");
+
+  // Get the selected product from the products state based on the form value
+  const selectedProduct = productId ? products.find(p => p.id === productId) : null;
+
   useEffect(() => {
     loadStores();
   }, []);
 
   useEffect(() => {
-    if (sourceStore) {
-      loadProductsForStore(sourceStore);
+    if (sourceStoreId) {
+      loadProductsForStore(sourceStoreId);
     } else {
       setProducts([]);
     }
-  }, [sourceStore]);
+    
+    // When source store changes, reset product selection and target store if it's the same
+    if (sourceStoreId) {
+      form.setValue("productId", "");
+      
+      const targetStoreId = form.getValues("targetStoreId");
+      if (targetStoreId === sourceStoreId) {
+        form.setValue("targetStoreId", "");
+      }
+    }
+  }, [sourceStoreId, form]);
 
   const loadStores = async () => {
+    setIsLoading(true);
     try {
       const storesData = await getStores();
       setStores(storesData);
@@ -73,6 +89,8 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
         description: "No se pudieron cargar las sucursales.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -120,8 +138,6 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
       });
       
       form.reset();
-      setSourceStore(null);
-      setSelectedProduct(null);
       onTransferSuccess();
     } catch (error) {
       console.error("Transfer error:", error);
@@ -144,13 +160,7 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
           render={({ field }) => (
             <FormItem>
               <FormLabel>Sucursal de Origen</FormLabel>
-              <Select 
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  setSourceStore(value);
-                }}
-                value={field.value}
-              >
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccione una sucursal" />
@@ -190,7 +200,7 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
                     <SelectItem 
                       key={store.id} 
                       value={store.id}
-                      disabled={store.id === sourceStore}
+                      disabled={store.id === sourceStoreId}
                     >
                       {store.nombre}
                     </SelectItem>
@@ -209,13 +219,9 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
             <FormItem>
               <FormLabel>Producto</FormLabel>
               <Select 
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  const product = products.find(p => p.id === value) || null;
-                  setSelectedProduct(product);
-                }}
+                onValueChange={field.onChange}
                 value={field.value}
-                disabled={!sourceStore || isLoading}
+                disabled={!sourceStoreId || isLoading}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -232,7 +238,7 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
                 <SelectContent>
                   {products.length === 0 ? (
                     <div className="p-2 text-center text-muted-foreground">
-                      {sourceStore 
+                      {sourceStoreId 
                         ? "No hay productos con stock en esta sucursal" 
                         : "Seleccione una sucursal primero"}
                     </div>
@@ -272,6 +278,7 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
                   min="1"
                   step="1"
                   {...field}
+                  onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
                   disabled={!selectedProduct}
                 />
               </FormControl>

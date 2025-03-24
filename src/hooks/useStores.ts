@@ -1,8 +1,6 @@
 
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
 
@@ -12,7 +10,6 @@ export interface Store {
 }
 
 export function useStores() {
-  const { toast: uiToast } = useToast();
   const { handleError } = useSupabaseQuery();
   
   const { 
@@ -45,8 +42,6 @@ export function useStores() {
     },
     staleTime: 60000, // 1 minute cache
     refetchOnWindowFocus: false,
-    // Prevents UI flash when data is fetched again and is the same
-    placeholderData: keepPreviousData => keepPreviousData || [],
   });
 
   return { 
@@ -56,4 +51,3 @@ export function useStores() {
     hasStores: stores.length > 0 
   };
 }
-

@@ -1,5 +1,6 @@
+
 import { UserWithRoles } from "@/types/auth";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -29,6 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useStores } from "@/hooks/useStores";
+import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
 
 // Form schema with validation
 const roleAssignmentSchema = z.object({
@@ -48,6 +50,7 @@ interface UserRoleFormProps {
 export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleFormProps) {
   const { toast: uiToast } = useToast();
   const { stores } = useStores();
+  const { handleError } = useSupabaseQuery();
   
   // Initialize form with default values
   const form = useForm<RoleAssignmentValues>({
@@ -59,7 +62,11 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
     },
   });
 
-  // Update form when selected user changes - using useEffect correctly
+  // Current role from form state
+  const currentRole = form.watch("role");
+  const needsStore = currentRole === "sales";
+
+  // Update form when selected user changes
   useEffect(() => {
     if (selectedUser) {
       form.setValue("userId", selectedUser.id);
@@ -78,13 +85,8 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
         });
 
       if (error) {
-        console.error("Error assigning role:", error);
-        uiToast({
-          title: "Error al asignar rol",
-          description: error.message,
-          variant: "destructive",
-        });
-        throw error;
+        handleError(error, "Error al asignar rol");
+        return;
       }
 
       toast.success("Rol asignado", {
@@ -101,8 +103,6 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
     }
   };
 
-  const currentRole = form.watch("role");
-  const needsStore = currentRole === "sales";
   const userName = selectedUser?.full_name || selectedUser?.email || "";
 
   return (
