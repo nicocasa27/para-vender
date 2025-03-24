@@ -70,18 +70,19 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
+      console.log("Fetching users...");
 
-      // First get all users from auth
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) throw authError;
-      
-      // Get profiles for additional user data
+      // Get all profiles which is more reliable than auth.users
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("*");
         
-      if (profilesError) throw profilesError;
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw profilesError;
+      }
+      
+      console.log("Profiles fetched:", profiles);
       
       // Get all user roles
       const { data: roles, error: rolesError } = await supabase
@@ -95,24 +96,31 @@ export default function UserManagement() {
           created_at
         `);
         
-      if (rolesError) throw rolesError;
+      if (rolesError) {
+        console.error("Error fetching roles:", rolesError);
+        throw rolesError;
+      }
+      
+      console.log("Roles fetched:", roles);
       
       // Combine the data
-      const usersWithRoles = authUsers.users.map(authUser => {
-        const profile = profiles.find(p => p.id === authUser.id);
-        const userRoles = roles.filter(r => r.user_id === authUser.id).map(role => ({
-          ...role,
-          almacen_nombre: role.almacenes?.nombre || null
-        }));
+      const usersWithRoles = profiles.map(profile => {
+        const userRoles = roles
+          .filter(r => r.user_id === profile.id)
+          .map(role => ({
+            ...role,
+            almacen_nombre: role.almacenes?.nombre || null
+          }));
         
         return {
-          id: authUser.id,
-          email: authUser.email || "",
-          full_name: profile?.full_name || authUser.user_metadata?.full_name || null,
+          id: profile.id,
+          email: profile.email || "",
+          full_name: profile.full_name || null,
           roles: userRoles,
         };
       });
       
+      console.log("Combined users with roles:", usersWithRoles);
       setUsers(usersWithRoles);
     } catch (error) {
       console.error("Error fetching users:", error);
