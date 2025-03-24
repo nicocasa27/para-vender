@@ -2,12 +2,14 @@
 import { PostgrestError } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
+import { useState } from "react";
 
 /**
  * A hook that provides standardized error handling for Supabase queries
  */
 export function useSupabaseQuery() {
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleError = (error: PostgrestError | Error, customMessage?: string) => {
     console.error("Supabase query error:", error);
@@ -33,12 +35,13 @@ export function useSupabaseQuery() {
   };
 
   /**
-   * Safely execute a Supabase query with error handling
+   * Safely execute a Supabase query with error handling and loading state management
    */
   const executeQuery = async <T>(
     queryFn: () => Promise<{ data: T | null; error: PostgrestError | null }>,
     errorMessage?: string
   ): Promise<T | null> => {
+    setIsLoading(true);
     try {
       const { data, error } = await queryFn();
       
@@ -51,8 +54,10 @@ export function useSupabaseQuery() {
     } catch (error) {
       handleError(error as Error, errorMessage);
       return null;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  return { executeQuery, handleError };
+  return { executeQuery, handleError, isLoading };
 }

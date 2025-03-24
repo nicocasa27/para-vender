@@ -20,6 +20,8 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
 
 type SaleItem = {
   id: string;
@@ -37,6 +39,7 @@ export const RecentSalesTable = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const itemsPerPage = 5;
+  const { handleError } = useSupabaseQuery();
 
   useEffect(() => {
     const fetchRecentSales = async () => {
@@ -57,7 +60,12 @@ export const RecentSalesTable = () => {
           .limit(10);
 
         if (ventasError) {
-          console.error('Error fetching ventas:', ventasError);
+          handleError(ventasError, "Error al cargar ventas recientes");
+          return;
+        }
+
+        if (!ventas || ventas.length === 0) {
+          setRecentSales([]);
           return;
         }
 
@@ -74,7 +82,7 @@ export const RecentSalesTable = () => {
             .limit(1);
 
           if (detallesError) {
-            console.error('Error fetching detalles_venta:', detallesError);
+            handleError(detallesError, "Error al cargar detalles de venta");
           }
 
           const productName = detalles && detalles.length > 0 && detalles[0].productos
@@ -103,15 +111,15 @@ export const RecentSalesTable = () => {
         }));
 
         setRecentSales(salesData);
-      } catch (error) {
-        console.error('Error fetching recent sales:', error);
+      } catch (error: any) {
+        handleError(error, "Error al cargar ventas recientes");
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchRecentSales();
-  }, []);
+  }, [handleError]);
 
   const totalPages = Math.ceil(recentSales.length / itemsPerPage);
   const currentPageItems = recentSales.slice(
@@ -124,26 +132,31 @@ export const RecentSalesTable = () => {
     return date.toLocaleDateString();
   };
 
-  if (isLoading) {
-    return (
-      <Card className="transition-all duration-300 hover:shadow-elevation">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base font-medium">Ventas Recientes</CardTitle>
-          <Button variant="outline" size="sm" disabled>
-            Ver Todas
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+  const renderSkeletonRows = () => {
+    return Array(5).fill(0).map((_, i) => (
+      <TableRow key={`skeleton-${i}`}>
+        <TableCell>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-4 w-32" />
           </div>
-        </CardContent>
-      </Card>
-    );
-  }
+        </TableCell>
+        <TableCell>
+          <div className="flex flex-col space-y-1">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        </TableCell>
+        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+        <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+        <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-full" /></TableCell>
+      </TableRow>
+    ));
+  };
 
   return (
-    <Card className="transition-all duration-300 hover:shadow-elevation">
+    <Card className="transition-all duration-300 hover:shadow-elevation min-h-[500px]">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base font-medium">Ventas Recientes</CardTitle>
         <Button variant="outline" size="sm">
@@ -151,101 +164,124 @@ export const RecentSalesTable = () => {
         </Button>
       </CardHeader>
       <CardContent>
-        {recentSales.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            No hay datos de ventas disponibles
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Producto</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Importe</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Producto</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Importe</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                renderSkeletonRows()
+              ) : recentSales.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-60 text-center">
+                    <div className="flex flex-col items-center justify-center py-8">
+                      <svg
+                        className="w-12 h-12 text-gray-400 mb-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        ></path>
+                      </svg>
+                      <p className="text-lg font-medium">No hay ventas recientes</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Las ventas realizadas aparecerán aquí
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                currentPageItems.map((sale) => (
+                  <TableRow key={sale.id} className="animate-fade-in">
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-primary/10 text-primary">
+                            {sale.customerInitial}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="font-medium">{sale.customer}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{sale.product}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {sale.store}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {formatDate(sale.date)}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      ${sale.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          sale.status === "completada" ? "default" : "secondary"
+                        }
+                      >
+                        {sale.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Acciones</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>Ver detalles</DropdownMenuItem>
+                          <DropdownMenuItem>Imprimir recibo</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {currentPageItems.map((sale) => (
-                    <TableRow key={sale.id} className="animate-fade-in">
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-primary/10 text-primary">
-                              {sale.customerInitial}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="font-medium">{sale.customer}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{sale.product}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {sale.store}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {formatDate(sale.date)}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        ${sale.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            sale.status === "completada" ? "default" : "secondary"
-                          }
-                        >
-                          {sale.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Acciones</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Ver detalles</DropdownMenuItem>
-                            <DropdownMenuItem>Imprimir recibo</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        {!isLoading && recentSales.length > 0 && totalPages > 1 && (
+          <div className="flex items-center justify-end space-x-2 py-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-sm text-muted-foreground mx-2">
+              Página {page} de {Math.max(1, totalPages)}
             </div>
-            <div className="flex items-center justify-end space-x-2 py-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1 || recentSales.length === 0}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="text-sm text-muted-foreground mx-2">
-                Página {page} de {Math.max(1, totalPages)}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages || recentSales.length === 0}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>

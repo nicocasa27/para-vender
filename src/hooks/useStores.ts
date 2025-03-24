@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
+import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
 
 export interface Store {
   id: string;
@@ -12,6 +13,7 @@ export interface Store {
 
 export function useStores() {
   const { toast: uiToast } = useToast();
+  const { handleError } = useSupabaseQuery();
   
   const { 
     data: stores = [], 
@@ -27,14 +29,11 @@ export function useStores() {
           .order("nombre");
 
         if (error) {
-          console.error("Error fetching stores:", error);
-          uiToast({
-            title: "Error",
-            description: "No se pudieron cargar las sucursales: " + error.message,
-            variant: "destructive",
-          });
-          throw error;
+          handleError(error, "No se pudieron cargar las sucursales");
+          return [];
         }
+        
+        // Return an empty array if no data to avoid null checks
         return data || [];
       } catch (error: any) {
         console.error("Error fetching stores:", error);
@@ -46,7 +45,15 @@ export function useStores() {
     },
     staleTime: 60000, // 1 minute cache
     refetchOnWindowFocus: false,
+    // Prevents UI flash when data is fetched again and is the same
+    placeholderData: keepPreviousData => keepPreviousData || [],
   });
 
-  return { stores, isLoading, error };
+  return { 
+    stores, 
+    isLoading, 
+    error,
+    hasStores: stores.length > 0 
+  };
 }
+

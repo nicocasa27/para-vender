@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Loader2, Package } from "lucide-react";
+import { Loader2, Package, FileX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 import {
@@ -14,6 +14,7 @@ import {
 
 import { getRecentTransfers } from "./stock-transfer-api";
 import { TransferRecord } from "./types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function TransferHistory() {
   const [transferRecords, setTransferRecords] = useState<TransferRecord[]>([]);
@@ -40,42 +41,56 @@ export function TransferHistory() {
     }
   };
 
+  const renderSkeletonRows = () => {
+    return Array(3).fill(0).map((_, i) => (
+      <TableRow key={`skeleton-${i}`}>
+        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+      </TableRow>
+    ));
+  };
+
   return (
-    <>
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground">
-          <Loader2 className="h-8 w-8 animate-spin mb-2" />
-          <p>Cargando historial...</p>
-        </div>
-      ) : transferRecords.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground">
-          <Package className="h-12 w-12 mb-2" />
-          <p className="text-base">No hay transferencias registradas</p>
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
+    <div className="min-h-[300px]">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Fecha</TableHead>
+            <TableHead>Producto</TableHead>
+            <TableHead>Origen</TableHead>
+            <TableHead>Destino</TableHead>
+            <TableHead>Cantidad</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
+            renderSkeletonRows()
+          ) : transferRecords.length === 0 ? (
             <TableRow>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Producto</TableHead>
-              <TableHead>Origen</TableHead>
-              <TableHead>Destino</TableHead>
-              <TableHead>Cantidad</TableHead>
+              <TableCell colSpan={5} className="h-[250px]">
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                  <FileX className="h-12 w-12 mb-2 text-muted-foreground/60" />
+                  <p className="text-base font-medium">No hay transferencias registradas</p>
+                  <p className="text-sm mt-1">Utilice el formulario para registrar transferencias de stock</p>
+                </div>
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {transferRecords.map((transfer) => (
-              <TableRow key={transfer.id}>
+          ) : (
+            transferRecords.map((transfer) => (
+              <TableRow key={transfer.id} className="animate-fade-in">
                 <TableCell>{transfer.fecha}</TableCell>
                 <TableCell>{transfer.producto}</TableCell>
                 <TableCell>{transfer.origen}</TableCell>
                 <TableCell>{transfer.destino}</TableCell>
                 <TableCell>{transfer.cantidad}</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-    </>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
