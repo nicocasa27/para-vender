@@ -1,18 +1,22 @@
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { addAdminRoleToUser } from "@/utils/adminUtils";
 import { useToast } from "@/hooks/use-toast";
 
 export function AdminInitializer() {
   const initialized = useRef(false);
   const { toast } = useToast();
+  const [isInitializing, setIsInitializing] = useState(false);
 
   useEffect(() => {
     // Only run once and prevent re-initialization
-    if (initialized.current) return;
+    if (initialized.current || isInitializing) return;
     
     async function initializeAdmin() {
       try {
+        setIsInitializing(true);
+        console.log("AdminInitializer: Starting initialization");
+        
         // Add nc@vokter.es as admin on component mount
         const result = await addAdminRoleToUser("nc@vokter.es");
         
@@ -37,13 +41,13 @@ export function AdminInitializer() {
         console.error("Error initializing admin:", error);
       } finally {
         initialized.current = true;
+        setIsInitializing(false);
+        console.log("AdminInitializer: Initialization complete");
       }
     }
 
     initializeAdmin();
-    
-    // Include toast in dependencies to avoid lint warnings
-  }, [toast]);
+  }, [toast, isInitializing]);
 
   // This component doesn't render anything
   return null;

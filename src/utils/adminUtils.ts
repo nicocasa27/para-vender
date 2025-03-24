@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export async function addAdminRoleToUser(email: string) {
   try {
+    console.log("AdminUtils: Attempting to add admin role to", email);
+    
     // First get the user profile by email
     const { data: profiles, error: profileError } = await supabase
       .from("profiles")
@@ -15,12 +17,18 @@ export async function addAdminRoleToUser(email: string) {
       .eq("email", email)
       .limit(1);
       
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error("AdminUtils: Error fetching profile:", profileError);
+      throw profileError;
+    }
+    
     if (!profiles || profiles.length === 0) {
+      console.error("AdminUtils: No user found with email:", email);
       throw new Error(`No se encontró ningún usuario con el email ${email}`);
     }
     
     const userId = profiles[0].id;
+    console.log("AdminUtils: Found user with ID:", userId);
     
     // Check if the user already has the admin role
     const { data: existingRoles, error: roleCheckError } = await supabase
@@ -30,15 +38,20 @@ export async function addAdminRoleToUser(email: string) {
       .eq("role", "admin")
       .limit(1);
       
-    if (roleCheckError) throw roleCheckError;
+    if (roleCheckError) {
+      console.error("AdminUtils: Error checking existing roles:", roleCheckError);
+      throw roleCheckError;
+    }
     
     // If the user already has admin role, no need to add it again
     if (existingRoles && existingRoles.length > 0) {
+      console.log("AdminUtils: User already has admin role");
       return { success: true, message: `El usuario ${email} ya tiene rol de administrador.` };
     }
     
-    // Add admin role to the user with the service_role client to bypass RLS
-    // Since we're inside the AdminInitializer, this is acceptable for bootstrapping the first admin
+    console.log("AdminUtils: Adding admin role to user");
+    
+    // Add admin role to the user
     const { error: insertError } = await supabase
       .from("user_roles")
       .insert({
@@ -46,8 +59,12 @@ export async function addAdminRoleToUser(email: string) {
         role: "admin"
       });
       
-    if (insertError) throw insertError;
+    if (insertError) {
+      console.error("AdminUtils: Error inserting role:", insertError);
+      throw insertError;
+    }
     
+    console.log("AdminUtils: Admin role successfully added");
     return { success: true, message: `Rol de administrador asignado a ${email} correctamente.` };
   } catch (error: any) {
     console.error("Error adding admin role:", error);
