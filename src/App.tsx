@@ -58,11 +58,9 @@ const App = () => {
                   <Route path="/pos" element={<PointOfSale />} />
                   <Route path="/analytics" element={<Analytics />} />
                   
-                  {/* Admin-only routes */}
-                  <Route path="/users" element={<UserManagement />} requiredRole="admin" />
-                  
-                  {/* Manager/Admin routes */}
-                  <Route path="/config" element={<Configuration />} requiredRole="manager" />
+                  {/* These two routes will use the effectiveRequiredRole logic in ProtectedRoute */}
+                  <Route path="/users" element={<UserManagement />} />
+                  <Route path="/config" element={<Configuration />} />
                   
                   {/* All authenticated users */}
                   <Route path="/profile" element={<Profile />} />

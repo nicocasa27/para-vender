@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +28,8 @@ import {
   FileText,
   Check,
   X,
-  Loader
+  Loader,
+  RefreshCw
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -58,28 +60,12 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-
-interface ProductWithStock {
-  id: string;
-  nombre: string;
-  categoria: string;
-  categoria_id: string;
-  unidad: string;
-  unidad_id: string;
-  precio_compra: number;
-  precio_venta: number;
-  stock: {
-    [key: string]: number;
-  };
-  stock_minimo: number;
-  stock_maximo: number;
-}
+import { Skeleton } from "@/components/ui/skeleton";
+import { useProducts, Product } from "@/hooks/useProducts";
+import { useStores } from "@/hooks/useStores";
 
 export const ProductTable = () => {
-  const [products, setProducts] = useState<ProductWithStock[]>([]);
-  const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
-  const [stores, setStores] = useState<{id: string, name: string}[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // State
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStore, setSelectedStore] = useState("all");
@@ -88,100 +74,49 @@ export const ProductTable = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isStockDialogOpen, setIsStockDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<ProductWithStock | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [newStockQuantity, setNewStockQuantity] = useState(0);
   const [selectedStockWarehouse, setSelectedStockWarehouse] = useState("");
+  
+  // Custom hooks
   const { toast } = useToast();
-
+  const { products, isLoading, refetch } = useProducts(selectedStore);
+  const { stores, isLoading: storesLoading } = useStores();
+  
+  // Get categories from products
+  const categories = [
+    { id: "all", name: "Todas las Categorías" },
+    ...Array.from(
+      new Set(products.map(product => product.categoria_id))
+    ).map(id => {
+      const product = products.find(p => p.categoria_id === id);
+      return { 
+        id: id || "unknown", 
+        name: product?.categoria || "Sin categoría" 
+      };
+    })
+  ];
+  
+  // Get units from products
+  const [units, setUnits] = useState<{id: string, name: string}[]>([]);
+  
   useEffect(() => {
-    async function fetchData() {
-      setIsLoading(true);
+    async function fetchUnits() {
       try {
-        const { data: categoriesData, error: categoriesError } = await supabase
-          .from("categorias")
+        const { data: unitsData, error: unitsError } = await supabase
+          .from("unidades")
           .select("id, nombre");
         
-        if (categoriesError) throw categoriesError;
+        if (unitsError) throw unitsError;
         
-        const formattedCategories = [
-          { id: "all", name: "Todas las Categorías" },
-          ...categoriesData.map(cat => ({ id: cat.id, name: cat.nombre }))
-        ];
-        setCategories(formattedCategories);
-        
-        const { data: storesData, error: storesError } = await supabase
-          .from("almacenes")
-          .select("id, nombre");
-        
-        if (storesError) throw storesError;
-        
-        const formattedStores = [
-          { id: "all", name: "Todos los Almacenes" },
-          ...storesData.map(store => ({ id: store.id, name: store.nombre }))
-        ];
-        setStores(formattedStores);
-        
-        const { data: productsData, error: productsError } = await supabase
-          .from("productos")
-          .select(`
-            id, nombre, precio_compra, precio_venta, stock_minimo, stock_maximo,
-            categoria_id, categorias(nombre),
-            unidad_id, unidades(nombre)
-          `);
-        
-        if (productsError) throw productsError;
-        
-        const productsWithStock = await Promise.all(
-          productsData.map(async (product) => {
-            const { data: inventoryData, error: inventoryError } = await supabase
-              .from("inventario")
-              .select(`
-                cantidad,
-                almacen_id,
-                almacenes(id, nombre)
-              `)
-              .eq("producto_id", product.id);
-            
-            if (inventoryError) throw inventoryError;
-            
-            const stockByStore: {[key: string]: number} = {};
-            inventoryData.forEach(item => {
-              if (item.almacenes) {
-                stockByStore[item.almacenes.nombre] = item.cantidad;
-              }
-            });
-            
-            return {
-              id: product.id,
-              nombre: product.nombre,
-              categoria: product.categorias ? product.categorias.nombre : "Sin categoría",
-              categoria_id: product.categoria_id,
-              unidad: product.unidades ? product.unidades.nombre : "Unidad",
-              unidad_id: product.unidad_id,
-              precio_compra: product.precio_compra,
-              precio_venta: product.precio_venta,
-              stock: stockByStore,
-              stock_minimo: product.stock_minimo,
-              stock_maximo: product.stock_maximo,
-            };
-          })
-        );
-        
-        setProducts(productsWithStock);
+        setUnits(unitsData.map(unit => ({ id: unit.id, name: unit.nombre })));
       } catch (error) {
-        console.error("Error fetching data:", error);
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar los datos. Intente nuevamente.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
+        console.error("Error fetching units:", error);
       }
     }
     
-    fetchData();
-  }, [toast]);
+    fetchUnits();
+  }, []);
 
   const handleDeleteProduct = async (id: string) => {
     try {
@@ -199,7 +134,7 @@ export const ProductTable = () => {
       
       if (error) throw error;
       
-      setProducts(prev => prev.filter(product => product.id !== id));
+      refetch();
       
       toast({
         title: "Producto eliminado",
@@ -215,12 +150,12 @@ export const ProductTable = () => {
     }
   };
 
-  const handleEditProduct = (product: ProductWithStock) => {
+  const handleEditProduct = (product: Product) => {
     setSelectedProduct(product);
     setIsEditDialogOpen(true);
   };
 
-  const handleStockUpdate = (product: ProductWithStock) => {
+  const handleStockUpdate = (product: Product) => {
     setSelectedProduct(product);
     setNewStockQuantity(0);
     setSelectedStockWarehouse("");
@@ -238,8 +173,6 @@ export const ProductTable = () => {
     }
 
     try {
-      setIsLoading(true);
-      
       const { data: existingInventory, error: checkError } = await supabase
         .from("inventario")
         .select("id, cantidad")
@@ -279,26 +212,8 @@ export const ProductTable = () => {
 
       if (movementError) throw movementError;
 
-      setProducts((prevProducts) => {
-        return prevProducts.map((product) => {
-          if (product.id === selectedProduct.id) {
-            const updatedStock = { ...product.stock };
-            const storeName = stores.find((store) => store.id === selectedStockWarehouse)?.name || "";
-            
-            if (storeName) {
-              updatedStock[storeName] = (updatedStock[storeName] || 0) + newStockQuantity;
-            }
-            
-            return {
-              ...product,
-              stock: updatedStock,
-            };
-          }
-          return product;
-        });
-      });
-
       setIsStockDialogOpen(false);
+      refetch();
       
       toast({
         title: "Stock actualizado",
@@ -311,8 +226,6 @@ export const ProductTable = () => {
         description: "No se pudo actualizar el inventario. Intente nuevamente.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -329,7 +242,7 @@ export const ProductTable = () => {
     page * itemsPerPage
   );
 
-  const currentStoreName = stores.find(store => store.id === selectedStore)?.name || "";
+  const currentStoreName = stores.find(store => store.id === selectedStore)?.nombre || "";
 
   const handleAddProductSubmit = async (data: any) => {
     try {
@@ -373,24 +286,8 @@ export const ProductTable = () => {
         if (movementError) throw movementError;
       }
 
-      const warehouseName = stores.find(store => store.id === data.warehouse)?.name || "";
-      
-      const newProductWithStock: ProductWithStock = {
-        id: newProduct.id,
-        nombre: data.name,
-        categoria: categories.find(cat => cat.id === data.category)?.name || "Sin categoría",
-        categoria_id: data.category,
-        unidad: units.find(unit => unit.id === data.unit)?.name || "Unidad",
-        unidad_id: data.unit,
-        precio_compra: data.purchasePrice,
-        precio_venta: data.salePrice,
-        stock: warehouseName ? { [warehouseName]: data.initialStock } : {},
-        stock_minimo: data.minStock,
-        stock_maximo: data.maxStock,
-      };
-
-      setProducts(prev => [...prev, newProductWithStock]);
       setIsAddDialogOpen(false);
+      refetch();
 
       toast({
         title: "Producto agregado",
@@ -425,27 +322,8 @@ export const ProductTable = () => {
 
       if (error) throw error;
 
-      setProducts(prevProducts => {
-        return prevProducts.map(product => {
-          if (product.id === selectedProduct.id) {
-            return {
-              ...product,
-              nombre: data.name,
-              categoria: categories.find(cat => cat.id === data.category)?.name || "Sin categoría",
-              categoria_id: data.category,
-              unidad: units.find(unit => unit.id === data.unit)?.name || "Unidad",
-              unidad_id: data.unit,
-              precio_compra: data.purchasePrice,
-              precio_venta: data.salePrice,
-              stock_minimo: data.minStock,
-              stock_maximo: data.maxStock,
-            };
-          }
-          return product;
-        });
-      });
-
       setIsEditDialogOpen(false);
+      refetch();
       
       toast({
         title: "Producto actualizado",
@@ -460,26 +338,6 @@ export const ProductTable = () => {
       });
     }
   };
-
-  const [units, setUnits] = useState<{id: string, name: string}[]>([]);
-  
-  useEffect(() => {
-    async function fetchUnits() {
-      try {
-        const { data: unitsData, error: unitsError } = await supabase
-          .from("unidades")
-          .select("id, nombre");
-        
-        if (unitsError) throw unitsError;
-        
-        setUnits(unitsData.map(unit => ({ id: unit.id, name: unit.nombre })));
-      } catch (error) {
-        console.error("Error fetching units:", error);
-      }
-    }
-    
-    fetchUnits();
-  }, []);
 
   return (
     <div className="space-y-4">
@@ -514,13 +372,24 @@ export const ProductTable = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {stores.map(store => (
-                <SelectItem key={store.id} value={store.id}>
-                  {store.name}
-                </SelectItem>
-              ))}
+              {storesLoading ? (
+                <div className="flex items-center justify-center py-2">
+                  <Loader className="h-4 w-4 animate-spin mr-2" />
+                  Cargando...
+                </div>
+              ) : (
+                stores.map(store => (
+                  <SelectItem key={store.id} value={store.id}>
+                    {store.nombre}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
+          
+          <Button variant="outline" size="icon" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         </div>
 
         <div className="flex gap-2 w-full sm:w-auto">
@@ -549,8 +418,14 @@ export const ProductTable = () => {
 
       <Card>
         {isLoading ? (
-          <div className="flex justify-center items-center h-60">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          <div className="flex flex-col gap-4 p-4">
+            <div className="flex justify-between items-center">
+              <Skeleton className="h-10 w-1/4" />
+              <Skeleton className="h-10 w-1/4" />
+            </div>
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
           </div>
         ) : paginatedProducts.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-60 text-center">
@@ -743,7 +618,7 @@ export const ProductTable = () => {
                         .filter(store => store.id !== "all")
                         .map(store => (
                           <SelectItem key={store.id} value={store.id}>
-                            {store.name}
+                            {store.nombre}
                           </SelectItem>
                         ))}
                     </SelectContent>

@@ -4,6 +4,8 @@ import { ProductGrid } from "@/components/pos/ProductGrid";
 import { Cart } from "@/components/pos/Cart";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useStores } from "@/hooks/useStores";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface CartItem {
   id: string;
@@ -16,34 +18,16 @@ interface CartItem {
 const PointOfSale = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedStore, setSelectedStore] = useState<string>("");
-  const [stores, setStores] = useState<{id: string, nombre: string}[]>([]);
+  const { stores, isLoading: storesLoading } = useStores();
   const { toast } = useToast();
 
+  // Set first store as default once loaded
   useEffect(() => {
-    const fetchStores = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("almacenes")
-          .select("id, nombre");
-        
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-          setStores(data);
-          setSelectedStore(data[0].id); // Set first store as default
-        }
-      } catch (error) {
-        console.error("Error fetching stores:", error);
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar las sucursales",
-          variant: "destructive",
-        });
-      }
-    };
-
-    fetchStores();
-  }, [toast]);
+    if (stores && stores.length > 0 && !selectedStore) {
+      setSelectedStore(stores[0].id);
+      console.log("Setting default store:", stores[0].id);
+    }
+  }, [stores, selectedStore]);
 
   const handleProductSelect = (product: { id: string; name: string; price: number; stock: number }) => {
     setCartItems((prevItems) => {
@@ -104,7 +88,14 @@ const PointOfSale = () => {
   };
 
   const handleCompleteSale = async (paymentMethod: string, customerName: string, cashAmount?: number) => {
-    if (cartItems.length === 0 || !selectedStore) return false;
+    if (cartItems.length === 0 || !selectedStore) {
+      toast({
+        title: "Error",
+        description: "El carrito está vacío o no se ha seleccionado una sucursal",
+        variant: "destructive",
+      });
+      return false;
+    }
     
     try {
       const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -147,7 +138,7 @@ const PointOfSale = () => {
           .select("id, cantidad")
           .eq("producto_id", item.id)
           .eq("almacen_id", selectedStore)
-          .single();
+          .maybeSingle();
 
         if (inventoryError && inventoryError.code !== "PGRST116") throw inventoryError;
 
@@ -179,6 +170,11 @@ const PointOfSale = () => {
       // Clear cart after successful sale
       setCartItems([]);
       
+      toast({
+        title: "Venta completada",
+        description: `Venta #${saleData.id} procesada correctamente.`,
+      });
+      
       return true;
     } catch (error) {
       console.error("Error completing sale:", error);
@@ -200,26 +196,44 @@ const PointOfSale = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 h-[calc(100vh-14rem)]">
-        <div className="lg:col-span-2 h-full">
-          <ProductGrid 
-            onProductSelect={handleProductSelect} 
-            selectedStore={selectedStore}
-          />
+      {storesLoading ? (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 h-[calc(100vh-14rem)]">
+          <div className="lg:col-span-2 h-full">
+            <Skeleton className="w-full h-full" />
+          </div>
+          <div className="h-full">
+            <Skeleton className="w-full h-full" />
+          </div>
         </div>
-        <div className="h-full">
-          <Cart
-            items={cartItems}
-            onUpdateQuantity={handleUpdateQuantity}
-            onRemoveItem={handleRemoveItem}
-            onClearCart={handleClearCart}
-            onCompleteSale={handleCompleteSale}
-            stores={stores}
-            selectedStore={selectedStore}
-            onStoreChange={setSelectedStore}
-          />
+      ) : stores.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-8 bg-muted rounded-lg h-[calc(100vh-14rem)]">
+          <h3 className="text-xl font-semibold mb-2">No hay sucursales disponibles</h3>
+          <p className="text-muted-foreground text-center mb-4">
+            Debe crear al menos una sucursal para utilizar el punto de venta.
+          </p>
         </div>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 h-[calc(100vh-14rem)]">
+          <div className="lg:col-span-2 h-full">
+            <ProductGrid 
+              onProductSelect={handleProductSelect} 
+              selectedStore={selectedStore}
+            />
+          </div>
+          <div className="h-full">
+            <Cart
+              items={cartItems}
+              onUpdateQuantity={handleUpdateQuantity}
+              onRemoveItem={handleRemoveItem}
+              onClearCart={handleClearCart}
+              onCompleteSale={handleCompleteSale}
+              stores={stores}
+              selectedStore={selectedStore}
+              onStoreChange={setSelectedStore}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
