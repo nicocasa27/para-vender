@@ -1,9 +1,12 @@
 
 import { Button } from "@/components/ui/button";
-import { Shield } from "lucide-react";
+import { Shield, User, Home, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Unauthorized() {
+  const { user, signOut } = useAuth();
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
       <div className="text-center space-y-6 max-w-md">
@@ -13,10 +16,41 @@ export default function Unauthorized() {
           No tiene los permisos necesarios para acceder a esta página.
           Contacte al administrador si cree que esto es un error.
         </p>
-        <div className="pt-4">
-          <Button asChild>
-            <Link to="/">Volver al inicio</Link>
+        
+        {user ? (
+          <div className="bg-muted/50 rounded-lg p-4 text-left text-sm">
+            <p className="font-medium mb-2">Su cuenta actual:</p>
+            <div className="flex items-center gap-2 mb-1">
+              <User className="h-4 w-4" /> 
+              <span>{user.email}</span>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Necesita permisos adicionales para acceder a esta sección.
+            </p>
+          </div>
+        ) : null}
+        
+        <div className="pt-4 flex flex-col sm:flex-row gap-2 justify-center">
+          <Button asChild variant="default">
+            <Link to="/">
+              <Home className="mr-2 h-4 w-4" />
+              Volver al inicio
+            </Link>
           </Button>
+          
+          {user ? (
+            <Button onClick={signOut} variant="outline">
+              <LogOut className="mr-2 h-4 w-4" />
+              Cerrar sesión
+            </Button>
+          ) : (
+            <Button asChild variant="outline">
+              <Link to="/auth">
+                <LogOut className="mr-2 h-4 w-4" />
+                Iniciar sesión
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
     </div>
