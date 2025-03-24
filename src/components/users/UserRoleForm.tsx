@@ -1,6 +1,6 @@
 
 import { UserWithRoles } from "@/types/auth";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -28,8 +28,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useQuery } from "@tanstack/react-query";
+import { useStores } from "@/hooks/useStores";
 
+// Form schema with validation
 const roleAssignmentSchema = z.object({
   userId: z.string().min(1, "Usuario es requerido"),
   role: z.enum(["admin", "manager", "sales", "viewer"] as const),
@@ -46,33 +47,9 @@ interface UserRoleFormProps {
 
 export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleFormProps) {
   const { toast } = useToast();
-
-  // Use React Query for fetching stores
-  const { data: stores = [] } = useQuery({
-    queryKey: ['stores'],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from("almacenes")
-          .select("id, nombre")
-          .order("nombre");
-
-        if (error) throw error;
-        return data || [];
-      } catch (error) {
-        console.error("Error fetching stores:", error);
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar las sucursales",
-          variant: "destructive",
-        });
-        return [];
-      }
-    },
-    staleTime: 60000, // 1 minute cache
-    refetchOnWindowFocus: false,
-  });
-
+  const { stores } = useStores();
+  
+  // Initialize form with default values
   const form = useForm<RoleAssignmentValues>({
     resolver: zodResolver(roleAssignmentSchema),
     defaultValues: {
@@ -83,14 +60,15 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
   });
 
   // Update form when selected user changes
-  useEffect(() => {
+  useState(() => {
     if (selectedUser) {
       form.setValue("userId", selectedUser.id);
     }
-  }, [selectedUser, form]);
+  });
 
   const handleAddRole = async (values: RoleAssignmentValues) => {
     try {
+      console.log("Adding role:", values);
       const { error } = await supabase
         .from("user_roles")
         .insert({
@@ -118,14 +96,19 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
     }
   };
 
+  const currentRole = form.watch("role");
+  const needsStore = currentRole === "sales";
+  const userName = selectedUser?.full_name || selectedUser?.email || "";
+
   return (
     <DialogContent className="sm:max-w-[425px]">
       <DialogHeader>
         <DialogTitle>Asignar Rol</DialogTitle>
         <DialogDescription>
-          Asigne un rol al usuario {selectedUser?.full_name || selectedUser?.email || ""}
+          Asigne un rol al usuario {userName}
         </DialogDescription>
       </DialogHeader>
+      
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleAddRole)} className="space-y-4">
           <FormField
@@ -155,7 +138,7 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
             )}
           />
 
-          {form.watch("role") === "sales" && (
+          {needsStore && (
             <FormField
               control={form.control}
               name="almacenId"
