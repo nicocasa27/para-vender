@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
+import { Link } from "react-router-dom";
 
 interface TopNavProps {
   sidebarOpen: boolean;
@@ -18,6 +20,8 @@ interface TopNavProps {
 }
 
 export const TopNav: React.FC<TopNavProps> = ({ sidebarOpen, setSidebarOpen }) => {
+  const { user, userRoles, signOut } = useAuth();
+  
   return (
     <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-30">
       <div className="flex h-16 items-center px-4">
@@ -50,17 +54,32 @@ export const TopNav: React.FC<TopNavProps> = ({ sidebarOpen, setSidebarOpen }) =
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">Admin</p>
+                  <p className="text-sm font-medium leading-none">
+                    {user?.user_metadata?.full_name || "Usuario"}
+                  </p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    admin@example.com
+                    {user?.email}
                   </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
+              
+              {userRoles.some(role => role.role === 'admin') && (
+                <DropdownMenuItem asChild>
+                  <Link to="/users">Gestionar Usuarios</Link>
+                </DropdownMenuItem>
+              )}
+              
+              <DropdownMenuItem asChild>
+                <Link to="/profile">Perfil</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/settings">Configuración</Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Log out</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => signOut()}>
+                Cerrar sesión
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

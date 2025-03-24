@@ -244,6 +244,27 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       unidades: {
         Row: {
           abreviatura: string
@@ -264,6 +285,38 @@ export type Database = {
           nombre?: string
         }
         Relationships: []
+      }
+      user_roles: {
+        Row: {
+          almacen_id: string | null
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Insert: {
+          almacen_id?: string | null
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Update: {
+          almacen_id?: string | null
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ventas: {
         Row: {
@@ -315,6 +368,13 @@ export type Database = {
         }
         Returns: number
       }
+      has_role: {
+        Args: {
+          requested_role: Database["public"]["Enums"]["user_role"]
+          store_id?: string
+        }
+        Returns: boolean
+      }
       increment: {
         Args: {
           current_value: number
@@ -324,7 +384,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      user_role: "admin" | "manager" | "sales" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
