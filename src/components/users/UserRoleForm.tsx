@@ -1,6 +1,6 @@
 
 import { UserWithRoles } from "@/types/auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -59,12 +59,12 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
     },
   });
 
-  // Update form when selected user changes
-  useState(() => {
+  // Update form when selected user changes - using useEffect correctly
+  useEffect(() => {
     if (selectedUser) {
       form.setValue("userId", selectedUser.id);
     }
-  });
+  }, [selectedUser, form]);
 
   const handleAddRole = async (values: RoleAssignmentValues) => {
     try {

@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 export default function UserManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
-  const { hasRole } = useAuth();
+  const { hasRole, user } = useAuth();
   const { toast } = useToast();
 
   // Use React Query for data fetching with caching and optimized refetching
@@ -29,6 +29,11 @@ export default function UserManagement() {
     queryFn: async () => {
       try {
         console.log("Fetching users...");
+        
+        if (!user) {
+          console.log("No authenticated user found");
+          return [];
+        }
         
         // Get all profiles with more robust error handling
         const { data: profiles, error: profilesError } = await supabase
@@ -98,6 +103,7 @@ export default function UserManagement() {
     refetchOnWindowFocus: false,
     staleTime: 30000, // 30 seconds before refetching stale data
     retry: 2,
+    enabled: !!user && hasRole("admin") // Only run query if user is logged in and has admin role
   });
 
   const handleDeleteRole = async (roleId: string) => {

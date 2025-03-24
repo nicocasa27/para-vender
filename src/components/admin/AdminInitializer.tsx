@@ -2,23 +2,25 @@
 import { useEffect, useRef, useState } from "react";
 import { addAdminRoleToUser } from "@/utils/adminUtils";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function AdminInitializer() {
   const initialized = useRef(false);
   const { toast } = useToast();
   const [isInitializing, setIsInitializing] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     // Only run once and prevent re-initialization
-    if (initialized.current || isInitializing) return;
+    if (initialized.current || isInitializing || !user) return;
     
     async function initializeAdmin() {
       try {
         setIsInitializing(true);
-        console.log("AdminInitializer: Starting initialization");
+        console.log("AdminInitializer: Starting initialization for logged-in user");
         
-        // Add nc@vokter.es as admin on component mount
-        const result = await addAdminRoleToUser("nc@vokter.es");
+        // Only assign admin to the currently logged-in user if not already an admin
+        const result = await addAdminRoleToUser(user.email);
         
         if (result.success) {
           console.log("Admin role management:", result.message);
@@ -31,11 +33,6 @@ export function AdminInitializer() {
           }
         } else {
           console.error("Admin role management failed:", result.message);
-          toast({
-            title: "Error de configuración",
-            description: result.message,
-            variant: "destructive",
-          });
         }
       } catch (error) {
         console.error("Error initializing admin:", error);
@@ -47,7 +44,7 @@ export function AdminInitializer() {
     }
 
     initializeAdmin();
-  }, [toast, isInitializing]);
+  }, [toast, isInitializing, user]);
 
   // This component doesn't render anything
   return null;

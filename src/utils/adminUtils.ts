@@ -8,6 +8,11 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export async function addAdminRoleToUser(email: string) {
   try {
+    if (!email) {
+      console.error("AdminUtils: No email provided");
+      return { success: false, message: "No se proporcionó un email" };
+    }
+    
     console.log("AdminUtils: Attempting to add admin role to", email);
     
     // First get the user profile by email
@@ -19,12 +24,12 @@ export async function addAdminRoleToUser(email: string) {
       
     if (profileError) {
       console.error("AdminUtils: Error fetching profile:", profileError);
-      throw profileError;
+      return { success: false, message: profileError.message };
     }
     
     if (!profiles || profiles.length === 0) {
       console.error("AdminUtils: No user found with email:", email);
-      throw new Error(`No se encontró ningún usuario con el email ${email}`);
+      return { success: false, message: `No se encontró ningún usuario con el email ${email}` };
     }
     
     const userId = profiles[0].id;
@@ -40,7 +45,7 @@ export async function addAdminRoleToUser(email: string) {
       
     if (roleCheckError) {
       console.error("AdminUtils: Error checking existing roles:", roleCheckError);
-      throw roleCheckError;
+      return { success: false, message: roleCheckError.message };
     }
     
     // If the user already has admin role, no need to add it again
@@ -61,7 +66,7 @@ export async function addAdminRoleToUser(email: string) {
       
     if (insertError) {
       console.error("AdminUtils: Error inserting role:", insertError);
-      throw insertError;
+      return { success: false, message: insertError.message };
     }
     
     console.log("AdminUtils: Admin role successfully added");
