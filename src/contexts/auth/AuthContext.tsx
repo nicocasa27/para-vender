@@ -16,7 +16,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     auth.user, 
     auth.userRoles, 
     auth.loading, 
-    auth.hasRole
+    auth.hasRole,
+    auth.refreshUserRoles
   ]);
 
   return (
