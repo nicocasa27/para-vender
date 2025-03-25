@@ -12,7 +12,7 @@ export interface AuthContextType {
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
   hasRole: (role: UserRole, storeId?: string) => boolean;
-  refreshUserRoles: () => Promise<UserRoleWithStore[]>;
+  refreshUserRoles: (force?: boolean) => Promise<UserRoleWithStore[]>;
   getAllUsers: () => Promise<UserWithRoles[]>;
   deleteUser: (userId: string) => Promise<boolean>;
 }

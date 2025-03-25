@@ -17,7 +17,7 @@ export default function Profile() {
     
     setRefreshing(true);
     try {
-      const roles = await refreshUserRoles(true);
+      const roles = await refreshUserRoles();
       toast.success(
         roles.length > 0 
           ? "Roles actualizados correctamente" 

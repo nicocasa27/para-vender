@@ -1,4 +1,3 @@
-
 import { Navigate, Outlet, useLocation, useMatch } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { UserRole } from "@/types/auth";
@@ -73,7 +72,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         if (user && roleRefreshAttempts < 3) {
           console.log("ProtectedRoute: Forcing role refresh due to long timeout");
           setRoleRefreshAttempts(prev => prev + 1);
-          refreshUserRoles(true).then(() => {
+          refreshUserRoles().then(() => {
             if (isMounted) {
               // Manually trigger authorization check after forced refresh
               checkAuthorization();
@@ -87,7 +86,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (user && session && userRoles.length === 0 && !rolesLoading && !authLoading && roleRefreshAttempts < 3) {
       console.log("ProtectedRoute: User authenticated but no roles found. Refreshing roles...");
       setRoleRefreshAttempts(prev => prev + 1);
-      refreshUserRoles(true)
+      refreshUserRoles()
         .then(refreshedRoles => {
           console.log("ProtectedRoute: Roles refreshed:", refreshedRoles);
           if (isMounted && refreshedRoles.length > 0) {
