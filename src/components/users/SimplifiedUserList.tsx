@@ -5,10 +5,7 @@ import { es } from "date-fns/locale";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { UserRoleBadge } from "./UserRoleBadge";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Trash } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useState } from "react";
-import { UserRoleForm } from "./UserRoleForm";
+import { UserPlus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface SimplifiedUserListProps {

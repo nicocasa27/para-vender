@@ -28,6 +28,13 @@ export function useDirectUserFetch() {
 
       console.log("DirectUserFetch: Perfiles obtenidos:", profiles);
 
+      // Si no hay perfiles, retornar array vacío
+      if (!profiles || profiles.length === 0) {
+        console.log("DirectUserFetch: No se encontraron perfiles de usuario");
+        setUsers([]);
+        return;
+      }
+
       // 2. Obtener todos los roles de usuario
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")

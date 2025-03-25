@@ -1,9 +1,8 @@
 
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, UserPlus } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { UserCreateForm } from "@/components/users/UserCreateForm";
 import { toast } from "sonner";
@@ -11,7 +10,7 @@ import { AccessDenied } from "@/components/users/AccessDenied";
 import { UserManagementPanel } from "@/components/users/UserManagementPanel";
 
 export default function UserManagement() {
-  const { hasRole, user, signUp } = useAuth();
+  const { hasRole, signUp } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   
