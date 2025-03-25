@@ -13,7 +13,7 @@ export function useUserManagement() {
       console.log("UserManagement: Cargando usuarios...");
       setLoading(true);
       
-      // Obtener perfiles de usuario
+      // Obtener perfiles de usuario con ordenación explícita por fecha de creación descendente
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
@@ -32,6 +32,7 @@ export function useUserManagement() {
       }
       
       console.log("UserManagement: Perfiles cargados:", profiles.length);
+      console.log("UserManagement: Datos de perfiles:", profiles);
       
       // Obtener roles de usuarios
       const { data: roles, error: rolesError } = await supabase

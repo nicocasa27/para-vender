@@ -16,7 +16,7 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
           return [];
         }
         
-        // Get all profiles with more robust error handling
+        // Get all profiles with more robust error handling and explicit ordering
         const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
           .select("*")
@@ -33,6 +33,7 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
         }
         
         console.log("Profiles fetched:", profiles.length);
+        console.log("Profile data:", profiles);
         
         // Get all user roles with better error handling
         const { data: roles, error: rolesError } = await supabase
@@ -81,8 +82,8 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
       }
     },
     refetchOnWindowFocus: false,
-    staleTime: 10000, // 10 seconds before refetching stale data
+    staleTime: 10000, // 10 segundos antes de considerar los datos obsoletos
     retry: 2,
-    enabled: !!user && hasAdminRole // Only run query if user is logged in and has admin role
+    enabled: !!user && hasAdminRole // Solo ejecutar la consulta si el usuario está conectado y tiene rol de administrador
   });
 }
