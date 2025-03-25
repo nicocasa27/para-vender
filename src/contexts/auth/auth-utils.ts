@@ -6,6 +6,12 @@ export const fetchUserRoles = async (userId: string): Promise<UserRoleWithStore[
   try {
     console.log("AuthUtils: Fetching roles for user:", userId);
     
+    // Check if we have a valid userId
+    if (!userId) {
+      console.error('AuthUtils: Invalid user ID provided');
+      return [];
+    }
+    
     // First, attempt to fetch from the user_roles table directly
     const { data, error } = await supabase
       .from('user_roles')
@@ -36,19 +42,24 @@ export const fetchUserRoles = async (userId: string): Promise<UserRoleWithStore[
         .eq('id', userId)
         .single();
         
-      if (profileError || !userProfile) {
-        console.error('AuthUtils: Error or no profile found when checking admin status:', profileError);
-        return [];
+      if (profileError) {
+        console.error('AuthUtils: Error when checking profile:', profileError);
+        // Don't throw here, try the RPC as a fallback
       }
       
-      console.log("AuthUtils: Found user profile:", userProfile);
+      if (userProfile) {
+        console.log("AuthUtils: Found user profile:", userProfile);
+      }
       
-      // Special case for new project setup - this helps early admins
-      // to access admin features even if the role is not yet assigned
-      if (userProfile.email) {
-        // Optional: Make a special RPC call to check if user should be admin
-        try {
-          const { data: isAdminResult } = await supabase.rpc('is_admin');
+      // Try using RPC to check if user should be admin
+      try {
+        console.log("AuthUtils: Checking admin status via RPC");
+        const { data: isAdminResult, error: rpcError } = await supabase.rpc('is_admin');
+        
+        if (rpcError) {
+          console.log("AuthUtils: RPC admin check error:", rpcError);
+          // This is expected if the function doesn't exist, don't throw
+        } else {
           console.log("AuthUtils: RPC admin check result:", isAdminResult);
           
           if (isAdminResult === true) {
@@ -61,9 +72,10 @@ export const fetchUserRoles = async (userId: string): Promise<UserRoleWithStore[
               created_at: new Date().toISOString(),
             }];
           }
-        } catch (rpcError) {
-          console.log("AuthUtils: RPC admin check error (expected if function doesn't exist):", rpcError);
         }
+      } catch (rpcError) {
+        console.log("AuthUtils: RPC admin check exception:", rpcError);
+        // This is expected if the function doesn't exist, don't throw
       }
       
       return [];
@@ -77,6 +89,7 @@ export const fetchUserRoles = async (userId: string): Promise<UserRoleWithStore[
     return rolesWithStoreNames;
   } catch (error) {
     console.error('AuthUtils: Error in fetchUserRoles:', error);
+    // Return empty array instead of throwing to prevent blocking the authentication flow
     return [];
   }
 };
