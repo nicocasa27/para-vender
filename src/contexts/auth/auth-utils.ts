@@ -30,7 +30,7 @@ export const fetchUserRoles = async (userId: string): Promise<UserRoleWithStore[
       throw error;
     }
 
-    console.log("AuthUtils: Fetched roles:", data);
+    console.log("AuthUtils: Fetched roles data:", data);
     
     if (!data || data.length === 0) {
       console.log("AuthUtils: No roles found for user, checking if this is a first admin");
@@ -86,6 +86,7 @@ export const fetchUserRoles = async (userId: string): Promise<UserRoleWithStore[
       almacen_nombre: role.almacenes?.nombre || null
     }));
 
+    console.log("AuthUtils: Processed roles with store names:", rolesWithStoreNames);
     return rolesWithStoreNames;
   } catch (error) {
     console.error('AuthUtils: Error in fetchUserRoles:', error);

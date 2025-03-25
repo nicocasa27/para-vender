@@ -4,27 +4,43 @@ import { useAuth } from "@/contexts/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, UserIcon, Shield, Key } from "lucide-react";
-import { useState } from "react";
+import { RefreshCw, UserIcon, Shield, Key, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 export default function Profile() {
-  const { user, hasRole, userRoles, refreshUserRoles, rolesLoading } = useAuth();
+  const { user, hasRole, userRoles, refreshUserRoles, rolesLoading, session } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
+  const [lastRefreshAttempt, setLastRefreshAttempt] = useState<Date | null>(null);
+
+  // Monitor role status on initial load
+  useEffect(() => {
+    if (user && userRoles.length === 0 && !rolesLoading && !lastRefreshAttempt) {
+      console.log("Profile: No roles detected on initial profile load, attempting refresh");
+      handleRefreshRoles();
+    }
+  }, [user, userRoles, rolesLoading]);
 
   const handleRefreshRoles = async () => {
     if (!user) return;
     
     setRefreshing(true);
+    setLastRefreshAttempt(new Date());
+    
     try {
       const roles = await refreshUserRoles();
-      toast.success(
-        roles.length > 0 
-          ? "Roles actualizados correctamente" 
-          : "No se encontraron roles asignados"
-      );
+      
+      if (roles.length > 0) {
+        toast.success("Roles actualizados correctamente");
+        console.log("Profile: Roles refreshed successfully:", roles);
+      } else {
+        toast.warning("No se encontraron roles asignados", {
+          description: "Es posible que necesites contactar a un administrador"
+        });
+        console.warn("Profile: No roles found after refresh");
+      }
     } catch (error) {
-      console.error("Error refreshing roles:", error);
+      console.error("Profile: Error refreshing roles:", error);
       toast.error("Error al actualizar roles");
     } finally {
       setRefreshing(false);
@@ -60,6 +76,19 @@ export default function Profile() {
                 <p className="text-sm font-medium text-muted-foreground">ID de Usuario</p>
                 <p className="font-mono text-sm">{user?.id}</p>
               </div>
+              {session && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Estado de Sesión</p>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline" className="bg-green-50">Autenticado</Badge>
+                    {session.expires_at && (
+                      <span className="text-xs text-muted-foreground">
+                        Expira: {new Date(session.expires_at * 1000).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
           
@@ -82,7 +111,12 @@ export default function Profile() {
               </div>
             </CardHeader>
             <CardContent>
-              {userRoles.length > 0 ? (
+              {rolesLoading ? (
+                <div className="text-center py-4">
+                  <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" />
+                  <p className="text-muted-foreground">Cargando roles...</p>
+                </div>
+              ) : userRoles.length > 0 ? (
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Tus roles asignados:</p>
@@ -132,12 +166,22 @@ export default function Profile() {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-4">
-                  <p className="text-muted-foreground">
-                    {rolesLoading 
-                      ? "Cargando roles..." 
-                      : "No tienes roles asignados. Contacta a un administrador."}
+                <div className="text-center py-6">
+                  <AlertCircle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
+                  <p className="text-muted-foreground font-medium">
+                    No tienes roles asignados
                   </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Contacta a un administrador para obtener permisos de acceso
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-4"
+                    onClick={handleRefreshRoles}
+                  >
+                    Intentar nuevamente
+                  </Button>
                 </div>
               )}
             </CardContent>

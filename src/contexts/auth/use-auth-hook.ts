@@ -1,5 +1,4 @@
-
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,53 +18,71 @@ export const useAuthProvider = () => {
   const [loading, setLoading] = useState(true);
   const [rolesLoading, setRolesLoading] = useState(false);
   const [roleLoadingAttempt, setRoleLoadingAttempt] = useState(0);
+  const pendingRoleLoadRef = useRef<Promise<UserRoleWithStore[]> | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Synchronized role loading with retries and cache to prevent race conditions
   const loadUserRoles = async (userId: string, forceRefresh = false): Promise<UserRoleWithStore[]> => {
     if (!userId) return [];
     
     console.log("Auth: Loading roles for user:", userId, forceRefresh ? "(forced refresh)" : "");
     
-    // If we're already loading roles and it's not a forced refresh, return the current roles
-    if (rolesLoading && !forceRefresh) {
-      console.log("Auth: Already loading roles, returning current roles");
-      return userRoles;
+    // If there's already a pending role load and we're not forcing a refresh, return that promise
+    if (pendingRoleLoadRef.current && !forceRefresh) {
+      console.log("Auth: Using existing pending role load request");
+      return pendingRoleLoadRef.current;
     }
     
     setRolesLoading(true);
     
-    try {
-      const roles = await fetchUserRoles(userId);
-      console.log("Auth: Roles loaded:", roles);
-      
-      if (roles.length === 0 && roleLoadingAttempt < MAX_ROLE_LOADING_RETRIES) {
-        // If we got no roles but we haven't exceeded max retries, schedule another attempt
-        console.log(`Auth: No roles found, scheduling retry attempt ${roleLoadingAttempt + 1}/${MAX_ROLE_LOADING_RETRIES}`);
-        setRoleLoadingAttempt(prev => prev + 1);
+    // Create a new promise for this role loading operation
+    const roleLoadPromise = (async () => {
+      try {
+        console.log("Auth: Starting role loading process");
+        let roles: UserRoleWithStore[] = [];
+        let attempt = 0;
         
-        // Schedule a retry
-        setTimeout(() => {
-          if (userId === user?.id) { // Only if the user is still the same
-            console.log(`Auth: Executing retry attempt ${roleLoadingAttempt + 1}`);
-            loadUserRoles(userId, true);
+        // Try loading roles with retries
+        while (attempt < MAX_ROLE_LOADING_RETRIES) {
+          attempt++;
+          console.log(`Auth: Fetching roles attempt ${attempt}/${MAX_ROLE_LOADING_RETRIES}`);
+          
+          const fetchedRoles = await fetchUserRoles(userId);
+          
+          if (fetchedRoles.length > 0) {
+            console.log(`Auth: Successfully fetched ${fetchedRoles.length} roles on attempt ${attempt}`);
+            roles = fetchedRoles;
+            break;
           }
-        }, ROLE_LOADING_RETRY_DELAY);
-      } else {
-        // Reset retry counter if we got roles or hit max retries
-        setRoleLoadingAttempt(0);
+          
+          if (attempt < MAX_ROLE_LOADING_RETRIES) {
+            console.log(`Auth: No roles found on attempt ${attempt}, waiting before retry...`);
+            await new Promise(resolve => setTimeout(resolve, ROLE_LOADING_RETRY_DELAY));
+          }
+        }
+        
+        console.log("Auth: Role loading process complete, setting userRoles state");
+        setUserRoles(roles);
+        setRoleLoadingAttempt(0); // Reset attempt counter after successful loading
+        return roles;
+      } catch (error) {
+        console.error("Auth: Error during role loading:", error);
+        setUserRoles([]);
+        return [];
+      } finally {
+        setRolesLoading(false);
+        // Clear the pending promise reference once completed
+        if (pendingRoleLoadRef.current === roleLoadPromise) {
+          pendingRoleLoadRef.current = null;
+        }
       }
-      
-      // Always update roles with whatever we got
-      setUserRoles(roles);
-      return roles;
-    } catch (error) {
-      console.error("Auth: Error loading roles:", error);
-      setUserRoles([]);
-      return [];
-    } finally {
-      setRolesLoading(false);
-    }
+    })();
+    
+    // Store the promise in the ref for potential reuse
+    pendingRoleLoadRef.current = roleLoadPromise;
+    
+    return roleLoadPromise;
   };
 
   // This effect initializes auth and sets up listeners
@@ -87,6 +104,15 @@ export const useAuthProvider = () => {
           if (event === 'SIGNED_IN') {
             console.log("Auth: User signed in, force refreshing roles");
             await loadUserRoles(currentSession.user.id, true);
+          } else if (event === 'TOKEN_REFRESHED') {
+            console.log("Auth: Token refreshed, checking if roles need refresh");
+            // Only refresh roles if they're empty or we haven't tried recently
+            if (userRoles.length === 0) {
+              console.log("Auth: No roles found after token refresh, reloading");
+              await loadUserRoles(currentSession.user.id, true);
+            } else {
+              console.log("Auth: Roles already loaded, skipping refresh after token refresh");
+            }
           } else {
             console.log("Auth: User authenticated in state change, fetching roles");
             await loadUserRoles(currentSession.user.id);
@@ -121,8 +147,8 @@ export const useAuthProvider = () => {
           setSession(currentSession);
           setUser(currentSession.user);
           
-          // Load roles with the session
-          await loadUserRoles(currentSession.user.id);
+          // Load roles with the session - force refresh on init
+          await loadUserRoles(currentSession.user.id, true);
         } else {
           console.log("Auth: No existing session found");
           setSession(null);
@@ -173,9 +199,18 @@ export const useAuthProvider = () => {
         setSession(data.session);
         setUser(data.user);
         
-        // Force refresh roles immediately after login
+        // Force load roles BEFORE navigating - important to prevent unauthorized access
         console.log("Auth: Sign in successful, force loading roles for user:", data.user.id);
-        await loadUserRoles(data.user.id, true);
+        const roles = await loadUserRoles(data.user.id, true);
+        
+        if (roles.length === 0) {
+          console.warn("Auth: No roles found after sign in");
+          sonnerToast.warning("No se encontraron roles asignados", {
+            description: "Es posible que necesites contactar a un administrador para obtener permisos"
+          });
+        } else {
+          console.log("Auth: Successfully loaded roles after sign in:", roles);
+        }
       }
 
       sonnerToast.success("Inicio de sesión exitoso", {

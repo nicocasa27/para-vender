@@ -1,10 +1,12 @@
+
 import { Navigate, Outlet, useLocation, useMatch } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { UserRole } from "@/types/auth";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 interface ProtectedRouteProps {
   requiredRole?: UserRole;
@@ -41,126 +43,113 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     isConfigRoute ? "manager" : 
     requiredRole;
   
+  // Function to force a role refresh and retry authorization
+  const forceRoleRefresh = async () => {
+    if (!user) return;
+    
+    console.log("ProtectedRoute: Forcing role refresh");
+    setRoleRefreshAttempts(prev => prev + 1);
+    try {
+      const refreshedRoles = await refreshUserRoles();
+      console.log("ProtectedRoute: Roles refreshed:", refreshedRoles);
+      // Re-check authorization with the new roles
+      checkAuthorization();
+    } catch (error) {
+      console.error("ProtectedRoute: Error refreshing roles:", error);
+    }
+  };
+  
+  // Function to check authorization status
+  const checkAuthorization = () => {
+    if (!user) {
+      console.log("ProtectedRoute: No user found, unauthorized");
+      setIsAuthorized(false);
+      setAuthCheckComplete(true);
+      return;
+    }
+    
+    console.log("ProtectedRoute: Checking authorization for user:", user.id);
+    console.log("ProtectedRoute: Session state:", session ? "Valid" : "Missing");
+    console.log("ProtectedRoute: Required role:", effectiveRequiredRole);
+    console.log("ProtectedRoute: Current roles:", userRoles);
+    
+    if (effectiveRequiredRole) {
+      const authorized = hasRole(effectiveRequiredRole, storeId);
+      console.log(`ProtectedRoute: User has role ${effectiveRequiredRole}?`, authorized);
+      
+      if (authorized) {
+        console.log("ProtectedRoute: User is authorized");
+        setIsAuthorized(true);
+        setAuthCheckComplete(true);
+      } else if (userRoles.length === 0 && roleRefreshAttempts < 3) {
+        // No roles found, but we haven't exhausted our refresh attempts
+        console.log("ProtectedRoute: No roles found but attempts remain, will retry");
+        setIsAuthorized(null); // Keep authorization pending
+        setAuthCheckComplete(false);
+      } else {
+        // User doesn't have the required role or we've exhausted retries
+        console.log("ProtectedRoute: User is not authorized or retries exhausted");
+        setIsAuthorized(false);
+        setAuthCheckComplete(true);
+        
+        if (userRoles.length > 0) {
+          toast.error("Acceso denegado", {
+            description: "No tienes los permisos necesarios para acceder a esta página"
+          });
+        }
+      }
+    } else {
+      // No specific role required
+      console.log("ProtectedRoute: No specific role required, access granted");
+      setIsAuthorized(true);
+      setAuthCheckComplete(true);
+    }
+  };
+  
   useEffect(() => {
     let isMounted = true;
     setTimeoutReached(false);
     setLongTimeoutReached(false);
     
-    console.log("ProtectedRoute: Checking authorization for role:", effectiveRequiredRole);
-    console.log("ProtectedRoute: Auth loading state:", authLoading);
-    console.log("ProtectedRoute: Roles loading state:", rolesLoading);
-    console.log("ProtectedRoute: Current user roles:", userRoles);
+    console.log("ProtectedRoute: Initializing authorization check");
+    console.log("ProtectedRoute: Auth loading:", authLoading);
+    console.log("ProtectedRoute: Roles loading:", rolesLoading);
     console.log("ProtectedRoute: Current path:", location.pathname);
-    console.log("ProtectedRoute: Session exists:", !!session);
-
-    const longWaitTimeout = setTimeout(() => {
+    
+    // Set up timeouts for loading indicators
+    const timeoutTimer = setTimeout(() => {
       if (isMounted && !authCheckComplete) {
         setTimeoutReached(true);
-        console.log("ProtectedRoute: Authorization check is taking longer than expected");
-        toast.info("La verificación está tardando más de lo esperado", {
-          duration: 5000
-        });
+        console.log("ProtectedRoute: Authorization check taking longer than expected");
       }
     }, 1500);
     
-    const veryLongWaitTimeout = setTimeout(() => {
+    const longTimeoutTimer = setTimeout(() => {
       if (isMounted && !authCheckComplete) {
         setLongTimeoutReached(true);
-        console.log("ProtectedRoute: Authorization check is taking MUCH longer than expected");
+        console.log("ProtectedRoute: Authorization check taking much longer than expected");
         
-        // Force refresh roles one more time if we've waited too long
+        // Force a role refresh if we've waited too long
         if (user && roleRefreshAttempts < 3) {
-          console.log("ProtectedRoute: Forcing role refresh due to long timeout");
-          setRoleRefreshAttempts(prev => prev + 1);
-          refreshUserRoles().then(() => {
-            if (isMounted) {
-              // Manually trigger authorization check after forced refresh
-              checkAuthorization();
-            }
-          });
+          forceRoleRefresh();
         }
       }
     }, 3500);
     
-    // If roles are empty but user is authenticated, try refreshing the roles
+    // If we have a user but no roles, try to refresh roles
     if (user && session && userRoles.length === 0 && !rolesLoading && !authLoading && roleRefreshAttempts < 3) {
-      console.log("ProtectedRoute: User authenticated but no roles found. Refreshing roles...");
-      setRoleRefreshAttempts(prev => prev + 1);
-      refreshUserRoles()
-        .then(refreshedRoles => {
-          console.log("ProtectedRoute: Roles refreshed:", refreshedRoles);
-          if (isMounted && refreshedRoles.length > 0) {
-            // If we got roles, check authorization again
-            checkAuthorization();
-          }
-        })
-        .catch(error => {
-          console.error("ProtectedRoute: Error refreshing roles:", error);
-        });
+      console.log("ProtectedRoute: User authenticated but no roles, refreshing");
+      forceRoleRefresh();
+    } else if (!authLoading && !rolesLoading) {
+      // Auth and roles are not loading, check authorization
+      console.log("ProtectedRoute: Ready to check authorization");
+      setTimeout(checkAuthorization, 100); // Small delay to ensure state is settled
     }
-    
-    // Don't complete authorization check until auth loading is done
-    if (authLoading) {
-      console.log("ProtectedRoute: Auth still loading, waiting...");
-      return () => {
-        isMounted = false;
-        clearTimeout(longWaitTimeout);
-        clearTimeout(veryLongWaitTimeout);
-      };
-    }
-    
-    // Now check authorization with current state
-    const checkAuthorization = () => {
-      if (!user) {
-        console.log("ProtectedRoute: No user found, redirecting to /auth");
-        setIsAuthorized(false);
-        setAuthCheckComplete(true);
-        return;
-      }
-      
-      // Log session state for debugging
-      console.log("ProtectedRoute: Session during authorization check:", 
-        session ? "Valid" : "Missing", 
-        session?.expires_at ? `(expires: ${new Date(session.expires_at * 1000).toISOString()})` : ""
-      );
-      
-      if (effectiveRequiredRole) {
-        const authorized = hasRole(effectiveRequiredRole, storeId);
-        console.log(`ProtectedRoute: User has role ${effectiveRequiredRole}?`, authorized);
-        console.log("ProtectedRoute: User roles available during check:", userRoles);
-        
-        setIsAuthorized(authorized);
-        
-        if (!authorized && userRoles.length === 0 && roleRefreshAttempts < 3) {
-          // We might need to try refreshing roles again
-          console.log("ProtectedRoute: Authorization failed but roles are empty, might need another refresh");
-          setAuthCheckComplete(false);
-        } else {
-          setAuthCheckComplete(true);
-          
-          if (!authorized) {
-            console.log("ProtectedRoute: Access denied - user doesn't have required role");
-            if (userRoles.length > 0) {
-              toast.error("Acceso denegado", {
-                description: "No tienes los permisos necesarios para acceder a esta página"
-              });
-            }
-          }
-        }
-      } else {
-        console.log("ProtectedRoute: No specific role required, access granted");
-        setIsAuthorized(true);
-        setAuthCheckComplete(true);
-      }
-    };
-    
-    // Small delay to ensure all state updates have propagated
-    setTimeout(checkAuthorization, 100);
     
     return () => {
       isMounted = false;
-      clearTimeout(longWaitTimeout);
-      clearTimeout(veryLongWaitTimeout);
+      clearTimeout(timeoutTimer);
+      clearTimeout(longTimeoutTimer);
     };
   }, [
     authLoading, 
@@ -170,15 +159,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     storeId, 
     hasRole, 
     userRoles, 
-    location.pathname, 
-    refreshUserRoles,
+    location.pathname,
     roleRefreshAttempts,
     session
   ]);
 
-  // Show loading state if authentication or roles are still being loaded
+  // Loading screen with retry button for long waits
   if ((authLoading || rolesLoading || !authCheckComplete) && !longTimeoutReached) {
-    console.log("ProtectedRoute: Still loading authentication state");
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-2">
@@ -192,27 +179,51 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       </div>
     );
   }
+  
+  // Very long wait screen with manual retry option
+  if (longTimeoutReached && isAuthorized === null && user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-md w-full space-y-4 text-center">
+          <AlertCircle className="h-12 w-12 text-amber-500 mx-auto" />
+          <h2 className="text-xl font-semibold">Verificación de permisos incompleta</h2>
+          <p className="text-muted-foreground">
+            La verificación está tomando más tiempo de lo esperado. Esto puede suceder si el servidor está
+            ocupado o hay problemas de conexión.
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button onClick={forceRoleRefresh} disabled={rolesLoading}>
+              {rolesLoading ? "Intentando..." : "Reintentar verificación"}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                // Allow access but with warning
+                toast.warning("Verificación incompleta", {
+                  description: "Algunas funciones podrían no estar disponibles"
+                });
+                setIsAuthorized(true);
+                setAuthCheckComplete(true);
+              }}
+            >
+              Continuar de todos modos
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
-    console.log("ProtectedRoute: User not authenticated, redirecting to /auth");
+    console.log("ProtectedRoute: No authenticated user, redirecting to login");
     toast.error("Sesión no válida", {
       description: "Debes iniciar sesión para acceder a esta página"
     });
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // If we waited a very long time and still don't have a definitive authorization,
-  // allow access and let the component-level permissions handle it
-  if (longTimeoutReached && isAuthorized === null && user) {
-    console.log("ProtectedRoute: Authorization timed out but user is authenticated, allowing access");
-    toast.warning("Verificación de permisos incompleta", {
-      description: "Los permisos no se pudieron verificar completamente, algunas funciones podrían no estar disponibles"
-    });
-    return <Outlet />;
-  }
-
   if (isAuthorized === false) {
-    console.log("ProtectedRoute: User not authorized, redirecting to /unauthorized");
+    console.log("ProtectedRoute: User not authorized, redirecting to unauthorized");
     return <Navigate to="/unauthorized" state={{ from: location, requiredRole: effectiveRequiredRole }} replace />;
   }
 
