@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Shield, User, Home, LogOut, AlertTriangle, Copy, Check, RefreshCw } from "lucide-react";
@@ -12,7 +11,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Unauthorized() {
-  const { user, userRoles, hasRole, refreshUserRoles } = useAuth();
+  const { user, userRoles, hasRole, refreshUserRoles, signOut } = useAuth();
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [requiredRole, setRequiredRole] = useState<string | null>(null);
@@ -25,7 +24,6 @@ export default function Unauthorized() {
       setRequiredRole(state.requiredRole);
     }
     
-    // Get auth status from Supabase directly for debugging
     const checkAuthStatus = async () => {
       const { data } = await supabase.auth.getSession();
       setAuthDetails(data.session);
@@ -86,6 +84,15 @@ export default function Unauthorized() {
       toast.error("Error al actualizar roles");
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast.error("Error al cerrar sesión");
     }
   };
 
@@ -200,7 +207,7 @@ export default function Unauthorized() {
           </Button>
           
           {user ? (
-            <Button onClick={() => useAuth().signOut()} variant="outline">
+            <Button onClick={handleSignOut} variant="outline">
               <LogOut className="mr-2 h-4 w-4" />
               Cerrar sesión
             </Button>
