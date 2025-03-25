@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { MainLayout } from "./components/layout/MainLayout";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider } from "./contexts/auth/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AdminInitializer } from "./components/admin/AdminInitializer";
 import Dashboard from "./pages/Dashboard";
@@ -19,7 +19,6 @@ import Auth from "./pages/Auth";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
-import { useEffect } from "react";
 
 // Create a client with default options
 const queryClient = new QueryClient({
@@ -33,10 +32,6 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  useEffect(() => {
-    console.log("App mounted");
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

@@ -2,11 +2,13 @@
 import { UserManagementPanel } from "@/components/users/UserManagementPanel";
 import { useAuth } from "@/contexts/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, UserIcon, Shield, Key, AlertCircle } from "lucide-react";
+import { RefreshCw, UserIcon, Shield, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { UserRolesList } from "@/components/profile/UserRolesList";
+import { AccessPermissions } from "@/components/profile/AccessPermissions";
+import { AccountInfo } from "@/components/profile/AccountInfo";
 
 export default function Profile() {
   const { user, hasRole, userRoles, refreshUserRoles, rolesLoading, session } = useAuth();
@@ -68,27 +70,7 @@ export default function Profile() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Email</p>
-                <p>{user?.email}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">ID de Usuario</p>
-                <p className="font-mono text-sm">{user?.id}</p>
-              </div>
-              {session && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Estado de Sesión</p>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="outline" className="bg-green-50">Autenticado</Badge>
-                    {session.expires_at && (
-                      <span className="text-xs text-muted-foreground">
-                        Expira: {new Date(session.expires_at * 1000).toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
+              <AccountInfo user={user} session={session} />
             </CardContent>
           </Card>
           
@@ -120,49 +102,12 @@ export default function Profile() {
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Tus roles asignados:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {userRoles.map((role, idx) => (
-                        <Badge key={idx} variant={role.role === 'admin' ? 'default' : 'outline'} className="flex items-center">
-                          <Key className="h-3 w-3 mr-1" />
-                          {role.role}
-                          {role.almacen_id && (
-                            <span className="ml-1 text-xs opacity-80">
-                              ({role.almacen_nombre || role.almacen_id})
-                            </span>
-                          )}
-                        </Badge>
-                      ))}
-                    </div>
+                    <UserRolesList roles={userRoles} isLoading={false} />
                   </div>
                   
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Acceso a funcionalidades:</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                      <div className="flex items-center">
-                        <Badge variant={hasRole('admin') ? 'default' : 'secondary'} className="mr-2">
-                          {hasRole('admin') ? 'Permitido' : 'No permitido'}
-                        </Badge>
-                        Administración
-                      </div>
-                      <div className="flex items-center">
-                        <Badge variant={hasRole('manager') ? 'default' : 'secondary'} className="mr-2">
-                          {hasRole('manager') ? 'Permitido' : 'No permitido'}
-                        </Badge>
-                        Gestión
-                      </div>
-                      <div className="flex items-center">
-                        <Badge variant={hasRole('sales') ? 'default' : 'secondary'} className="mr-2">
-                          {hasRole('sales') ? 'Permitido' : 'No permitido'}
-                        </Badge>
-                        Ventas
-                      </div>
-                      <div className="flex items-center">
-                        <Badge variant={hasRole('viewer') ? 'default' : 'secondary'} className="mr-2">
-                          {hasRole('viewer') ? 'Permitido' : 'No permitido'}
-                        </Badge>
-                        Visualización
-                      </div>
-                    </div>
+                    <AccessPermissions hasRole={hasRole} />
                   </div>
                 </div>
               ) : (

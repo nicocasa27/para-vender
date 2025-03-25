@@ -2,11 +2,10 @@
 import { Navigate, Outlet, useLocation, useMatch } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { UserRole } from "@/types/auth";
-import { useEffect, useState } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useAuthorization } from "@/hooks/auth/useAuthorization";
 
 interface ProtectedRouteProps {
   requiredRole?: UserRole;
@@ -28,14 +27,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   } = useAuth();
   
   const location = useLocation();
-  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
-  const [authCheckComplete, setAuthCheckComplete] = useState(false);
-  const [timeoutReached, setTimeoutReached] = useState(false);
-  const [longTimeoutReached, setLongTimeoutReached] = useState(false);
-  const [roleRefreshAttempts, setRoleRefreshAttempts] = useState(0);
-  const [maxAttemptsReached, setMaxAttemptsReached] = useState(false);
-  const { toast: uiToast } = useToast();
-  
   const isUsersRoute = useMatch("/users");
   const isConfigRoute = useMatch("/config");
   
@@ -44,188 +35,24 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     isConfigRoute ? "manager" : 
     requiredRole;
   
-  // Function to force a role refresh and retry authorization
-  const forceRoleRefresh = async () => {
-    if (!user) return;
-    
-    console.log("ProtectedRoute: Forcing role refresh");
-    setRoleRefreshAttempts(prev => prev + 1);
-    try {
-      const refreshedRoles = await refreshUserRoles();
-      console.log("ProtectedRoute: Roles refreshed:", refreshedRoles);
-      // Re-check authorization with the new roles
-      checkAuthorization();
-    } catch (error) {
-      console.error("ProtectedRoute: Error refreshing roles:", error);
-      // Mark auth check as complete even if refresh failed
-      setAuthCheckComplete(true);
-    }
-  };
-  
-  // Function to check authorization status
-  const checkAuthorization = () => {
-    // Don't check authorization if we're still loading roles or auth
-    if (rolesLoading || authLoading) {
-      console.log("ProtectedRoute: Still loading, deferring authorization check");
-      return;
-    }
-    
-    if (!user) {
-      console.log("ProtectedRoute: No user found, unauthorized");
-      setIsAuthorized(false);
-      setAuthCheckComplete(true);
-      return;
-    }
-    
-    console.log("ProtectedRoute: Checking authorization for user:", user.id);
-    console.log("ProtectedRoute: Session state:", session ? "Valid" : "Missing");
-    console.log("ProtectedRoute: Required role:", effectiveRequiredRole);
-    console.log("ProtectedRoute: Current roles:", userRoles);
-    
-    if (effectiveRequiredRole) {
-      const authorized = hasRole(effectiveRequiredRole, storeId);
-      console.log(`ProtectedRoute: User has role ${effectiveRequiredRole}?`, authorized);
-      
-      if (authorized) {
-        console.log("ProtectedRoute: User is authorized");
-        setIsAuthorized(true);
-        setAuthCheckComplete(true);
-      } else if (userRoles.length === 0 && roleRefreshAttempts < 3 && !maxAttemptsReached) {
-        // No roles found, but we haven't exhausted our refresh attempts
-        console.log("ProtectedRoute: No roles found but attempts remain, will retry");
-        setIsAuthorized(null); // Keep authorization pending
-        
-        // Only continue trying to refresh if we haven't exceeded the limit
-        if (roleRefreshAttempts < 3) {
-          forceRoleRefresh();
-        }
-      } else {
-        // User doesn't have the required role or we've exhausted retries
-        console.log("ProtectedRoute: User is not authorized or retries exhausted");
-        setIsAuthorized(false);
-        setAuthCheckComplete(true);
-        
-        // Only show error if roles are loaded and we know authorization actually failed
-        if (userRoles.length > 0) {
-          toast.error("Acceso denegado", {
-            description: "No tienes los permisos necesarios para acceder a esta página"
-          });
-        }
-      }
-    } else {
-      // No specific role required
-      console.log("ProtectedRoute: No specific role required, access granted");
-      setIsAuthorized(true);
-      setAuthCheckComplete(true);
-    }
-  };
-  
-  useEffect(() => {
-    let isMounted = true;
-    setTimeoutReached(false);
-    setLongTimeoutReached(false);
-    
-    console.log("ProtectedRoute: Initializing authorization check");
-    console.log("ProtectedRoute: Auth loading:", authLoading);
-    console.log("ProtectedRoute: Roles loading:", rolesLoading);
-    console.log("ProtectedRoute: Current path:", location.pathname);
-    
-    // Set up timeouts for loading indicators
-    const timeoutTimer = setTimeout(() => {
-      if (isMounted && !authCheckComplete) {
-        setTimeoutReached(true);
-        console.log("ProtectedRoute: Authorization check taking longer than expected");
-      }
-    }, 1500);
-    
-    const longTimeoutTimer = setTimeout(() => {
-      if (isMounted && !authCheckComplete) {
-        setLongTimeoutReached(true);
-        console.log("ProtectedRoute: Authorization check taking much longer than expected");
-        
-        // Force a role refresh if we've waited too long and we're under the max attempts
-        if (user && roleRefreshAttempts < 3 && !maxAttemptsReached) {
-          forceRoleRefresh();
-        } else if (roleRefreshAttempts >= 3) {
-          // We've tried enough times, mark as complete and break the loop
-          setMaxAttemptsReached(true);
-          setAuthCheckComplete(true);
-          console.log("ProtectedRoute: Max attempts reached, breaking the infinite loop");
-          
-          // For really long timeouts, just proceed with current authorization state
-          if (userRoles.length > 0) {
-            setIsAuthorized(true);
-          } else {
-            setIsAuthorized(false);
-          }
-        }
-      }
-    }, 3500);
-    
-    // Add a final timeout to force-break any infinite loops after 8 seconds
-    const emergencyTimeoutTimer = setTimeout(() => {
-      if (isMounted && !authCheckComplete) {
-        console.log("ProtectedRoute: EMERGENCY TIMEOUT - Breaking infinite loop");
-        setMaxAttemptsReached(true);
-        setAuthCheckComplete(true);
-        
-        // If we have a user, give them the benefit of the doubt
-        if (user) {
-          setIsAuthorized(true);
-        } else {
-          setIsAuthorized(false);
-        }
-      }
-    }, 8000);
-    
-    // If we have a user but no roles, try to refresh roles
-    if (user && session && userRoles.length === 0 && !rolesLoading && !authLoading && roleRefreshAttempts < 3 && !maxAttemptsReached) {
-      console.log("ProtectedRoute: User authenticated but no roles, refreshing");
-      forceRoleRefresh();
-    } else if (!authLoading && !rolesLoading) {
-      // Only check authorization when both auth and roles are done loading
-      console.log("ProtectedRoute: Ready to check authorization");
-      setTimeout(checkAuthorization, 100); // Small delay to ensure state is settled
-    } else {
-      // Still loading either auth or roles, do not check authorization yet
-      console.log("ProtectedRoute: Still loading auth or roles, deferring authorization check");
-    }
-    
-    return () => {
-      isMounted = false;
-      clearTimeout(timeoutTimer);
-      clearTimeout(longTimeoutTimer);
-      clearTimeout(emergencyTimeoutTimer);
-    };
-  }, [
-    authLoading, 
-    rolesLoading, 
-    user, 
-    effectiveRequiredRole, 
-    storeId, 
-    hasRole, 
-    userRoles, 
-    location.pathname,
-    roleRefreshAttempts,
+  const {
+    isAuthorized,
+    authCheckComplete,
+    timeoutReached,
+    longTimeoutReached,
+    maxAttemptsReached,
+    forceRoleRefresh
+  } = useAuthorization(effectiveRequiredRole, storeId, {
+    user,
+    hasRole,
+    userRoles,
+    rolesLoading,
     session,
-    maxAttemptsReached
-  ]);
+    refreshUserRoles
+  });
 
-  // If max attempts reached and still loading, just show a final error
-  if (maxAttemptsReached && !authCheckComplete) {
-    console.log("ProtectedRoute: Max attempts reached, forcing authorization decision");
-    setAuthCheckComplete(true);
-    
-    // If we have a user, give them access as fallback
-    if (user) {
-      setIsAuthorized(true);
-    } else {
-      setIsAuthorized(false);
-    }
-  }
-
-  // Always show loading state while roles are being loaded or auth check is incomplete
-  if (authLoading || (rolesLoading && roleRefreshAttempts < 3) || (isAuthorized === null && !authCheckComplete && !maxAttemptsReached)) {
+  // Always show loading state while auth is loading or auth check is incomplete
+  if (authLoading || (rolesLoading && !maxAttemptsReached) || (isAuthorized === null && !authCheckComplete && !maxAttemptsReached)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-2">
@@ -254,7 +81,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           <div className="flex flex-col gap-2">
             <Button 
               onClick={forceRoleRefresh} 
-              disabled={rolesLoading || roleRefreshAttempts >= 3}
+              disabled={rolesLoading}
             >
               {rolesLoading ? "Intentando..." : "Reintentar verificación"}
             </Button>
@@ -265,8 +92,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
                 toast.warning("Verificación incompleta", {
                   description: "Algunas funciones podrían no estar disponibles"
                 });
-                setIsAuthorized(true);
-                setAuthCheckComplete(true);
               }}
             >
               Continuar de todos modos

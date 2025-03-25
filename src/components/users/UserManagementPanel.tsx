@@ -4,25 +4,17 @@ import { useAuth } from "@/contexts/auth";
 import { UserWithRoles } from "@/types/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Trash, UserPlus, RefreshCw, User, AlertTriangle } from "lucide-react";
 import { UserRoleBadge } from "./UserRoleBadge";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { UserCreateForm } from "./UserCreateForm";
 
 export function UserManagementPanel() {
   const { getAllUsers, deleteUser, signUp, hasRole, refreshUserRoles } = useAuth();
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [newUser, setNewUser] = useState({
-    email: "",
-    password: "",
-    fullName: "",
-  });
   const [isCreating, setIsCreating] = useState(false);
 
   // Verificar permisos de administrador
@@ -83,25 +75,24 @@ export function UserManagementPanel() {
     }
   };
 
-  const handleCreateUser = async () => {
+  const handleCreateUser = async (userData: { email: string; password: string; fullName: string }) => {
     try {
       setIsCreating(true);
       
-      if (!newUser.email || !newUser.password) {
+      if (!userData.email || !userData.password) {
         toast.error("Datos incompletos", {
           description: "El email y la contraseña son obligatorios",
         });
         return;
       }
       
-      console.log("UserManagementPanel: Creando usuario:", newUser.email);
-      await signUp(newUser.email, newUser.password, newUser.fullName);
+      console.log("UserManagementPanel: Creando usuario:", userData.email);
+      await signUp(userData.email, userData.password, userData.fullName);
       
       toast.success("Usuario creado", {
-        description: `Se ha creado el usuario ${newUser.email} correctamente`,
+        description: `Se ha creado el usuario ${userData.email} correctamente`,
       });
       
-      setNewUser({ email: "", password: "", fullName: "" });
       setOpen(false);
       
       // Esperar un momento para que Supabase procese el nuevo usuario y luego recargar
@@ -145,60 +136,11 @@ export function UserManagementPanel() {
                   Crear Usuario
                 </Button>
               </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Crear Nuevo Usuario</DialogTitle>
-                  <DialogDescription>
-                    Complete los datos para crear un nuevo usuario en el sistema.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="usuario@ejemplo.com"
-                      value={newUser.email}
-                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Nombre Completo</Label>
-                    <Input
-                      id="fullName"
-                      placeholder="Juan Pérez"
-                      value={newUser.fullName}
-                      onChange={(e) => setNewUser({ ...newUser, fullName: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Contraseña</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="********"
-                      value={newUser.password}
-                      onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setOpen(false)}
-                    disabled={isCreating}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleCreateUser}
-                    disabled={isCreating}
-                  >
-                    {isCreating ? "Creando..." : "Crear Usuario"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
+              <UserCreateForm 
+                onCreateUser={handleCreateUser}
+                onCancel={() => setOpen(false)}
+                isCreating={isCreating}
+              />
             </Dialog>
           </div>
         </CardTitle>
@@ -220,24 +162,24 @@ export function UserManagementPanel() {
             </p>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Usuario</TableHead>
-                <TableHead>Roles</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-2 font-medium">Usuario</th>
+                <th className="text-left py-2 font-medium">Roles</th>
+                <th className="text-right py-2 font-medium">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
               {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
+                <tr key={user.id} className="border-b">
+                  <td className="py-3">
                     <div>
                       <div className="font-medium">{user.full_name || "Sin nombre"}</div>
                       <div className="text-sm text-muted-foreground">{user.email}</div>
                     </div>
-                  </TableCell>
-                  <TableCell>
+                  </td>
+                  <td className="py-3">
                     {user.roles.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {user.roles.map((role) => (
@@ -253,8 +195,8 @@ export function UserManagementPanel() {
                     ) : (
                       <span className="text-muted-foreground text-sm">Sin roles asignados</span>
                     )}
-                  </TableCell>
-                  <TableCell className="text-right">
+                  </td>
+                  <td className="text-right py-3">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -264,11 +206,11 @@ export function UserManagementPanel() {
                       <Trash className="h-4 w-4" />
                       <span className="sr-only">Eliminar usuario</span>
                     </Button>
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         )}
       </CardContent>
     </Card>

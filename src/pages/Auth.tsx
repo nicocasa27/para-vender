@@ -1,6 +1,7 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,8 +19,7 @@ export default function Auth() {
   const [registerFullName, setRegisterFullName] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const { signIn, signUp, loading } = useAuth();
-  const navigate = useNavigate();
+  const { signIn, signUp } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,10 +31,7 @@ export default function Auth() {
     
     try {
       setIsLoggingIn(true);
-      
-      // Using the context's signIn method which now properly loads roles
       await signIn(loginEmail, loginPassword);
-      
       // Navigate is handled in the signIn method
     } catch (error: any) {
       console.error("Error al iniciar sesión:", error);
