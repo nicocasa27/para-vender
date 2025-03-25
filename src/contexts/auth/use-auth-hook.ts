@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
@@ -218,7 +219,7 @@ export const useAuthProvider = () => {
   const signUp = useCallback(
     async (email: string, password: string, fullName?: string) => {
       try {
-        setAuthLoading(true);
+        setLoading(true);
         console.log("Auth: Registrando nuevo usuario:", email);
 
         const { data, error } = await supabase.auth.signUp({
@@ -245,7 +246,7 @@ export const useAuthProvider = () => {
         console.error("Auth: Error durante el registro:", error);
         throw error;
       } finally {
-        setAuthLoading(false);
+        setLoading(false);
       }
     },
     []
