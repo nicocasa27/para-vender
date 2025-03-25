@@ -23,9 +23,11 @@ export function UserRow({ user, onAddRole, onDeleteRole }: UserRowProps) {
         <div className="flex flex-col">
           <span className="font-medium">{user.full_name || "Sin nombre"}</span>
           <span className="text-sm text-muted-foreground">{user.email}</span>
-          <span className="text-xs text-muted-foreground">
-            {user.created_at && format(new Date(user.created_at), "PPP", { locale: es })}
-          </span>
+          {user.created_at && (
+            <span className="text-xs text-muted-foreground">
+              {format(new Date(user.created_at), "PPP", { locale: es })}
+            </span>
+          )}
         </div>
       </TableCell>
       <TableCell>

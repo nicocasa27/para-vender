@@ -92,7 +92,10 @@ export default function UserManagement() {
             users={users}
             isLoading={isLoading}
             onDeleteRole={handleDeleteRole}
-            onSuccess={refetch}
+            onSuccess={async () => {
+              await refetch();
+              return;
+            }}
           />
         </CardContent>
       </Card>

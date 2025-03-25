@@ -18,5 +18,6 @@ export interface UserWithRoles {
   id: string;
   email: string;
   full_name: string | null;
+  created_at?: string;
   roles: UserRoleWithStore[];
 }
