@@ -76,6 +76,39 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
   const handleAddRole = async (values: RoleAssignmentValues) => {
     try {
       console.log("Adding role:", values);
+      
+      // Check if user already has this role
+      if (selectedUser?.roles) {
+        // For regular roles (not 'sales'), check if user already has this role type
+        if (values.role !== 'sales') {
+          const hasRole = selectedUser.roles.some(role => 
+            role.role === values.role
+          );
+          
+          if (hasRole) {
+            toast.error("Error al asignar rol", {
+              description: `El usuario ya tiene el rol de ${values.role}`
+            });
+            return;
+          }
+        } 
+        // For 'sales' role, check if user already has this role for this specific store
+        else if (values.almacenId) {
+          const hasStoreRole = selectedUser.roles.some(role => 
+            role.role === 'sales' && role.almacen_id === values.almacenId
+          );
+          
+          if (hasStoreRole) {
+            const storeName = stores.find(store => store.id === values.almacenId)?.nombre || 'esta sucursal';
+            toast.error("Error al asignar rol", {
+              description: `El usuario ya es vendedor en ${storeName}`
+            });
+            return;
+          }
+        }
+      }
+      
+      // Proceed with adding the role
       const { error } = await supabase
         .from("user_roles")
         .insert({
