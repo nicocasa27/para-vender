@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Trash, UserPlus, RefreshCw, User, AlertTriangle } from "lucide-react";
 import { UserRoleBadge } from "./UserRoleBadge";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export function UserManagementPanel() {
-  const { getAllUsers, deleteUser, signUp, hasRole } = useAuth();
+  const { getAllUsers, deleteUser, signUp, hasRole, refreshUserRoles } = useAuth();
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -43,10 +44,13 @@ export function UserManagementPanel() {
 
   const loadUsers = async () => {
     try {
+      console.log("UserManagementPanel: Cargando usuarios...");
       setLoading(true);
       const data = await getAllUsers();
+      console.log("UserManagementPanel: Usuarios cargados:", data.length);
       setUsers(data);
     } catch (error: any) {
+      console.error("UserManagementPanel: Error al cargar usuarios:", error);
       toast.error("Error al cargar usuarios", {
         description: error.message || "No se pudieron cargar los usuarios",
       });
@@ -61,9 +65,20 @@ export function UserManagementPanel() {
 
   const handleDeleteUser = async (userId: string) => {
     if (window.confirm("¿Estás seguro de eliminar este usuario? Esta acción no se puede deshacer.")) {
-      const success = await deleteUser(userId);
-      if (success) {
-        loadUsers();
+      try {
+        console.log("UserManagementPanel: Eliminando usuario:", userId);
+        const success = await deleteUser(userId);
+        
+        if (success) {
+          console.log("UserManagementPanel: Usuario eliminado correctamente");
+          toast.success("Usuario eliminado", {
+            description: "El usuario ha sido eliminado correctamente",
+          });
+          // Refrescar la lista después de eliminar
+          await loadUsers();
+        }
+      } catch (error) {
+        console.error("UserManagementPanel: Error al eliminar usuario:", error);
       }
     }
   };
@@ -79,15 +94,24 @@ export function UserManagementPanel() {
         return;
       }
       
+      console.log("UserManagementPanel: Creando usuario:", newUser.email);
       await signUp(newUser.email, newUser.password, newUser.fullName);
+      
       toast.success("Usuario creado", {
         description: `Se ha creado el usuario ${newUser.email} correctamente`,
       });
       
       setNewUser({ email: "", password: "", fullName: "" });
       setOpen(false);
-      loadUsers();
+      
+      // Esperar un momento para que Supabase procese el nuevo usuario y luego recargar
+      setTimeout(async () => {
+        console.log("UserManagementPanel: Recargando usuarios después de crear uno nuevo");
+        await loadUsers();
+      }, 1500);
+      
     } catch (error: any) {
+      console.error("UserManagementPanel: Error al crear usuario:", error);
       toast.error("Error al crear usuario", {
         description: error.message || "No se pudo crear el usuario",
       });
@@ -105,9 +129,14 @@ export function UserManagementPanel() {
             Administración de Usuarios
           </span>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={loadUsers} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              <span className="ml-2">{loading ? "Cargando..." : "Actualizar"}</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => loadUsers()} 
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              <span>{loading ? "Cargando..." : "Actualizar"}</span>
             </Button>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>

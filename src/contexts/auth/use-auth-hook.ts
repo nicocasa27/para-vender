@@ -4,10 +4,9 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { UserRole, UserRoleWithStore, UserWithRoles } from '@/types/auth';
-import { fetchUserRoles, checkHasRole } from './auth-utils';
+import { fetchUserRoles, checkHasRole, fetchAllUsers } from './auth-utils';
 import { toast as sonnerToast } from "sonner";
 
-// Constant for controlling role loading retries
 const MAX_ROLE_LOADING_RETRIES = 3;
 const ROLE_LOADING_RETRY_DELAY = 1000; // ms
 
@@ -22,13 +21,11 @@ export const useAuthProvider = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Synchronized role loading with retries and cache to prevent race conditions
   const loadUserRoles = async (userId: string, forceRefresh = false): Promise<UserRoleWithStore[]> => {
     if (!userId) return [];
     
     console.log("Auth: Loading roles for user:", userId, forceRefresh ? "(forced refresh)" : "");
     
-    // If there's already a pending role load and we're not forcing a refresh, return that promise
     if (pendingRoleLoadRef.current && !forceRefresh) {
       console.log("Auth: Using existing pending role load request");
       return pendingRoleLoadRef.current;
@@ -36,14 +33,12 @@ export const useAuthProvider = () => {
     
     setRolesLoading(true);
     
-    // Create a new promise for this role loading operation
     const roleLoadPromise = (async () => {
       try {
         console.log("Auth: Starting role loading process");
         let roles: UserRoleWithStore[] = [];
         let attempt = 0;
         
-        // Try loading roles with retries
         while (attempt < MAX_ROLE_LOADING_RETRIES) {
           attempt++;
           console.log(`Auth: Fetching roles attempt ${attempt}/${MAX_ROLE_LOADING_RETRIES}`);
@@ -64,7 +59,7 @@ export const useAuthProvider = () => {
         
         console.log("Auth: Role loading process complete, setting userRoles state");
         setUserRoles(roles);
-        setRoleLoadingAttempt(0); // Reset attempt counter after successful loading
+        setRoleLoadingAttempt(0);
         return roles;
       } catch (error) {
         console.error("Auth: Error during role loading:", error);
@@ -72,14 +67,12 @@ export const useAuthProvider = () => {
         return [];
       } finally {
         setRolesLoading(false);
-        // Clear the pending promise reference once completed
         if (pendingRoleLoadRef.current === roleLoadPromise) {
           pendingRoleLoadRef.current = null;
         }
       }
     })();
     
-    // Store the promise in the ref for potential reuse
     pendingRoleLoadRef.current = roleLoadPromise;
     
     return roleLoadPromise;
@@ -95,28 +88,23 @@ export const useAuthProvider = () => {
     return await loadUserRoles(user.id, force);
   };
 
-  // This effect initializes auth and sets up listeners
   useEffect(() => {
     console.log("Auth: Setting up auth state listener");
     setLoading(true);
     
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log("Auth: Auth state change event:", event, "Session:", !!currentSession);
         
         if (currentSession?.user) {
-          // Update session and user state immediately
           setSession(currentSession);
           setUser(currentSession.user);
           
-          // If this is a SIGNED_IN event, force a roles refresh
           if (event === 'SIGNED_IN') {
             console.log("Auth: User signed in, force refreshing roles");
             await loadUserRoles(currentSession.user.id, true);
           } else if (event === 'TOKEN_REFRESHED') {
             console.log("Auth: Token refreshed, checking if roles need refresh");
-            // Only refresh roles if they're empty or we haven't tried recently
             if (userRoles.length === 0) {
               console.log("Auth: No roles found after token refresh, reloading");
               await loadUserRoles(currentSession.user.id, true);
@@ -145,7 +133,6 @@ export const useAuthProvider = () => {
       }
     );
 
-    // THEN check for existing session
     const initializeAuth = async () => {
       try {
         console.log("Auth: Initializing auth, checking for existing session");
@@ -153,11 +140,9 @@ export const useAuthProvider = () => {
         
         if (currentSession?.user) {
           console.log("Auth: Existing session found for user:", currentSession.user.id);
-          // Update session and user state
           setSession(currentSession);
           setUser(currentSession.user);
           
-          // Load roles with the session - force refresh on init
           await loadUserRoles(currentSession.user.id, true);
         } else {
           console.log("Auth: No existing session found");
@@ -195,12 +180,9 @@ export const useAuthProvider = () => {
 
       if (data.user) {
         console.log("Auth: Sign in successful for user:", data.user.id);
-        // Setting session and user immediately, though onAuthStateChange will also trigger
         setSession(data.session);
         setUser(data.user);
         
-        // Force load roles BEFORE navigating - important to prevent unauthorized access
-        console.log("Auth: Sign in successful, force loading roles for user:", data.user.id);
         const roles = await loadUserRoles(data.user.id, true);
         
         if (roles.length === 0) {
@@ -251,11 +233,42 @@ export const useAuthProvider = () => {
         throw error;
       }
 
+      console.log("Auth: Sign up successful, adding default 'viewer' role");
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const { data: profiles, error: profileError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .limit(1);
+        
+      if (profileError) {
+        console.error("Auth: Error fetching new user profile:", profileError);
+      } else if (profiles && profiles.length > 0) {
+        const userId = profiles[0].id;
+        console.log("Auth: New user ID:", userId);
+        
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .insert({
+            user_id: userId,
+            role: "viewer"
+          });
+          
+        if (roleError) {
+          console.error("Auth: Error assigning default role:", roleError);
+        } else {
+          console.log("Auth: Default 'viewer' role assigned successfully");
+        }
+      } else {
+        console.error("Auth: Could not find newly created user profile");
+      }
+
       sonnerToast.success("Registro exitoso", {
         description: "Verifique su correo electrónico para confirmar su cuenta"
       });
       
-      // Note: User needs to be assigned a role by an admin
     } catch (error: any) {
       console.error("Auth: Sign up error:", error);
       sonnerToast.error("Error al registrarse", {
@@ -278,7 +291,6 @@ export const useAuthProvider = () => {
         throw error;
       }
       
-      // Explicitly clear auth state
       setSession(null);
       setUser(null);
       setUserRoles([]);
@@ -316,54 +328,9 @@ export const useAuthProvider = () => {
         throw new Error("No tienes permisos para ver usuarios");
       }
       
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*");
-        
-      if (profilesError) {
-        console.error("Error fetching profiles:", profilesError);
-        throw profilesError;
-      }
-      
-      if (!profiles || profiles.length === 0) {
-        return [];
-      }
-      
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select(`
-          id,
-          user_id,
-          role,
-          almacen_id,
-          created_at,
-          almacenes:almacen_id(nombre)
-        `);
-        
-      if (rolesError) {
-        console.error("Error fetching roles:", rolesError);
-        throw rolesError;
-      }
-      
-      const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
-        const userRoles = roles
-          ?.filter(r => r.user_id === profile.id)
-          .map(role => ({
-            ...role,
-            almacen_nombre: role.almacenes?.nombre || null
-          })) || [];
-        
-        return {
-          id: profile.id,
-          email: profile.email || "",
-          full_name: profile.full_name || null,
-          roles: userRoles,
-        };
-      });
-      
-      return usersWithRoles;
+      return await fetchAllUsers();
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error("Auth: Error fetching users:", error);
       throw error;
     }
   };
