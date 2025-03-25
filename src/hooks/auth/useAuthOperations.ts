@@ -89,7 +89,7 @@ export function useAuthOperations({
 
       console.log("Auth: Sign up successful, adding default 'viewer' role");
       
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       const { data: profiles, error: profileError } = await supabase
         .from("profiles")
@@ -120,8 +120,10 @@ export function useAuthOperations({
       }
 
       sonnerToast.success("Registro exitoso", {
-        description: "Verifique su correo electrónico para confirmar su cuenta"
+        description: "Se ha creado el usuario correctamente"
       });
+      
+      return data;
       
     } catch (error: any) {
       console.error("Auth: Sign up error:", error);

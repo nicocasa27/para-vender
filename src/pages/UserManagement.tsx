@@ -1,22 +1,21 @@
 
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth";
-import { supabase } from "@/integrations/supabase/client";
 import { UserWithRoles } from "@/types/auth";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
-import { Shield } from "lucide-react";
+import { Shield, RefreshCw } from "lucide-react";
 import { UserList } from "@/components/users/UserList";
 import { UserRoleForm } from "@/components/users/UserRoleForm";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function UserManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const { hasRole, user } = useAuth();
-  const { toast } = useToast();
 
   // Use React Query for data fetching with caching and optimized refetching
   const {
@@ -92,16 +91,14 @@ export default function UserManagement() {
         return usersWithRoles;
       } catch (error) {
         console.error("Error fetching users:", error);
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar los usuarios",
-          variant: "destructive",
+        toast.error("Error al cargar usuarios", {
+          description: "No se pudieron cargar los usuarios"
         });
         throw error;
       }
     },
     refetchOnWindowFocus: false,
-    staleTime: 30000, // 30 seconds before refetching stale data
+    staleTime: 10000, // 10 seconds before refetching stale data
     retry: 2,
     enabled: !!user && hasRole("admin") // Only run query if user is logged in and has admin role
   });
@@ -115,18 +112,15 @@ export default function UserManagement() {
 
       if (error) throw error;
 
-      toast({
-        title: "Rol eliminado",
+      toast.success("Rol eliminado", {
         description: "El rol ha sido eliminado correctamente",
       });
 
       refetch();
     } catch (error: any) {
       console.error("Error deleting role:", error);
-      toast({
-        title: "Error",
+      toast.error("Error al eliminar rol", {
         description: error.message || "No se pudo eliminar el rol",
-        variant: "destructive",
       });
     }
   };
@@ -186,7 +180,8 @@ export default function UserManagement() {
             Administre usuarios y asigne roles
           </p>
         </div>
-        <Button onClick={() => refetch()} disabled={isLoading}>
+        <Button onClick={() => refetch()} disabled={isLoading} className="flex items-center gap-2">
+          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
           {isLoading ? 'Cargando...' : 'Actualizar'}
         </Button>
       </div>
