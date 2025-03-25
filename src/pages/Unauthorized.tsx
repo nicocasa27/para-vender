@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Shield, User, Home, LogOut, AlertTriangle, Copy, Check, RefreshCw } from "lucide-react";
@@ -90,6 +91,7 @@ export default function Unauthorized() {
   const handleSignOut = async () => {
     try {
       await signOut();
+      toast.success("Sesión cerrada correctamente");
     } catch (error) {
       console.error("Error signing out:", error);
       toast.error("Error al cerrar sesión");
