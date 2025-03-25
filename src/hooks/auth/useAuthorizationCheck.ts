@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UserRole } from '@/types/auth';
 
 interface UseAuthorizationCheckProps {
@@ -41,19 +41,21 @@ export function useAuthorizationCheck({
       return;
     }
     
+    // Verificación explícita para admin primero
+    const isAdmin = hasRole('admin');
+    if (isAdmin) {
+      console.log("Authorization: User is admin, access granted automatically");
+      setIsAuthorized(true);
+      setAuthCheckComplete(true);
+      return;
+    }
+    
     // Verificar si el usuario tiene el rol requerido
     const authorized = hasRole(requiredRole, storeId);
     console.log(`Authorization: User has role ${requiredRole}?`, authorized);
     
-    if (authorized) {
-      console.log("Authorization: User is authorized");
-      setIsAuthorized(true);
-      setAuthCheckComplete(true);
-    } else {
-      console.log("Authorization: User is not authorized");
-      setIsAuthorized(false);
-      setAuthCheckComplete(true);
-    }
+    setIsAuthorized(authorized);
+    setAuthCheckComplete(true);
   };
   
   // Función para establecer la autorización manualmente (para casos de emergencia/timeout)

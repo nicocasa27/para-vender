@@ -41,7 +41,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     isUsersRoute,
     isConfigRoute,
     providedRole: requiredRole,
-    effectiveRole: effectiveRequiredRole
+    effectiveRole: effectiveRequiredRole,
+    userRoles: userRoles.map(r => r.role),
+    isAdmin: userRoles.some(r => r.role === 'admin')
   });
   
   const {
@@ -122,6 +124,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       description: "Debes iniciar sesión para acceder a esta página"
     });
     return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+
+  // Comprobación específica para rol de administrador
+  const isAdmin = userRoles.some(r => r.role === 'admin');
+  if (isAdmin && effectiveRequiredRole) {
+    console.log("ProtectedRoute: User is admin, bypassing role check for:", effectiveRequiredRole);
+    return <Outlet />;
   }
 
   // Handle unauthorized users - only redirect if we've completed authorization check

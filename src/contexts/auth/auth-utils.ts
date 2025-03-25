@@ -1,3 +1,4 @@
+
 import { UserRoleWithStore, UserRole } from "@/types/auth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -107,20 +108,20 @@ export const checkHasRole = (
     return false;
   }
   
-  // Admin can do anything
+  // Verificación mejorada: Si el usuario tiene rol 'admin', siempre conceder acceso sin importar otros parámetros
   const isAdmin = userRoles.some(r => r.role === 'admin');
   if (isAdmin) {
-    console.log("AuthUtils: User is admin, granting access to all areas");
+    console.log("AuthUtils: User is admin, granting access to all areas, including:", role);
     return true;
   }
   
-  // Manager can do anything except admin-specific tasks
+  // Manager puede hacer todo excepto tareas específicas de admin
   if (role !== 'admin' && userRoles.some(r => r.role === 'manager')) {
     console.log("AuthUtils: User is manager, granting access to non-admin role:", role);
     return true;
   }
   
-  // For store-specific roles like sales
+  // Para roles específicos de almacén (como sales)
   if (storeId && userRoles.some(r => 
     r.role === role && r.almacen_id === storeId
   )) {
@@ -128,7 +129,7 @@ export const checkHasRole = (
     return true;
   }
   
-  // For general roles without store specificity (like viewer)
+  // Para roles generales sin especificidad de almacén (como viewer)
   if (!storeId && userRoles.some(r => r.role === role)) {
     console.log("AuthUtils: User has general role, granting access");
     return true;
