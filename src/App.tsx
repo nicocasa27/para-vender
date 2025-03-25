@@ -13,7 +13,6 @@ import Inventory from "./pages/Inventory";
 import PointOfSale from "./pages/PointOfSale";
 import Analytics from "./pages/Analytics";
 import Configuration from "./pages/Configuration";
-import UserManagement from "./pages/UserManagement";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import Unauthorized from "./pages/Unauthorized";
@@ -53,8 +52,7 @@ const App = () => {
                   <Route path="/pos" element={<PointOfSale />} />
                   <Route path="/analytics" element={<Analytics />} />
                   
-                  {/* These two routes will use the effectiveRequiredRole logic in ProtectedRoute */}
-                  <Route path="/users" element={<UserManagement />} />
+                  {/* Config route */}
                   <Route path="/config" element={<Configuration />} />
                   
                   {/* All authenticated users */}

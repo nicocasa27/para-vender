@@ -1,11 +1,10 @@
 
-import { UserManagementPanel } from "@/components/users/UserManagementPanel";
-import { useAuth } from "@/contexts/auth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw, UserIcon, Shield, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/auth";
 import { UserRolesList } from "@/components/profile/UserRolesList";
 import { AccessPermissions } from "@/components/profile/AccessPermissions";
 import { AccountInfo } from "@/components/profile/AccountInfo";
@@ -132,13 +131,6 @@ export default function Profile() {
             </CardContent>
           </Card>
         </div>
-
-        {hasRole("admin") && (
-          <div className="space-y-2">
-            <h2 className="text-xl font-semibold">Administración</h2>
-            <UserManagementPanel />
-          </div>
-        )}
       </div>
     </div>
   );
