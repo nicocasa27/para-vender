@@ -7,7 +7,8 @@ export interface AuthContextType {
   user: User | null;
   userRoles: UserRoleWithStore[];
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  rolesLoading: boolean;
+  signIn: (email: string, password: string) => Promise<any>;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
   hasRole: (role: UserRole, storeId?: string) => boolean;

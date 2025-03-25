@@ -15,7 +15,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     auth.session, 
     auth.user, 
     auth.userRoles, 
-    auth.loading, 
+    auth.loading,
+    auth.rolesLoading,
     auth.hasRole,
     auth.refreshUserRoles
   ]);

@@ -13,30 +13,46 @@ export const useAuthProvider = () => {
   const [user, setUser] = useState<User | null>(null);
   const [userRoles, setUserRoles] = useState<UserRoleWithStore[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rolesLoading, setRolesLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Function to load user roles
+  const loadUserRoles = async (userId: string) => {
+    if (!userId) return [];
+    
+    console.log("Auth: Loading roles for user:", userId);
+    setRolesLoading(true);
+    
+    try {
+      const roles = await fetchUserRoles(userId);
+      console.log("Auth: Roles loaded:", roles);
+      setUserRoles(roles);
+      return roles;
+    } catch (error) {
+      console.error("Auth: Error loading roles:", error);
+      setUserRoles([]);
+      return [];
+    } finally {
+      setRolesLoading(false);
+    }
+  };
 
   // Initial auth setup and session check
   useEffect(() => {
     console.log("Auth: Setting up auth state listener");
+    setLoading(true);
     
     // Set up the auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        console.log("Auth: Auth state change event:", event);
+        console.log("Auth: Auth state change event:", event, "Session:", !!currentSession);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
           console.log("Auth: User authenticated in state change, fetching roles");
-          try {
-            const roles = await fetchUserRoles(currentSession.user.id);
-            console.log("Auth: Roles fetched during auth state change:", roles);
-            setUserRoles(roles);
-          } catch (error) {
-            console.error("Auth: Error fetching roles during auth state change:", error);
-            setUserRoles([]);
-          }
+          await loadUserRoles(currentSession.user.id);
         } else {
           console.log("Auth: No user in state change, clearing roles");
           setUserRoles([]);
@@ -53,7 +69,6 @@ export const useAuthProvider = () => {
 
     // Check for existing session
     const initializeAuth = async () => {
-      setLoading(true);
       try {
         console.log("Auth: Initializing auth, checking for existing session");
         const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -63,14 +78,7 @@ export const useAuthProvider = () => {
         
         if (currentSession?.user) {
           console.log("Auth: Existing session found for user:", currentSession.user.id);
-          try {
-            const roles = await fetchUserRoles(currentSession.user.id);
-            console.log("Auth: Roles fetched during init:", roles);
-            setUserRoles(roles);
-          } catch (error) {
-            console.error("Auth: Error fetching roles during init:", error);
-            setUserRoles([]);
-          }
+          await loadUserRoles(currentSession.user.id);
         } else {
           console.log("Auth: No existing session found");
         }
@@ -97,23 +105,7 @@ export const useAuthProvider = () => {
     }
     
     console.log("Auth: Manually refreshing user roles for:", user.id);
-    try {
-      setLoading(true);
-      const roles = await fetchUserRoles(user.id);
-      console.log("Auth: Refreshed roles:", roles);
-      setUserRoles(roles);
-      return roles;
-    } catch (error) {
-      console.error("Auth: Error refreshing roles:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron actualizar los roles de usuario",
-        variant: "destructive",
-      });
-      return [];
-    } finally {
-      setLoading(false);
-    }
+    return await loadUserRoles(user.id);
   };
 
   const signIn = async (email: string, password: string) => {
@@ -129,6 +121,12 @@ export const useAuthProvider = () => {
         throw error;
       }
 
+      // After successful login, immediately load user roles
+      if (data.user) {
+        console.log("Auth: Sign in successful, loading roles for user:", data.user.id);
+        await loadUserRoles(data.user.id);
+      }
+
       // Successful login
       sonnerToast.success("Inicio de sesión exitoso", {
         description: "Bienvenido de nuevo"
@@ -136,6 +134,8 @@ export const useAuthProvider = () => {
       
       console.log("Auth: Sign in successful, navigating to home");
       navigate("/");
+      
+      return data;
     } catch (error: any) {
       console.error("Auth: Sign in error:", error);
       sonnerToast.error("Error de inicio de sesión", {
@@ -222,6 +222,7 @@ export const useAuthProvider = () => {
     user,
     userRoles,
     loading,
+    rolesLoading,
     signIn,
     signUp,
     signOut,

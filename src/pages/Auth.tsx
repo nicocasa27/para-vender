@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Store } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 export default function Auth() {
   const [activeTab, setActiveTab] = useState<string>("login");
@@ -20,7 +18,7 @@ export default function Auth() {
   const [registerFullName, setRegisterFullName] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const { signUp, loading } = useAuth();
+  const { signIn, signUp, loading } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -34,30 +32,13 @@ export default function Auth() {
     try {
       setIsLoggingIn(true);
       
-      // Usando directamente supabase.auth en lugar de signIn del contexto
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password: loginPassword,
-      });
+      // Using the context's signIn method which now properly loads roles
+      await signIn(loginEmail, loginPassword);
       
-      if (error || !data.session) {
-        toast.error(error?.message || "Credenciales inválidas");
-        return;
-      }
-      
-      // Login exitoso
-      toast.success("Inicio de sesión exitoso", {
-        description: "Bienvenido de nuevo"
-      });
-      
-      // Redirigir al dashboard
-      navigate("/dashboard");
-      
+      // Navigate is handled in the signIn method
     } catch (error: any) {
       console.error("Error al iniciar sesión:", error);
-      toast.error("Error al iniciar sesión", {
-        description: error.message || "Hubo un problema al intentar iniciar sesión"
-      });
+      // Error handling is done in the signIn method
     } finally {
       setIsLoggingIn(false);
     }

@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Shield, User, Home, LogOut, AlertTriangle, Copy, Check, RefreshCw } from "lucide-react";
@@ -7,19 +6,20 @@ import { useAuth } from "@/contexts/auth";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Unauthorized() {
-  const { user, userRoles, hasRole, refreshUserRoles, signOut } = useAuth();
+  const { user, userRoles, hasRole, refreshUserRoles, signOut, rolesLoading } = useAuth();
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [requiredRole, setRequiredRole] = useState<string | null>(null);
   const [authDetails, setAuthDetails] = useState<any>(null);
   const location = useLocation();
 
-  useEffect(() => {
+  useState(() => {
     const state = location.state as { requiredRole?: string } | undefined;
     if (state?.requiredRole) {
       setRequiredRole(state.requiredRole);
@@ -31,7 +31,7 @@ export default function Unauthorized() {
     };
     
     checkAuthStatus();
-  }, [location]);
+  });
 
   const getDebugInfo = () => {
     const info = {
@@ -90,11 +90,13 @@ export default function Unauthorized() {
 
   const handleSignOut = async () => {
     try {
+      setLoggingOut(true);
       await signOut();
-      toast.success("Sesión cerrada correctamente");
     } catch (error) {
       console.error("Error signing out:", error);
       toast.error("Error al cerrar sesión");
+    } finally {
+      setLoggingOut(false);
     }
   };
 
@@ -138,11 +140,11 @@ export default function Unauthorized() {
                     variant="ghost" 
                     size="sm" 
                     onClick={handleRefreshRoles}
-                    disabled={refreshing}
+                    disabled={refreshing || rolesLoading}
                     className="h-7 px-2"
                   >
-                    <RefreshCw className={`h-3.5 w-3.5 mr-1 ${refreshing ? 'animate-spin' : ''}`} />
-                    {refreshing ? 'Actualizando...' : 'Actualizar'}
+                    <RefreshCw className={`h-3.5 w-3.5 mr-1 ${refreshing || rolesLoading ? 'animate-spin' : ''}`} />
+                    {refreshing || rolesLoading ? 'Actualizando...' : 'Actualizar'}
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -158,7 +160,9 @@ export default function Unauthorized() {
                       </Badge>
                     ))
                   ) : (
-                    <span className="text-xs text-muted-foreground">No tiene roles asignados</span>
+                    <span className="text-xs text-muted-foreground">
+                      {rolesLoading ? "Cargando roles..." : "No tiene roles asignados"}
+                    </span>
                   )}
                 </div>
               </div>
@@ -209,9 +213,13 @@ export default function Unauthorized() {
           </Button>
           
           {user ? (
-            <Button onClick={handleSignOut} variant="outline">
+            <Button 
+              onClick={handleSignOut} 
+              variant="outline"
+              disabled={loggingOut}
+            >
               <LogOut className="mr-2 h-4 w-4" />
-              Cerrar sesión
+              {loggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
             </Button>
           ) : (
             <Button asChild variant="outline">
