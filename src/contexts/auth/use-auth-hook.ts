@@ -281,7 +281,7 @@ export const useAuthProvider = () => {
         throw new Error("No hay sesión de usuario");
       }
       
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/delete-user`, {
+      const response = await fetch(`https://dyvjtczkihdncxvsjdrz.supabase.co/functions/v1/delete-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
