@@ -34,12 +34,8 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
         }
         
         console.log("Profiles fetched:", profiles.length);
-        console.log("Profile data:", profiles);
-        profiles.forEach(profile => {
-          console.log(`Perfil ID: ${profile.id}, Email: ${profile.email}, Nombre: ${profile.full_name}, Creado: ${profile.created_at}`);
-        });
         
-        // Traer TODOS los roles de usuario
+        // Traer TODOS los roles de usuario con JOIN a almacenes
         const { data: roles, error: rolesError } = await supabase
           .from("user_roles")
           .select(`
@@ -58,7 +54,7 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
         
         console.log("Roles fetched:", roles?.length || 0);
         
-        // Combinar los datos con mejor manejo de errores
+        // Combinar los datos 
         const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
           const userRoles = roles
             ?.filter(r => r.user_id === profile.id)
@@ -71,14 +67,12 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
             id: profile.id,
             email: profile.email || "",
             full_name: profile.full_name || null,
+            created_at: profile.created_at,
             roles: userRoles,
           };
         });
         
         console.log("Combined users with roles:", usersWithRoles.length);
-        usersWithRoles.forEach(user => {
-          console.log(`Usuario combinado - ID: ${user.id}, Email: ${user.email}, Roles: ${user.roles.length}`);
-        });
         
         return usersWithRoles;
       } catch (error) {
@@ -89,10 +83,10 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
         throw error;
       }
     },
-    refetchOnWindowFocus: false,
-    staleTime: 5000, // 5 segundos antes de considerar los datos obsoletos (reducido de 10s)
-    retry: 3, // Aumentado para más intentos
-    refetchInterval: 10000, // Refrescar cada 10 segundos automáticamente
-    enabled: !!user && hasAdminRole // Solo ejecutar la consulta si el usuario está conectado y tiene rol de administrador
+    refetchOnWindowFocus: true,
+    staleTime: 5000, // 5 segundos antes de considerar los datos obsoletos
+    retry: 3,
+    refetchInterval: 30000, // Refrescar automáticamente cada 30 segundos
+    enabled: !!user && hasAdminRole // Solo ejecutar si el usuario está conectado y tiene rol de administrador
   });
 }

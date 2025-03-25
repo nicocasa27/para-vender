@@ -1,17 +1,49 @@
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { UserRole, UserRoleWithStore } from '@/types/auth';
 import { fetchUserRoles, checkHasRole } from '@/contexts/auth/auth-utils';
+import { toast } from 'sonner';
 
 const MAX_ROLE_LOADING_RETRIES = 3;
 const ROLE_LOADING_RETRY_DELAY = 1000; // ms
+const AUTO_REFRESH_INTERVAL = 120000; // 2 minutos
 
 export function useRoles(user: User | null) {
   const [userRoles, setUserRoles] = useState<UserRoleWithStore[]>([]);
   const [rolesLoading, setRolesLoading] = useState(false);
   const [roleLoadingAttempt, setRoleLoadingAttempt] = useState(0);
   const pendingRoleLoadRef = useRef<Promise<UserRoleWithStore[]> | null>(null);
+  const autoRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Configurar auto-refresh para roles
+  useEffect(() => {
+    // Limpiar cualquier timer existente
+    if (autoRefreshTimerRef.current) {
+      clearInterval(autoRefreshTimerRef.current);
+      autoRefreshTimerRef.current = null;
+    }
+
+    // Solo configurar auto-refresh si hay un usuario logueado
+    if (user) {
+      console.log("Roles: Configurando auto-refresh de roles cada", AUTO_REFRESH_INTERVAL / 1000, "segundos");
+      
+      autoRefreshTimerRef.current = setInterval(() => {
+        if (!rolesLoading) {
+          console.log("Roles: Auto-refresh de roles iniciado");
+          loadUserRoles(user.id, true).catch(err => {
+            console.error("Error en auto-refresh de roles:", err);
+          });
+        }
+      }, AUTO_REFRESH_INTERVAL);
+    }
+
+    return () => {
+      if (autoRefreshTimerRef.current) {
+        clearInterval(autoRefreshTimerRef.current);
+      }
+    };
+  }, [user]);
 
   const loadUserRoles = useCallback(async (userId: string, forceRefresh = false): Promise<UserRoleWithStore[]> => {
     if (!userId) return [];
@@ -77,7 +109,37 @@ export function useRoles(user: User | null) {
     }
     
     console.log("Roles: Manually refreshing user roles for:", user.id, force ? "(forced)" : "");
-    return await loadUserRoles(user.id, force);
+    
+    try {
+      const roles = await loadUserRoles(user.id, force);
+      
+      if (roles.length === 0) {
+        console.warn("Roles: No roles found after refresh");
+        // Solo mostrar toast si es un refresh manual (force=true)
+        if (force) {
+          toast.warning("No se encontraron roles", {
+            description: "No tienes ningún rol asignado en el sistema"
+          });
+        }
+      } else {
+        console.log("Roles: Successfully refreshed roles:", roles);
+        // Solo mostrar toast si es un refresh manual (force=true)
+        if (force) {
+          toast.success(`${roles.length} roles cargados correctamente`);
+        }
+      }
+      
+      return roles;
+    } catch (error) {
+      console.error("Roles: Error refreshing roles:", error);
+      // Solo mostrar toast si es un refresh manual (force=true)
+      if (force) {
+        toast.error("Error al actualizar roles", {
+          description: "Intenta nuevamente más tarde"
+        });
+      }
+      return [];
+    }
   }, [user, loadUserRoles]);
 
   const hasRole = useCallback((role: UserRole, storeId?: string): boolean => {

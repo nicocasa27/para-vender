@@ -13,13 +13,33 @@ export default function Profile() {
   const { user, hasRole, userRoles, refreshUserRoles, rolesLoading, session } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefreshAttempt, setLastRefreshAttempt] = useState<Date | null>(null);
+  const [autoRefreshTimer, setAutoRefreshTimer] = useState<NodeJS.Timeout | null>(null);
 
-  // Monitor role status on initial load
+  // Monitor role status on initial load and set up auto-refresh
   useEffect(() => {
-    if (user && userRoles.length === 0 && !rolesLoading && !lastRefreshAttempt) {
-      console.log("Profile: No roles detected on initial profile load, attempting refresh");
-      handleRefreshRoles();
+    if (user && !autoRefreshTimer) {
+      // Auto refresh roles every 60 seconds
+      const timer = setInterval(() => {
+        console.log("Profile: Auto-refreshing roles");
+        refreshUserRoles(true).catch(error => {
+          console.error("Error in auto-refresh:", error);
+        });
+      }, 60000);
+      
+      setAutoRefreshTimer(timer);
+      
+      // Refresh immediately on mount
+      if (userRoles.length === 0 && !rolesLoading && !lastRefreshAttempt) {
+        console.log("Profile: No roles detected on initial profile load, attempting refresh");
+        handleRefreshRoles();
+      }
     }
+    
+    return () => {
+      if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer);
+      }
+    };
   }, [user, userRoles, rolesLoading]);
 
   const handleRefreshRoles = async () => {
@@ -29,7 +49,7 @@ export default function Profile() {
     setLastRefreshAttempt(new Date());
     
     try {
-      const roles = await refreshUserRoles();
+      const roles = await refreshUserRoles(true);
       
       if (roles.length > 0) {
         toast.success("Roles actualizados correctamente");

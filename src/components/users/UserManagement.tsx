@@ -1,44 +1,84 @@
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { RefreshCw, Users } from "lucide-react";
-import { useUsersAndRoles } from "@/hooks/useUsersAndRoles";
 import { useAuth } from "@/contexts/auth";
 import { UserSidePanel } from "@/components/users/UserSidePanel";
 import { UserWithRoles } from "@/types/auth";
 import { toast } from "sonner";
+import { useUserManagementQuery } from "@/hooks/useUserManagementQuery";
+import { supabase } from "@/integrations/supabase/client";
 
 export function UserManagement() {
-  const { hasRole } = useAuth();
+  const { user, hasRole } = useAuth();
   const isAdmin = hasRole('admin');
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   
+  // Usar React Query para manejar el estado de carga y actualización de datos
   const { 
-    users, 
-    loading, 
-    fetchUsers, 
-    deleteRole,
-    addRole,
-    deleteUser
-  } = useUsersAndRoles(isAdmin);
+    data: users = [], 
+    isLoading: loading, 
+    refetch 
+  } = useUserManagementQuery(user, isAdmin);
 
-  useEffect(() => {
-    if (isAdmin) {
-      console.log("UserManagement: Componente montado, cargando usuarios");
-    } else {
-      console.log("UserManagement: Usuario no es administrador");
-    }
-  }, [isAdmin]);
-
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     console.log("UserManagement: Actualizando lista de usuarios");
     toast.info("Actualizando lista de usuarios...");
-    fetchUsers();
+    await refetch();
+    toast.success("Lista de usuarios actualizada");
   };
 
-  const handleAddRole = (user: UserWithRoles) => {
-    console.log("Añadir rol a usuario:", user);
+  const handleDeleteRole = async (roleId: string) => {
+    try {
+      console.log(`Eliminando rol con ID: ${roleId}`);
+      
+      const { error } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('id', roleId);
+        
+      if (error) throw error;
+      
+      toast.success("Rol eliminado correctamente");
+      
+      // Actualizar la lista de usuarios
+      await refetch();
+    } catch (error: any) {
+      console.error("Error al eliminar rol:", error);
+      toast.error("Error al eliminar rol", {
+        description: error.message
+      });
+    }
+  };
+
+  const handleAddRole = async (userId: string, roleName: "admin" | "manager" | "sales" | "viewer", almacenId?: string) => {
+    try {
+      console.log(`Añadiendo rol ${roleName} al usuario ${userId}${almacenId ? ` para almacén ${almacenId}` : ''}`);
+      
+      const { error } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: roleName,
+          almacen_id: almacenId || null
+        });
+        
+      if (error) throw error;
+      
+      toast.success("Rol asignado correctamente");
+      
+      // Actualizar la lista de usuarios
+      await refetch();
+    } catch (error: any) {
+      console.error("Error al añadir rol:", error);
+      toast.error("Error al asignar rol", {
+        description: error.message
+      });
+    }
+  };
+
+  const handleOpenUserPanel = (user: UserWithRoles) => {
     setSidePanelOpen(true);
   };
 
@@ -97,8 +137,8 @@ export function UserManagement() {
         users={users}
         loading={loading}
         onRefresh={handleRefresh}
-        onDeleteRole={deleteRole}
-        onAddRole={handleAddRole}
+        onDeleteRole={handleDeleteRole}
+        onAddRole={handleOpenUserPanel}
       />
     </Card>
   );
