@@ -54,7 +54,7 @@ export function UserManagementPanel() {
       setTimeout(async () => {
         console.log("UserManagementPanel: Recargando usuarios después de crear uno nuevo");
         await loadUsers();
-      }, 1500);
+      }, 3000);
       
     } catch (error: any) {
       console.error("UserManagementPanel: Error al crear usuario:", error);
