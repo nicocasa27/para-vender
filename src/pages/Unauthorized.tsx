@@ -1,18 +1,22 @@
+
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Shield, User, Home, LogOut, AlertTriangle, Copy, Check } from "lucide-react";
+import { Shield, User, Home, LogOut, AlertTriangle, Copy, Check, RefreshCw } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Unauthorized() {
-  const { user, userRoles, hasRole } = useAuth();
+  const { user, userRoles, hasRole, refreshUserRoles } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [requiredRole, setRequiredRole] = useState<string | null>(null);
+  const [authDetails, setAuthDetails] = useState<any>(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -20,6 +24,14 @@ export default function Unauthorized() {
     if (state?.requiredRole) {
       setRequiredRole(state.requiredRole);
     }
+    
+    // Get auth status from Supabase directly for debugging
+    const checkAuthStatus = async () => {
+      const { data } = await supabase.auth.getSession();
+      setAuthDetails(data.session);
+    };
+    
+    checkAuthStatus();
   }, [location]);
 
   const getDebugInfo = () => {
@@ -27,11 +39,18 @@ export default function Unauthorized() {
       user: user ? {
         id: user.id,
         email: user.email,
+        auth_provider: user.app_metadata?.provider || "unknown",
+        created_at: user.created_at,
       } : "Not authenticated",
+      session: authDetails ? {
+        expires_at: authDetails.expires_at,
+        auth_token_type: authDetails.token_type,
+      } : "No session",
       userRoles: userRoles.map(role => ({
         role: role.role,
         store: role.almacen_nombre || "(global)",
-        storeId: role.almacen_id || "none"
+        storeId: role.almacen_id || "none",
+        roleId: role.id
       })),
       requiredRole: requiredRole || "Unknown",
       timestamp: new Date().toISOString(),
@@ -54,6 +73,20 @@ export default function Unauthorized() {
         console.error("Error al copiar al portapapeles:", err);
         toast.error("Error al copiar información");
       });
+  };
+
+  const handleRefreshRoles = async () => {
+    if (!user) return;
+    
+    setRefreshing(true);
+    try {
+      await refreshUserRoles();
+      toast.success("Roles actualizados");
+    } catch (error) {
+      toast.error("Error al actualizar roles");
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   return (
@@ -90,7 +123,19 @@ export default function Unauthorized() {
               </div>
               
               <div>
-                <p className="mb-2 font-medium text-sm">Sus roles actuales:</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-medium text-sm">Sus roles actuales:</p>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleRefreshRoles}
+                    disabled={refreshing}
+                    className="h-7 px-2"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 mr-1 ${refreshing ? 'animate-spin' : ''}`} />
+                    {refreshing ? 'Actualizando...' : 'Actualizar'}
+                  </Button>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {userRoles.length > 0 ? (
                     userRoles.map((role, index) => (
@@ -115,6 +160,9 @@ export default function Unauthorized() {
                     Información para soporte técnico
                   </AccordionTrigger>
                   <AccordionContent>
+                    <pre className="text-xs bg-muted/50 p-2 rounded overflow-auto max-h-60">
+                      {getDebugInfo()}
+                    </pre>
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -137,6 +185,9 @@ export default function Unauthorized() {
                 </AccordionItem>
               </Accordion>
             </CardContent>
+            <CardFooter className="text-xs text-muted-foreground flex justify-center border-t pt-4">
+              Es posible que necesite cerrar sesión e iniciar sesión nuevamente para refrescar sus roles.
+            </CardFooter>
           </Card>
         ) : null}
         

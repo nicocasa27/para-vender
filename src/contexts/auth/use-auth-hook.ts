@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
@@ -17,36 +16,65 @@ export const useAuthProvider = () => {
 
   // Initial auth setup and session check
   useEffect(() => {
+    console.log("Auth: Setting up auth state listener");
+    
     // Set up the auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        console.log("Auth state change:", event);
+        console.log("Auth: Auth state change event:", event);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
-          const roles = await fetchUserRoles(currentSession.user.id);
-          setUserRoles(roles);
+          console.log("Auth: User authenticated in state change, fetching roles");
+          try {
+            const roles = await fetchUserRoles(currentSession.user.id);
+            console.log("Auth: Roles fetched during auth state change:", roles);
+            setUserRoles(roles);
+          } catch (error) {
+            console.error("Auth: Error fetching roles during auth state change:", error);
+            setUserRoles([]);
+          }
         } else {
+          console.log("Auth: No user in state change, clearing roles");
           setUserRoles([]);
-          setLoading(false);
         }
+        
+        if (event === 'SIGNED_OUT') {
+          console.log("Auth: User signed out, clearing all auth state");
+          setUserRoles([]);
+        }
+        
+        setLoading(false);
       }
     );
 
     // Check for existing session
     const initializeAuth = async () => {
       setLoading(true);
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      if (currentSession?.user) {
-        const roles = await fetchUserRoles(currentSession.user.id);
-        setUserRoles(roles);
-        setLoading(false);
-      } else {
+      try {
+        console.log("Auth: Initializing auth, checking for existing session");
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        
+        if (currentSession?.user) {
+          console.log("Auth: Existing session found for user:", currentSession.user.id);
+          try {
+            const roles = await fetchUserRoles(currentSession.user.id);
+            console.log("Auth: Roles fetched during init:", roles);
+            setUserRoles(roles);
+          } catch (error) {
+            console.error("Auth: Error fetching roles during init:", error);
+            setUserRoles([]);
+          }
+        } else {
+          console.log("Auth: No existing session found");
+        }
+      } catch (error) {
+        console.error("Auth: Error during auth initialization:", error);
+      } finally {
         setLoading(false);
       }
     };
@@ -54,9 +82,37 @@ export const useAuthProvider = () => {
     initializeAuth();
 
     return () => {
+      console.log("Auth: Cleaning up auth subscription");
       subscription.unsubscribe();
     };
   }, []);
+
+  // Function to manually refresh user roles - useful for debugging
+  const refreshUserRoles = async () => {
+    if (!user) {
+      console.log("Auth: Can't refresh roles, no user logged in");
+      return;
+    }
+    
+    console.log("Auth: Manually refreshing user roles for:", user.id);
+    try {
+      setLoading(true);
+      const roles = await fetchUserRoles(user.id);
+      console.log("Auth: Refreshed roles:", roles);
+      setUserRoles(roles);
+      return roles;
+    } catch (error) {
+      console.error("Auth: Error refreshing roles:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron actualizar los roles de usuario",
+        variant: "destructive",
+      });
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -141,7 +197,9 @@ export const useAuthProvider = () => {
   };
 
   const hasRole = useCallback((role: UserRole, storeId?: string): boolean => {
-    return checkHasRole(userRoles, role, storeId);
+    const result = checkHasRole(userRoles, role, storeId);
+    console.log(`Auth: Checking if user has role '${role}'${storeId ? ` for store ${storeId}` : ''}: ${result}`);
+    return result;
   }, [userRoles]);
 
   return {
@@ -153,5 +211,6 @@ export const useAuthProvider = () => {
     signUp,
     signOut,
     hasRole,
+    refreshUserRoles,
   };
 };
