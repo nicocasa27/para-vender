@@ -42,14 +42,18 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     longTimeoutReached,
     maxAttemptsReached,
     forceRoleRefresh
-  } = useAuthorization(effectiveRequiredRole, storeId, {
-    user,
-    hasRole,
-    userRoles,
-    rolesLoading,
-    session,
-    refreshUserRoles
-  });
+  } = useAuthorization(
+    effectiveRequiredRole, 
+    {
+      user,
+      hasRole,
+      userRoles,
+      rolesLoading,
+      session,
+      refreshUserRoles
+    },
+    storeId
+  );
 
   // Always show loading state while auth is loading or auth check is incomplete
   if (authLoading || (rolesLoading && !maxAttemptsReached) || (isAuthorized === null && !authCheckComplete && !maxAttemptsReached)) {
