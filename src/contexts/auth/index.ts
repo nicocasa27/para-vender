@@ -1,5 +1,7 @@
 
-export * from './AuthContext';
 export * from './types';
 export * from './auth-utils';
-export * from '../AuthContext';  // Re-export the compatibility layer
+export { AuthProvider } from './AuthContext';
+export { useAuthContext as useAuth } from './AuthContext';
+
+// No longer re-export from ../AuthContext to avoid circular references

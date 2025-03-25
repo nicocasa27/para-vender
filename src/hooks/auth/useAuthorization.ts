@@ -13,9 +13,9 @@ export interface UseAuthorizationOptions {
 }
 
 export function useAuthorization(
-  requiredRole?: UserRole, 
-  storeId?: string,
-  options: UseAuthorizationOptions
+  requiredRole: UserRole | undefined, 
+  options: UseAuthorizationOptions,
+  storeId?: string
 ) {
   const { user, hasRole, userRoles, rolesLoading, session, refreshUserRoles } = options;
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);

@@ -1,5 +1,6 @@
 
 import { Badge } from "@/components/ui/badge";
+import { UserRole } from "@/types/auth";
 
 interface AccessPermissionsProps {
   hasRole: (role: string, storeId?: string) => boolean;
