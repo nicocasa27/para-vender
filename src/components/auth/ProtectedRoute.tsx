@@ -155,4 +155,4 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   console.log("ProtectedRoute: User is authenticated and authorized");
   return <Outlet />;
-}
+};
