@@ -1,6 +1,6 @@
 
 import { Session, User } from "@supabase/supabase-js";
-import { UserRole, UserRoleWithStore } from "@/types/auth";
+import { UserRole, UserRoleWithStore, UserWithRoles } from "@/types/auth";
 
 export interface AuthContextType {
   session: Session | null;
@@ -13,4 +13,6 @@ export interface AuthContextType {
   signOut: () => Promise<void>;
   hasRole: (role: UserRole, storeId?: string) => boolean;
   refreshUserRoles: () => Promise<UserRoleWithStore[]>;
+  getAllUsers: () => Promise<UserWithRoles[]>;
+  deleteUser: (userId: string) => Promise<boolean>;
 }

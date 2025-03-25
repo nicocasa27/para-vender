@@ -1,10 +1,9 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { UserRole, UserRoleWithStore } from '@/types/auth';
+import { UserRole, UserRoleWithStore, UserWithRoles } from '@/types/auth';
 import { fetchUserRoles, checkHasRole } from './auth-utils';
 import { toast as sonnerToast } from "sonner";
 
@@ -17,7 +16,6 @@ export const useAuthProvider = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Function to load user roles
   const loadUserRoles = async (userId: string) => {
     if (!userId) return [];
     
@@ -38,12 +36,10 @@ export const useAuthProvider = () => {
     }
   };
 
-  // Initial auth setup and session check
   useEffect(() => {
     console.log("Auth: Setting up auth state listener");
     setLoading(true);
     
-    // Set up the auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log("Auth: Auth state change event:", event, "Session:", !!currentSession);
@@ -67,7 +63,6 @@ export const useAuthProvider = () => {
       }
     );
 
-    // Check for existing session
     const initializeAuth = async () => {
       try {
         console.log("Auth: Initializing auth, checking for existing session");
@@ -97,7 +92,6 @@ export const useAuthProvider = () => {
     };
   }, []);
 
-  // Function to manually refresh user roles - useful for debugging
   const refreshUserRoles = async () => {
     if (!user) {
       console.log("Auth: Can't refresh roles, no user logged in");
@@ -121,13 +115,11 @@ export const useAuthProvider = () => {
         throw error;
       }
 
-      // After successful login, immediately load user roles
       if (data.user) {
         console.log("Auth: Sign in successful, loading roles for user:", data.user.id);
         await loadUserRoles(data.user.id);
       }
 
-      // Successful login
       sonnerToast.success("Inicio de sesión exitoso", {
         description: "Bienvenido de nuevo"
       });
@@ -142,7 +134,7 @@ export const useAuthProvider = () => {
         description: error.message || "Credenciales inválidas o problema de conexión"
       });
       
-      return Promise.reject(error); // Propagar el error para que el componente pueda manejarlo
+      return Promise.reject(error);
     } finally {
       setLoading(false);
     }
@@ -177,7 +169,7 @@ export const useAuthProvider = () => {
         description: error.message || "Hubo un problema al crear la cuenta"
       });
       
-      return Promise.reject(error); // Propagar el error para que el componente pueda manejarlo
+      return Promise.reject(error);
     } finally {
       setLoading(false);
     }
@@ -205,7 +197,7 @@ export const useAuthProvider = () => {
         description: error.message || "Hubo un problema al cerrar sesión"
       });
       
-      return Promise.reject(error); // Propagar el error para que el componente pueda manejarlo
+      return Promise.reject(error);
     } finally {
       setLoading(false);
     }
@@ -216,6 +208,107 @@ export const useAuthProvider = () => {
     console.log(`Auth: Checking if user has role '${role}'${storeId ? ` for store ${storeId}` : ''}: ${result}`);
     return result;
   }, [userRoles]);
+
+  const getAllUsers = async (): Promise<UserWithRoles[]> => {
+    try {
+      console.log("Auth: Fetching all users");
+      
+      if (!hasRole('admin')) {
+        throw new Error("No tienes permisos para ver usuarios");
+      }
+      
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*");
+        
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw profilesError;
+      }
+      
+      if (!profiles || profiles.length === 0) {
+        return [];
+      }
+      
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select(`
+          id,
+          user_id,
+          role,
+          almacen_id,
+          created_at,
+          almacenes:almacen_id(nombre)
+        `);
+        
+      if (rolesError) {
+        console.error("Error fetching roles:", rolesError);
+        throw rolesError;
+      }
+      
+      const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
+        const userRoles = roles
+          ?.filter(r => r.user_id === profile.id)
+          .map(role => ({
+            ...role,
+            almacen_nombre: role.almacenes?.nombre || null
+          })) || [];
+        
+        return {
+          id: profile.id,
+          email: profile.email || "",
+          full_name: profile.full_name || null,
+          roles: userRoles,
+        };
+      });
+      
+      return usersWithRoles;
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      throw error;
+    }
+  };
+
+  const deleteUser = async (userId: string): Promise<boolean> => {
+    try {
+      console.log("Auth: Deleting user", userId);
+      
+      if (!hasRole('admin')) {
+        throw new Error("No tienes permisos para eliminar usuarios");
+      }
+      
+      if (!session?.access_token) {
+        throw new Error("No hay sesión de usuario");
+      }
+      
+      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/delete-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ userId }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || "Error al eliminar usuario");
+      }
+      
+      sonnerToast.success("Usuario eliminado", {
+        description: "El usuario ha sido eliminado correctamente"
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      sonnerToast.error("Error al eliminar usuario", {
+        description: error.message || "Hubo un problema al eliminar el usuario"
+      });
+      return false;
+    }
+  };
 
   return {
     session,
@@ -228,5 +321,7 @@ export const useAuthProvider = () => {
     signOut,
     hasRole,
     refreshUserRoles,
+    getAllUsers,
+    deleteUser,
   };
 };
