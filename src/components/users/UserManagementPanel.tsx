@@ -132,7 +132,7 @@ export function UserManagementPanel() {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => loadUsers()} 
+              onClick={loadUsers} 
               disabled={loading}
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
