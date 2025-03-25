@@ -1,51 +1,50 @@
 
 import { useEffect, useRef, useState } from "react";
 import { addAdminRoleToUser } from "@/utils/adminUtils";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/auth";
 
 export function AdminInitializer() {
   const initialized = useRef(false);
-  const { toast } = useToast();
   const [isInitializing, setIsInitializing] = useState(false);
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    // Skip if auth is still loading or if already initialized
+    // Solo inicializar una vez y solo si hay un usuario actual
     if (loading || initialized.current || isInitializing || !user) return;
     
-    async function initializeAdmin() {
+    // Verificar si el sistema es nuevo (sin usuarios administradores)
+    async function checkAndInitializeFirstAdmin() {
       try {
         setIsInitializing(true);
-        console.log("AdminInitializer: Starting initialization for logged-in user");
+        console.log("AdminInitializer: Verificando si se necesita configurar el primer administrador");
         
-        // Only check admin status for the current logged-in user
-        const result = await addAdminRoleToUser(user.email);
+        // Solo ejecutar para el primer usuario o en entorno de desarrollo controlado
+        const result = await addAdminRoleToUser(user.email, true);
         
         if (result.success) {
-          console.log("Admin role management:", result.message);
-          // Only show toast if role was newly added (not if user already had the role)
-          if (!result.message.includes("ya tiene rol")) {
-            toast({
-              title: "Administrador configurado",
+          console.log("AdminInitializer:", result.message);
+          // Solo mostrar toast si se asignó un nuevo rol (no si ya tenía el rol)
+          if (result.adminAdded) {
+            toast.success("Administrador configurado", {
               description: result.message,
             });
           }
         } else {
-          console.error("Admin role management failed:", result.message);
+          console.error("AdminInitializer: Error en la gestión de roles:", result.message);
         }
       } catch (error) {
-        console.error("Error initializing admin:", error);
+        console.error("AdminInitializer: Error al inicializar admin:", error);
       } finally {
         initialized.current = true;
         setIsInitializing(false);
-        console.log("AdminInitializer: Initialization complete");
+        console.log("AdminInitializer: Verificación completada");
       }
     }
 
-    initializeAdmin();
+    checkAndInitializeFirstAdmin();
   }, [toast, isInitializing, user, loading]);
 
-  // This component doesn't render anything
+  // Este componente no renderiza nada
   return null;
 }
