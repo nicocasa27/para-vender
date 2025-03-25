@@ -1,18 +1,19 @@
 
-import { UserWithRoles } from "@/types/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { UserWithRoles } from "@/types/auth";
 
 /**
- * Obtiene todos los usuarios con sus roles correspondientes
+ * Obtiene todos los usuarios con sus roles
  */
 export const fetchAllUsers = async (): Promise<UserWithRoles[]> => {
   try {
     console.log("AuthUtils: Fetching all users");
     
-    // Get all profiles with robust error handling
+    // Get all profiles
     const { data: profiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("*");
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
       
     if (profilesError) {
       console.error("AuthUtils: Error fetching profiles:", profilesError);
@@ -24,11 +25,11 @@ export const fetchAllUsers = async (): Promise<UserWithRoles[]> => {
       return [];
     }
     
-    console.log("AuthUtils: Profiles fetched:", profiles.length);
+    console.log(`AuthUtils: Found ${profiles.length} profiles`);
     
-    // Get all user roles with better error handling
+    // Get all roles
     const { data: roles, error: rolesError } = await supabase
-      .from("user_roles")
+      .from('user_roles')
       .select(`
         id,
         user_id,
@@ -43,10 +44,8 @@ export const fetchAllUsers = async (): Promise<UserWithRoles[]> => {
       throw rolesError;
     }
     
-    console.log("AuthUtils: Roles fetched:", roles?.length || 0);
-    
-    // Combine the data
-    const usersWithRoles = profiles.map(profile => {
+    // Combine data
+    const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
       const userRoles = roles
         ?.filter(r => r.user_id === profile.id)
         .map(role => ({
@@ -62,11 +61,10 @@ export const fetchAllUsers = async (): Promise<UserWithRoles[]> => {
       };
     });
     
-    console.log("AuthUtils: Combined users with roles:", usersWithRoles.length);
+    console.log(`AuthUtils: Processed ${usersWithRoles.length} users with roles`);
     return usersWithRoles;
-    
   } catch (error) {
-    console.error("AuthUtils: Error fetching all users:", error);
+    console.error("AuthUtils: Error in fetchAllUsers:", error);
     throw error;
   }
 };
