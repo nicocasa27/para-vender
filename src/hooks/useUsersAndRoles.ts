@@ -116,15 +116,15 @@ export function useUsersAndRoles(isAdmin: boolean) {
   };
 
   // Añadir un rol a un usuario
-  const addRole = async (userId: string, role: string, almacenId?: string) => {
+  const addRole = async (userId: string, roleName: "admin" | "manager" | "sales" | "viewer", almacenId?: string) => {
     try {
-      console.log(`Añadiendo rol ${role} al usuario ${userId}${almacenId ? ` para almacén ${almacenId}` : ''}`);
+      console.log(`Añadiendo rol ${roleName} al usuario ${userId}${almacenId ? ` para almacén ${almacenId}` : ''}`);
       
       const { error } = await supabase
         .from('user_roles')
         .insert({
           user_id: userId,
-          role: role,
+          role: roleName,
           almacen_id: almacenId || null
         });
         

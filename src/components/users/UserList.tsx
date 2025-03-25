@@ -41,7 +41,7 @@ export const UserList = memo(function UserList({ users, isLoading, onDeleteRole,
         <TableHeader>
           <TableRow>
             <TableHead>Usuario</TableHead>
-            <TableHead>Roles asignados</TableHead>
+            <TableHead>Roles</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>

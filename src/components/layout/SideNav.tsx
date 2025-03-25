@@ -104,4 +104,3 @@ export const SideNav: React.FC<SideNavProps> = ({ open, setOpen }) => {
     </div>
   );
 };
-

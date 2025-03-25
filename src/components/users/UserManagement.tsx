@@ -1,15 +1,17 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { RefreshCw, UserPlus } from "lucide-react";
-import { UserList } from "@/components/users/UserList";
+import { RefreshCw, UserPlus, Users } from "lucide-react";
 import { useUsersAndRoles } from "@/hooks/useUsersAndRoles";
 import { useAuth } from "@/contexts/auth";
+import { UserSidePanel } from "@/components/users/UserSidePanel";
+import { UserWithRoles } from "@/types/auth";
 
 export function UserManagement() {
   const { hasRole } = useAuth();
   const isAdmin = hasRole('admin');
+  const [sidePanelOpen, setSidePanelOpen] = useState(false);
   
   const { 
     users, 
@@ -33,11 +35,8 @@ export function UserManagement() {
     fetchUsers();
   };
 
-  const handleAddRole = (user: any) => {
-    // Esto debería abrir un diálogo para seleccionar el rol
+  const handleAddRole = (user: UserWithRoles) => {
     console.log("Añadir rol a usuario:", user);
-    // Por ahora simplemente asignamos un rol viewer
-    addRole(user.id, 'viewer');
   };
 
   if (!isAdmin) {
@@ -69,16 +68,32 @@ export function UserManagement() {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Actualizar
           </Button>
-          <Button>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Nuevo Usuario
+          <Button onClick={() => setSidePanelOpen(true)}>
+            <Users className="h-4 w-4 mr-2" />
+            Gestionar Usuarios
           </Button>
         </div>
       </div>
 
-      <UserList 
-        users={users} 
-        isLoading={loading} 
+      <div className="text-center p-10 border rounded-md">
+        <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+        <h3 className="text-xl font-semibold mb-2">Panel de Gestión de Usuarios</h3>
+        <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+          Haz clic en el botón "Gestionar Usuarios" para abrir el panel lateral donde 
+          podrás ver y administrar todos los usuarios del sistema y sus roles.
+        </p>
+        <Button onClick={() => setSidePanelOpen(true)}>
+          <Users className="h-4 w-4 mr-2" />
+          Abrir Panel de Usuarios
+        </Button>
+      </div>
+
+      <UserSidePanel
+        open={sidePanelOpen}
+        onOpenChange={setSidePanelOpen}
+        users={users}
+        loading={loading}
+        onRefresh={handleRefresh}
         onDeleteRole={deleteRole}
         onAddRole={handleAddRole}
       />
