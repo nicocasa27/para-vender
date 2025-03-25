@@ -85,6 +85,16 @@ export const useAuthProvider = () => {
     return roleLoadPromise;
   };
 
+  const refreshUserRoles = async (force = true): Promise<UserRoleWithStore[]> => {
+    if (!user) {
+      console.log("Auth: Can't refresh roles, no user logged in");
+      return [];
+    }
+    
+    console.log("Auth: Manually refreshing user roles for:", user.id, force ? "(forced)" : "");
+    return await loadUserRoles(user.id, force);
+  };
+
   // This effect initializes auth and sets up listeners
   useEffect(() => {
     console.log("Auth: Setting up auth state listener");
@@ -169,16 +179,6 @@ export const useAuthProvider = () => {
       subscription.unsubscribe();
     };
   }, []);
-
-  const refreshUserRoles = async (force = true): Promise<UserRoleWithStore[]> => {
-    if (!user) {
-      console.log("Auth: Can't refresh roles, no user logged in");
-      return [];
-    }
-    
-    console.log("Auth: Manually refreshing user roles for:", user.id, force ? "(forced)" : "");
-    return await loadUserRoles(user.id, force);
-  };
 
   const signIn = async (email: string, password: string) => {
     try {
