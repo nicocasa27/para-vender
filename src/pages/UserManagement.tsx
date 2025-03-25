@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { UserWithRoles } from "@/types/auth";
 import { useToast } from "@/hooks/use-toast";

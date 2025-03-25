@@ -1,9 +1,8 @@
-
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Shield, User, Home, LogOut, AlertTriangle, Copy, Check } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -16,7 +15,6 @@ export default function Unauthorized() {
   const [requiredRole, setRequiredRole] = useState<string | null>(null);
   const location = useLocation();
 
-  // Extract the required role from the state if available
   useEffect(() => {
     const state = location.state as { requiredRole?: string } | undefined;
     if (state?.requiredRole) {
@@ -24,7 +22,6 @@ export default function Unauthorized() {
     }
   }, [location]);
 
-  // Prepare debug information for clipboard
   const getDebugInfo = () => {
     const info = {
       user: user ? {
@@ -45,7 +42,6 @@ export default function Unauthorized() {
     return JSON.stringify(info, null, 2);
   };
 
-  // Copy debug info to clipboard
   const copyToClipboard = () => {
     const debugInfo = getDebugInfo();
     navigator.clipboard.writeText(debugInfo)

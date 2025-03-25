@@ -1,6 +1,5 @@
-
 import { Navigate, Outlet, useLocation, useMatch } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { UserRole } from "@/types/auth";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -23,18 +22,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const [timeoutReached, setTimeoutReached] = useState(false);
   const { toast: uiToast } = useToast();
   
-  // Check if we're on a route that requires special permissions
   const isUsersRoute = useMatch("/users");
   const isConfigRoute = useMatch("/config");
   
-  // Determine the required role based on the current route
   const effectiveRequiredRole = 
     isUsersRoute ? "admin" : 
     isConfigRoute ? "manager" : 
     requiredRole;
   
   useEffect(() => {
-    // Reset states when route or required role changes
     setIsAuthorized(null);
     setAuthCheckComplete(false);
     setTimeoutReached(false);
@@ -44,7 +40,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     console.log("ProtectedRoute: Current user roles:", userRoles);
     console.log("ProtectedRoute: Current path:", location.pathname);
     
-    // Add a shorter timeout to show "taking longer than expected" message
     const longWaitTimeout = setTimeout(() => {
       if (!authCheckComplete) {
         setTimeoutReached(true);
@@ -53,14 +48,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           duration: 5000
         });
       }
-    }, 1500); // 1.5 second notification
+    }, 1500);
     
-    // Extended timeout to ensure roles have time to load
     const authCheckTimeout = setTimeout(() => {
       if (!authCheckComplete) {
         console.log("ProtectedRoute: Auth check timed out after 5s, continuing with available information");
         
-        // If timeout is reached and still not authorized, redirect to appropriate page
         if (!user) {
           console.log("ProtectedRoute: No user found after timeout");
           setIsAuthorized(false);
@@ -76,7 +69,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             variant: "destructive",
           });
         } else {
-          // Make a best-effort attempt with available information
           const hasRequiredRole = effectiveRequiredRole ? hasRole(effectiveRequiredRole, storeId) : true;
           console.log(`ProtectedRoute: After timeout - user has role ${effectiveRequiredRole}?`, hasRequiredRole);
           setIsAuthorized(hasRequiredRole);
@@ -90,13 +82,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         
         setAuthCheckComplete(true);
       }
-    }, 5000); // Extended to 5 second hard timeout
+    }, 5000);
     
-    // Only check authorization when user and roles are loaded
     if (!authLoading) {
       if (user) {
         if (effectiveRequiredRole) {
-          // Add a small delay to ensure roles have been properly loaded
           setTimeout(() => {
             const authorized = hasRole(effectiveRequiredRole, storeId);
             console.log(`ProtectedRoute: User has role ${effectiveRequiredRole}?`, authorized);
@@ -112,10 +102,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             }
             
             setAuthCheckComplete(true);
-          }, 100); // Small delay for roles to be properly set
+          }, 100);
         } else {
           console.log("ProtectedRoute: No specific role required, access granted");
-          setIsAuthorized(true); // No specific role required
+          setIsAuthorized(true);
           setAuthCheckComplete(true);
         }
       } else {
@@ -133,7 +123,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     };
   }, [authLoading, user, effectiveRequiredRole, storeId, hasRole, userRoles, location.pathname]);
 
-  // Still loading auth state - but with a timeout to prevent infinite loading
   if ((authLoading || !authCheckComplete) && !timeoutReached) {
     console.log("ProtectedRoute: Still loading authentication state");
     return (
@@ -150,7 +139,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Not authenticated
   if (!user) {
     console.log("ProtectedRoute: User not authenticated, redirecting to /auth");
     toast.error("Sesión no válida", {
@@ -159,7 +147,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Checking permissions
   if (isAuthorized === null && !authCheckComplete) {
     console.log("ProtectedRoute: Still checking permissions");
     return (
@@ -176,14 +163,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Not authorized
   if (isAuthorized === false) {
     console.log("ProtectedRoute: User not authorized, redirecting to /unauthorized");
-    // Pass the required role information to the unauthorized page
     return <Navigate to="/unauthorized" state={{ from: location, requiredRole: effectiveRequiredRole }} replace />;
   }
 
-  // User is authenticated and has the required permissions
   console.log("ProtectedRoute: User is authenticated and authorized");
   return <Outlet />;
 };

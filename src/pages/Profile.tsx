@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // Set initial fullName when user data is available
   useEffect(() => {
     if (user?.user_metadata?.full_name) {
       setFullName(user.user_metadata.full_name);
@@ -29,14 +27,12 @@ export default function Profile() {
     try {
       setIsLoading(true);
 
-      // Update auth metadata
       const { error: authError } = await supabase.auth.updateUser({
         data: { full_name: fullName }
       });
 
       if (authError) throw authError;
 
-      // Update profile table
       const { error: profileError } = await supabase
         .from("profiles")
         .update({ full_name: fullName })
