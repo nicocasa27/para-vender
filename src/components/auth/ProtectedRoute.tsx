@@ -179,7 +179,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Not authorized
   if (isAuthorized === false) {
     console.log("ProtectedRoute: User not authorized, redirecting to /unauthorized");
-    return <Navigate to="/unauthorized" replace />;
+    // Pass the required role information to the unauthorized page
+    return <Navigate to="/unauthorized" state={{ from: location, requiredRole: effectiveRequiredRole }} replace />;
   }
 
   // User is authenticated and has the required permissions

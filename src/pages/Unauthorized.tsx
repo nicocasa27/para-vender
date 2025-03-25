@@ -1,12 +1,64 @@
 
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Shield, User, Home, LogOut, AlertTriangle } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Shield, User, Home, LogOut, AlertTriangle, Copy, Check } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 export default function Unauthorized() {
-  const { user, signOut } = useAuth();
+  const { user, userRoles, hasRole } = useAuth();
+  const [copied, setCopied] = useState(false);
+  const [requiredRole, setRequiredRole] = useState<string | null>(null);
+  const location = useLocation();
+
+  // Extract the required role from the state if available
+  useEffect(() => {
+    const state = location.state as { requiredRole?: string } | undefined;
+    if (state?.requiredRole) {
+      setRequiredRole(state.requiredRole);
+    }
+  }, [location]);
+
+  // Prepare debug information for clipboard
+  const getDebugInfo = () => {
+    const info = {
+      user: user ? {
+        id: user.id,
+        email: user.email,
+      } : "Not authenticated",
+      userRoles: userRoles.map(role => ({
+        role: role.role,
+        store: role.almacen_nombre || "(global)",
+        storeId: role.almacen_id || "none"
+      })),
+      requiredRole: requiredRole || "Unknown",
+      timestamp: new Date().toISOString(),
+      path: location.pathname,
+      referrer: location.state?.from?.pathname || "Unknown",
+    };
+    
+    return JSON.stringify(info, null, 2);
+  };
+
+  // Copy debug info to clipboard
+  const copyToClipboard = () => {
+    const debugInfo = getDebugInfo();
+    navigator.clipboard.writeText(debugInfo)
+      .then(() => {
+        setCopied(true);
+        toast.success("Información copiada al portapapeles");
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(err => {
+        console.error("Error al copiar al portapapeles:", err);
+        toast.error("Error al copiar información");
+      });
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
@@ -22,21 +74,74 @@ export default function Unauthorized() {
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Error de permisos</AlertTitle>
           <AlertDescription>
-            Su cuenta no tiene los privilegios necesarios para acceder a este recurso.
+            {requiredRole ? (
+              <span>Su cuenta no tiene el rol <strong>{requiredRole}</strong> necesario para acceder a este recurso.</span>
+            ) : (
+              <span>Su cuenta no tiene los privilegios necesarios para acceder a este recurso.</span>
+            )}
           </AlertDescription>
         </Alert>
         
         {user ? (
-          <div className="bg-muted/50 rounded-lg p-4 text-left text-sm">
-            <p className="font-medium mb-2">Su cuenta actual:</p>
-            <div className="flex items-center gap-2 mb-1">
-              <User className="h-4 w-4" /> 
-              <span>{user.email}</span>
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Necesita permisos adicionales para acceder a esta sección.
-            </p>
-          </div>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-medium">Información de cuenta</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm space-y-4">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" /> 
+                <span>{user.email}</span>
+              </div>
+              
+              <div>
+                <p className="mb-2 font-medium text-sm">Sus roles actuales:</p>
+                <div className="flex flex-wrap gap-2">
+                  {userRoles.length > 0 ? (
+                    userRoles.map((role, index) => (
+                      <Badge key={index} variant="outline" className="bg-muted/50">
+                        {role.role}
+                        {role.almacen_nombre && (
+                          <span className="ml-1 text-xs opacity-70">
+                            ({role.almacen_nombre})
+                          </span>
+                        )}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-xs text-muted-foreground">No tiene roles asignados</span>
+                  )}
+                </div>
+              </div>
+              
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="debug">
+                  <AccordionTrigger className="text-xs text-muted-foreground hover:no-underline py-2">
+                    Información para soporte técnico
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full mt-2 text-xs" 
+                      onClick={copyToClipboard}
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="h-3 w-3 mr-1" />
+                          Copiado
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copiar información para soporte
+                        </>
+                      )}
+                    </Button>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
         ) : null}
         
         <div className="pt-4 flex flex-col sm:flex-row gap-2 justify-center">
@@ -48,7 +153,7 @@ export default function Unauthorized() {
           </Button>
           
           {user ? (
-            <Button onClick={signOut} variant="outline">
+            <Button onClick={() => useAuth().signOut()} variant="outline">
               <LogOut className="mr-2 h-4 w-4" />
               Cerrar sesión
             </Button>
