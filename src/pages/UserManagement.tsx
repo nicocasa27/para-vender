@@ -1,27 +1,20 @@
 
+import { useState } from "react";
 import { useAuth } from "@/contexts/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, UserPlus } from "lucide-react";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { UserCreateForm } from "@/components/users/UserCreateForm";
-import { NewUserList } from "@/components/users/NewUserList";
-import { useNewUserManagement } from "@/hooks/useNewUserManagement";
+import { toast } from "sonner";
 import { AccessDenied } from "@/components/users/AccessDenied";
-import { useState } from "react";
+import { UserManagementPanel } from "@/components/users/UserManagementPanel";
 
 export default function UserManagement() {
   const { hasRole, user, signUp } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   
-  const {
-    users,
-    isLoading,
-    refetch,
-    handleDeleteRole
-  } = useNewUserManagement(user, hasRole("admin"));
-
   if (!hasRole("admin")) {
     return <AccessDenied />;
   }
@@ -32,14 +25,13 @@ export default function UserManagement() {
       await signUp(userData.email, userData.password, userData.fullName);
       setIsDialogOpen(false);
       
-      // Dar tiempo a que se ejecuten los triggers de Supabase
-      setTimeout(() => {
-        refetch();
-        setTimeout(refetch, 3000); // Segunda recarga por si acaso
-      }, 2000);
+      toast.success("Usuario creado correctamente");
       
     } catch (error: any) {
       console.error("Error al crear usuario:", error);
+      toast.error("Error al crear usuario", {
+        description: error.message || "Ha ocurrido un error al crear el usuario"
+      });
     } finally {
       setIsCreatingUser(false);
     }
@@ -54,16 +46,7 @@ export default function UserManagement() {
             Administre usuarios y asigne roles
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => refetch()}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-            {isLoading ? "Cargando..." : "Actualizar"}
-          </Button>
-
+        <div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="flex items-center gap-2">
@@ -80,25 +63,8 @@ export default function UserManagement() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Usuarios registrados ({users.length})</CardTitle>
-          <CardDescription>
-            Lista de usuarios y sus roles asignados
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <NewUserList
-            users={users}
-            isLoading={isLoading}
-            onDeleteRole={handleDeleteRole}
-            onSuccess={async () => {
-              await refetch();
-              return;
-            }}
-          />
-        </CardContent>
-      </Card>
+      {/* Usamos el panel simplificado de gestión de usuarios */}
+      <UserManagementPanel />
     </div>
   );
 }
