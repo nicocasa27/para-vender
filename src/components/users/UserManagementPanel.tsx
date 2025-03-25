@@ -1,22 +1,21 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth";
-import { UserWithRoles } from "@/types/auth";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import { Trash, UserPlus, RefreshCw, User, AlertTriangle } from "lucide-react";
-import { UserRoleBadge } from "./UserRoleBadge";
 import { toast } from "sonner";
-import { UserCreateForm } from "./UserCreateForm";
-import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertTriangle, User } from "lucide-react";
+import { UserManagementActions } from "./UserManagementActions";
+import { UserManagementContent } from "./UserManagementContent";
+import { useUserManagement } from "@/hooks/useUserManagement";
 
 export function UserManagementPanel() {
   const { hasRole, signUp } = useAuth();
-  const [users, setUsers] = useState<UserWithRoles[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
+  const { users, loading, loadUsers, handleDeleteUser } = useUserManagement();
+
+  // Cargar usuarios al montar el componente
+  useEffect(() => {
+    loadUsers();
+  }, []);
 
   // Verificar permisos de administrador
   if (!hasRole("admin")) {
@@ -35,138 +34,8 @@ export function UserManagementPanel() {
     );
   }
 
-  const loadUsers = async () => {
-    try {
-      console.log("UserManagementPanel: Cargando usuarios...");
-      setLoading(true);
-      
-      // Obtener perfiles de usuario
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*");
-        
-      if (profilesError) {
-        console.error("UserManagementPanel: Error al cargar perfiles:", profilesError);
-        throw profilesError;
-      }
-      
-      if (!profiles || profiles.length === 0) {
-        console.log("UserManagementPanel: No se encontraron perfiles");
-        setUsers([]);
-        setLoading(false);
-        return;
-      }
-      
-      console.log("UserManagementPanel: Perfiles cargados:", profiles.length);
-      
-      // Obtener roles de usuarios
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select(`
-          id,
-          user_id,
-          role,
-          almacen_id,
-          created_at,
-          almacenes:almacen_id(nombre)
-        `);
-        
-      if (rolesError) {
-        console.error("UserManagementPanel: Error al cargar roles:", rolesError);
-        throw rolesError;
-      }
-      
-      console.log("UserManagementPanel: Roles cargados:", roles?.length || 0);
-      
-      // Combinar datos de usuarios y roles
-      const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
-        const userRoles = roles
-          ?.filter(r => r.user_id === profile.id)
-          .map(role => ({
-            ...role,
-            almacen_nombre: role.almacenes?.nombre || null
-          })) || [];
-        
-        return {
-          id: profile.id,
-          email: profile.email || "",
-          full_name: profile.full_name || null,
-          roles: userRoles,
-        };
-      });
-      
-      console.log("UserManagementPanel: Usuarios con roles:", usersWithRoles.length);
-      setUsers(usersWithRoles);
-    } catch (error: any) {
-      console.error("UserManagementPanel: Error al cargar usuarios:", error);
-      toast.error("Error al cargar usuarios", {
-        description: error.message || "No se pudieron cargar los usuarios",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  const handleDeleteUser = async (userId: string) => {
-    if (window.confirm("¿Estás seguro de eliminar este usuario? Esta acción no se puede deshacer.")) {
-      try {
-        console.log("UserManagementPanel: Eliminando usuario:", userId);
-        
-        // Primero eliminamos los roles del usuario
-        const { error: rolesError } = await supabase
-          .from("user_roles")
-          .delete()
-          .eq("user_id", userId);
-          
-        if (rolesError) {
-          console.error("UserManagementPanel: Error al eliminar roles del usuario:", rolesError);
-          throw rolesError;
-        }
-        
-        // Luego eliminamos el perfil del usuario
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .delete()
-          .eq("id", userId);
-          
-        if (profileError) {
-          console.error("UserManagementPanel: Error al eliminar perfil del usuario:", profileError);
-          throw profileError;
-        }
-        
-        // Finalmente, eliminamos el usuario de la autenticación
-        const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-        
-        if (authError) {
-          console.error("UserManagementPanel: Error al eliminar usuario de auth:", authError);
-          toast.error("Error parcial al eliminar usuario", {
-            description: "El perfil y roles del usuario se eliminaron, pero no se pudo eliminar el usuario de autenticación",
-          });
-        } else {
-          toast.success("Usuario eliminado", {
-            description: "El usuario ha sido eliminado correctamente",
-          });
-        }
-        
-        // Refrescar la lista después de eliminar
-        await loadUsers();
-      } catch (error: any) {
-        console.error("UserManagementPanel: Error al eliminar usuario:", error);
-        toast.error("Error al eliminar usuario", {
-          description: error.message || "No se pudo eliminar el usuario",
-        });
-      }
-    }
-  };
-
   const handleCreateUser = async (userData: { email: string; password: string; fullName: string }) => {
     try {
-      setIsCreating(true);
-      
       if (!userData.email || !userData.password) {
         toast.error("Datos incompletos", {
           description: "El email y la contraseña son obligatorios",
@@ -181,8 +50,6 @@ export function UserManagementPanel() {
         description: `Se ha creado el usuario ${userData.email} correctamente`,
       });
       
-      setOpen(false);
-      
       // Esperar un momento para que Supabase procese el nuevo usuario y luego recargar
       setTimeout(async () => {
         console.log("UserManagementPanel: Recargando usuarios después de crear uno nuevo");
@@ -194,8 +61,6 @@ export function UserManagementPanel() {
       toast.error("Error al crear usuario", {
         description: error.message || "No se pudo crear el usuario",
       });
-    } finally {
-      setIsCreating(false);
     }
   };
 
@@ -207,99 +72,22 @@ export function UserManagementPanel() {
             <User className="h-5 w-5" />
             Administración de Usuarios
           </span>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={loadUsers} 
-              disabled={loading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-              <span>{loading ? "Cargando..." : "Actualizar"}</span>
-            </Button>
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Crear Usuario
-                </Button>
-              </DialogTrigger>
-              <UserCreateForm 
-                onCreateUser={handleCreateUser}
-                onCancel={() => setOpen(false)}
-                isCreating={isCreating}
-              />
-            </Dialog>
-          </div>
+          <UserManagementActions 
+            onRefresh={loadUsers}
+            onCreateUser={handleCreateUser}
+            isLoading={loading}
+          />
         </CardTitle>
         <CardDescription>
           Gestione los usuarios del sistema, cree nuevos usuarios o elimine existentes.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          </div>
-        ) : users.length === 0 ? (
-          <div className="text-center py-10">
-            <User className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium">No hay usuarios registrados</h3>
-            <p className="text-muted-foreground text-sm mt-1">
-              Los usuarios aparecerán aquí cuando se registren
-            </p>
-          </div>
-        ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-2 font-medium">Usuario</th>
-                <th className="text-left py-2 font-medium">Roles</th>
-                <th className="text-right py-2 font-medium">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id} className="border-b">
-                  <td className="py-3">
-                    <div>
-                      <div className="font-medium">{user.full_name || "Sin nombre"}</div>
-                      <div className="text-sm text-muted-foreground">{user.email}</div>
-                    </div>
-                  </td>
-                  <td className="py-3">
-                    {user.roles.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {user.roles.map((role) => (
-                          <UserRoleBadge
-                            key={role.id}
-                            id={role.id}
-                            role={role.role as any}
-                            storeName={role.almacen_nombre}
-                            onDelete={() => {}}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">Sin roles asignados</span>
-                    )}
-                  </td>
-                  <td className="text-right py-3">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteUser(user.id)}
-                      className="text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash className="h-4 w-4" />
-                      <span className="sr-only">Eliminar usuario</span>
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <UserManagementContent 
+          users={users}
+          loading={loading}
+          onDeleteUser={handleDeleteUser}
+        />
       </CardContent>
     </Card>
   );
