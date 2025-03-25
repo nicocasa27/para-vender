@@ -5,7 +5,7 @@ import { UserWithRoles } from "@/types/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, AlertTriangle } from "lucide-react";
 import { UserList } from "@/components/users/UserList";
 import { UserRoleForm } from "@/components/users/UserRoleForm";
 import { AccessDenied } from "@/components/users/AccessDenied";
@@ -24,17 +24,29 @@ export default function UserManagement() {
     data: users = [],
     isLoading,
     refetch,
+    isRefetching,
     error
   } = useUserManagementQuery(user, hasRole("admin"));
 
+  // Refrescar automáticamente al montar
+  useState(() => {
+    console.log("UserManagement: Página montada, refrescando datos...");
+    refetch();
+  });
+
   const handleDeleteRole = async (roleId: string) => {
     try {
+      console.log("UserManagement: Eliminando rol:", roleId);
+      
       const { error } = await supabase
         .from("user_roles")
         .delete()
         .eq("id", roleId);
 
-      if (error) throw error;
+      if (error) {
+        console.error("UserManagement: Error al eliminar rol:", error);
+        throw error;
+      }
 
       toast.success("Rol eliminado", {
         description: "El rol ha sido eliminado correctamente",
@@ -50,6 +62,7 @@ export default function UserManagement() {
   };
 
   const showRoleDialog = (user: UserWithRoles) => {
+    console.log("UserManagement: Mostrando diálogo de roles para usuario:", user.id);
     setSelectedUser(user);
     setIsDialogOpen(true);
   };
@@ -60,7 +73,26 @@ export default function UserManagement() {
   }
 
   if (error) {
-    return <UserManagementError onRetry={() => refetch()} />;
+    console.error("UserManagement: Error en la consulta:", error);
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle />
+            Error al cargar usuarios
+          </CardTitle>
+          <CardDescription>
+            No se pudieron cargar los usuarios. Por favor, intente nuevamente.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={() => refetch()} variant="outline">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Intentar nuevamente
+          </Button>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -72,15 +104,15 @@ export default function UserManagement() {
             Administre usuarios y asigne roles
           </p>
         </div>
-        <Button onClick={() => refetch()} disabled={isLoading} className="flex items-center gap-2">
-          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-          {isLoading ? 'Cargando...' : 'Actualizar'}
+        <Button onClick={() => refetch()} disabled={isLoading || isRefetching} className="flex items-center gap-2">
+          <RefreshCw className={`h-4 w-4 ${isLoading || isRefetching ? "animate-spin" : ""}`} />
+          {isLoading || isRefetching ? 'Cargando...' : 'Actualizar'}
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Usuarios registrados</CardTitle>
+          <CardTitle>Usuarios registrados ({users.length})</CardTitle>
           <CardDescription>
             Lista de usuarios y sus roles asignados
           </CardDescription>
@@ -88,7 +120,7 @@ export default function UserManagement() {
         <CardContent>
           <UserList 
             users={users}
-            isLoading={isLoading}
+            isLoading={isLoading || isRefetching}
             onDeleteRole={handleDeleteRole}
             onAddRole={showRoleDialog}
           />

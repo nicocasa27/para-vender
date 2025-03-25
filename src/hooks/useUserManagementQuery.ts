@@ -16,7 +16,8 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
           return [];
         }
         
-        // Get all profiles with more robust error handling and explicit ordering
+        // Traer TODOS los perfiles sin filtros para asegurar que obtenemos todos los usuarios
+        console.log("Intentando obtener TODOS los perfiles de usuario sin filtros");
         const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
           .select("*")
@@ -34,8 +35,11 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
         
         console.log("Profiles fetched:", profiles.length);
         console.log("Profile data:", profiles);
+        profiles.forEach(profile => {
+          console.log(`Perfil ID: ${profile.id}, Email: ${profile.email}, Nombre: ${profile.full_name}, Creado: ${profile.created_at}`);
+        });
         
-        // Get all user roles with better error handling
+        // Traer TODOS los roles de usuario
         const { data: roles, error: rolesError } = await supabase
           .from("user_roles")
           .select(`
@@ -54,7 +58,7 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
         
         console.log("Roles fetched:", roles?.length || 0);
         
-        // Combine the data with improved error handling
+        // Combinar los datos con mejor manejo de errores
         const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
           const userRoles = roles
             ?.filter(r => r.user_id === profile.id)
@@ -72,6 +76,10 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
         });
         
         console.log("Combined users with roles:", usersWithRoles.length);
+        usersWithRoles.forEach(user => {
+          console.log(`Usuario combinado - ID: ${user.id}, Email: ${user.email}, Roles: ${user.roles.length}`);
+        });
+        
         return usersWithRoles;
       } catch (error) {
         console.error("Error fetching users:", error);
@@ -82,8 +90,9 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
       }
     },
     refetchOnWindowFocus: false,
-    staleTime: 10000, // 10 segundos antes de considerar los datos obsoletos
-    retry: 2,
+    staleTime: 5000, // 5 segundos antes de considerar los datos obsoletos (reducido de 10s)
+    retry: 3, // Aumentado para más intentos
+    refetchInterval: 10000, // Refrescar cada 10 segundos automáticamente
     enabled: !!user && hasAdminRole // Solo ejecutar la consulta si el usuario está conectado y tiene rol de administrador
   });
 }

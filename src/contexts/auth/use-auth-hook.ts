@@ -215,71 +215,41 @@ export const useAuthProvider = () => {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
-    try {
-      console.log("Auth: Attempting to sign up with email:", email);
-      setLoading(true);
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
+  const signUp = useCallback(
+    async (email: string, password: string, fullName?: string) => {
+      try {
+        setAuthLoading(true);
+        console.log("Auth: Registrando nuevo usuario:", email);
+
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName || email.split('@')[0],
+            },
           },
-        },
-      });
+        });
 
-      if (error) {
-        throw error;
-      }
-
-      console.log("Auth: Sign up successful, adding default 'viewer' role");
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const { data: profiles, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", email)
-        .limit(1);
-        
-      if (profileError) {
-        console.error("Auth: Error fetching new user profile:", profileError);
-      } else if (profiles && profiles.length > 0) {
-        const userId = profiles[0].id;
-        console.log("Auth: New user ID:", userId);
-        
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert({
-            user_id: userId,
-            role: "viewer"
-          });
-          
-        if (roleError) {
-          console.error("Auth: Error assigning default role:", roleError);
-        } else {
-          console.log("Auth: Default 'viewer' role assigned successfully");
+        if (error) {
+          console.error("Auth: Error al registrar usuario:", error);
+          throw error;
         }
-      } else {
-        console.error("Auth: Could not find newly created user profile");
-      }
 
-      sonnerToast.success("Registro exitoso", {
-        description: "Verifique su correo electrónico para confirmar su cuenta"
-      });
-      
-    } catch (error: any) {
-      console.error("Auth: Sign up error:", error);
-      sonnerToast.error("Error al registrarse", {
-        description: error.message || "Hubo un problema al crear la cuenta"
-      });
-      
-      return Promise.reject(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+        console.log("Auth: Usuario registrado correctamente:", data);
+        
+        console.log("Auth: Esperando a que los triggers de Supabase creen el perfil y asignen roles");
+        
+        return data;
+      } catch (error: any) {
+        console.error("Auth: Error durante el registro:", error);
+        throw error;
+      } finally {
+        setAuthLoading(false);
+      }
+    },
+    []
+  );
 
   const signOut = async () => {
     try {
