@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useMemo } from "react";
-import { useAuthProvider } from "../auth/use-auth-hook";
+import { useAuth } from "@/hooks/auth/useAuth";
 import { AuthContextType } from "./types";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -8,7 +8,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   children 
 }) => {
-  const auth = useAuthProvider();
+  const auth = useAuth();
   
   // Memoize context value to prevent unnecessary renders
   const value = useMemo(() => auth, [
