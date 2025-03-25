@@ -87,77 +87,9 @@ export function useAuthOperations({
         throw error;
       }
 
-      console.log("Auth: Sign up successful, adding default 'viewer' role");
+      // Ya no necesitamos manejar la asignación del rol aquí, pues lo hace el trigger
+      console.log("Auth: Sign up successful, role will be assigned by database trigger");
       
-      // Esperar más tiempo para que Supabase procese la creación del perfil
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const { data: profiles, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", email)
-        .limit(1);
-        
-      if (profileError) {
-        console.error("Auth: Error fetching new user profile:", profileError);
-        throw new Error("No se pudo obtener el perfil del nuevo usuario");
-      } 
-      
-      if (!profiles || profiles.length === 0) {
-        console.error("Auth: Could not find newly created user profile for email:", email);
-        
-        // Intento adicional utilizando UUID del usuario creado
-        if (data.user?.id) {
-          console.log("Auth: Trying to find profile using user ID:", data.user.id);
-          const { data: profileById, error: profileByIdError } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("id", data.user.id)
-            .limit(1);
-            
-          if (profileByIdError) {
-            console.error("Auth: Error fetching profile by ID:", profileByIdError);
-          } else if (profileById && profileById.length > 0) {
-            const userId = profileById[0].id;
-            console.log("Auth: Found user profile by ID:", userId);
-            
-            const { error: roleError } = await supabase
-              .from("user_roles")
-              .insert({
-                user_id: userId,
-                role: "viewer"
-              });
-              
-            if (roleError) {
-              console.error("Auth: Error assigning default role:", roleError);
-              throw new Error("Error al asignar rol predeterminado");
-            } else {
-              console.log("Auth: Default 'viewer' role assigned successfully to user ID:", userId);
-            }
-          } else {
-            console.error("Auth: Profile not found by either email or ID");
-            throw new Error("No se pudo encontrar el perfil del usuario creado");
-          }
-        }
-      } else {
-        const userId = profiles[0].id;
-        console.log("Auth: New user ID found by email:", userId);
-        
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert({
-            user_id: userId,
-            role: "viewer"
-          });
-          
-        if (roleError) {
-          console.error("Auth: Error assigning default role:", roleError);
-          throw new Error("Error al asignar rol predeterminado");
-        } else {
-          console.log("Auth: Default 'viewer' role assigned successfully to email lookup user:", userId);
-        }
-      }
-
       sonnerToast.success("Registro exitoso", {
         description: "Se ha creado el usuario correctamente"
       });

@@ -51,10 +51,11 @@ export function UserManagementPanel() {
       });
       
       // Esperar un momento para que Supabase procese el nuevo usuario y luego recargar
+      // Aumentamos a 5 segundos para dar tiempo a los triggers de ejecutarse completamente
       setTimeout(async () => {
         console.log("UserManagementPanel: Recargando usuarios después de crear uno nuevo");
         await loadUsers();
-      }, 3000);
+      }, 5000);
       
     } catch (error: any) {
       console.error("UserManagementPanel: Error al crear usuario:", error);

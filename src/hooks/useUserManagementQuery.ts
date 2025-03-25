@@ -19,7 +19,8 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
         // Get all profiles with more robust error handling
         const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
-          .select("*");
+          .select("*")
+          .order('created_at', { ascending: false });
           
         if (profilesError) {
           console.error("Error fetching profiles:", profilesError);

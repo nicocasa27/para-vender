@@ -16,7 +16,8 @@ export function useUserManagement() {
       // Obtener perfiles de usuario
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("*");
+        .select("*")
+        .order('created_at', { ascending: false });
         
       if (profilesError) {
         console.error("UserManagement: Error al cargar perfiles:", profilesError);
