@@ -1,3 +1,7 @@
+// IMPORTANTE: No modifiques este archivo si es de solo lectura (read_only_files).
+// Si lo es, solo necesitamos utilizar las importaciones actualizadas del auth-utils.ts
+// Como estamos refactorizando sin cambiar funcionalidad, este archivo debería seguir funcionando
+// sin cambios dado que auth-utils.ts re-exporta todas las funciones.
 
 import { useSession } from './useSession';
 import { useRoles } from './useRoles';
