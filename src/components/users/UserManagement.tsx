@@ -2,11 +2,12 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { RefreshCw, UserPlus, Users } from "lucide-react";
+import { RefreshCw, Users } from "lucide-react";
 import { useUsersAndRoles } from "@/hooks/useUsersAndRoles";
 import { useAuth } from "@/contexts/auth";
 import { UserSidePanel } from "@/components/users/UserSidePanel";
 import { UserWithRoles } from "@/types/auth";
+import { toast } from "sonner";
 
 export function UserManagement() {
   const { hasRole } = useAuth();
@@ -32,11 +33,13 @@ export function UserManagement() {
 
   const handleRefresh = () => {
     console.log("UserManagement: Actualizando lista de usuarios");
+    toast.info("Actualizando lista de usuarios...");
     fetchUsers();
   };
 
   const handleAddRole = (user: UserWithRoles) => {
     console.log("Añadir rol a usuario:", user);
+    setSidePanelOpen(true);
   };
 
   if (!isAdmin) {

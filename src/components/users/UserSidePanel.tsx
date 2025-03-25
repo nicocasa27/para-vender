@@ -17,6 +17,7 @@ import { RefreshCw, UserPlus, X } from "lucide-react";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { UserRoleForm } from "@/components/users/UserRoleForm";
 import { useState } from "react";
+import { toast } from "sonner";
 
 interface UserSidePanelProps {
   open: boolean;
@@ -56,6 +57,11 @@ export function UserSidePanel({
     onRefresh();
   };
 
+  const handleRefresh = () => {
+    toast.info("Actualizando lista de usuarios...");
+    onRefresh();
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md overflow-hidden" side="right">
@@ -69,7 +75,7 @@ export function UserSidePanel({
         <div className="flex justify-between items-center mb-4">
           <Button 
             variant="outline" 
-            onClick={onRefresh}
+            onClick={handleRefresh}
             disabled={loading}
             size="sm"
           >

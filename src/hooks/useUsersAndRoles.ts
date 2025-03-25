@@ -80,6 +80,7 @@ export function useUsersAndRoles(isAdmin: boolean) {
       
       console.log(`Datos combinados: ${usersWithRoles.length} usuarios con sus roles`);
       setUsers(usersWithRoles);
+      toast.success(`${usersWithRoles.length} usuarios cargados correctamente`);
     } catch (error: any) {
       console.error("Error en useUsersAndRoles:", error);
       setError(error.message || "Error al cargar usuarios");
