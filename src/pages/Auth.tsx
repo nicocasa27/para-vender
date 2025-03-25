@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Store } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Auth() {
   const [activeTab, setActiveTab] = useState<string>("login");
@@ -16,18 +17,47 @@ export default function Auth() {
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerFullName, setRegisterFullName] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
   const { signIn, signUp, loading } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    await signIn(loginEmail, loginPassword);
+    
+    if (!loginEmail || !loginPassword) {
+      toast.error("Por favor, complete todos los campos");
+      return;
+    }
+    
+    try {
+      setIsLoggingIn(true);
+      await signIn(loginEmail, loginPassword);
+      // No need to navigate here as signIn already navigates on success
+    } catch (error) {
+      console.error("Error al iniciar sesión:", error);
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    await signUp(registerEmail, registerPassword, registerFullName);
-    setActiveTab("login");
+    
+    if (!registerEmail || !registerPassword || !registerFullName) {
+      toast.error("Por favor, complete todos los campos");
+      return;
+    }
+    
+    try {
+      setIsRegistering(true);
+      await signUp(registerEmail, registerPassword, registerFullName);
+      setActiveTab("login");
+    } catch (error) {
+      console.error("Error al registrarse:", error);
+    } finally {
+      setIsRegistering(false);
+    }
   };
 
   return (
@@ -92,9 +122,9 @@ export default function Auth() {
                   <Button 
                     type="submit" 
                     className="w-full" 
-                    disabled={loading}
+                    disabled={isLoggingIn}
                   >
-                    {loading ? "Iniciando sesión..." : "Iniciar sesión"}
+                    {isLoggingIn ? "Iniciando sesión..." : "Iniciar sesión"}
                   </Button>
                 </CardFooter>
               </form>
@@ -151,9 +181,9 @@ export default function Auth() {
                   <Button 
                     type="submit" 
                     className="w-full" 
-                    disabled={loading}
+                    disabled={isRegistering}
                   >
-                    {loading ? "Registrando..." : "Registrarse"}
+                    {isRegistering ? "Registrando..." : "Registrarse"}
                   </Button>
                 </CardFooter>
               </form>

@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session, User } from '@supabase/supabase-js';
@@ -5,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { UserRole, UserRoleWithStore } from '@/types/auth';
 import { fetchUserRoles, checkHasRole } from './auth-utils';
+import { toast as sonnerToast } from "sonner";
 
 export const useAuthProvider = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -91,7 +93,7 @@ export const useAuthProvider = () => {
   const refreshUserRoles = async () => {
     if (!user) {
       console.log("Auth: Can't refresh roles, no user logged in");
-      return;
+      return [];
     }
     
     console.log("Auth: Manually refreshing user roles for:", user.id);
@@ -116,27 +118,31 @@ export const useAuthProvider = () => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log("Auth: Attempting to sign in with email:", email);
       setLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       // Successful login
-      toast({
-        title: "Inicio de sesión exitoso",
-        description: "Bienvenido de nuevo",
+      sonnerToast.success("Inicio de sesión exitoso", {
+        description: "Bienvenido de nuevo"
       });
       
+      console.log("Auth: Sign in successful, navigating to home");
       navigate("/");
     } catch (error: any) {
-      toast({
-        title: "Error de inicio de sesión",
-        description: error.message || "Hubo un problema al iniciar sesión",
-        variant: "destructive",
+      console.error("Auth: Sign in error:", error);
+      sonnerToast.error("Error de inicio de sesión", {
+        description: error.message || "Credenciales inválidas o problema de conexión"
       });
+      
+      return Promise.reject(error); // Propagar el error para que el componente pueda manejarlo
     } finally {
       setLoading(false);
     }
@@ -144,6 +150,7 @@ export const useAuthProvider = () => {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
+      console.log("Auth: Attempting to sign up with email:", email);
       setLoading(true);
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -155,20 +162,22 @@ export const useAuthProvider = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
-      toast({
-        title: "Registro exitoso",
-        description: "Su cuenta ha sido creada",
+      sonnerToast.success("Registro exitoso", {
+        description: "Verifique su correo electrónico para confirmar su cuenta"
       });
       
       // Note: User needs to be assigned a role by an admin
     } catch (error: any) {
-      toast({
-        title: "Error al registrarse",
-        description: error.message || "Hubo un problema al crear la cuenta",
-        variant: "destructive",
+      console.error("Auth: Sign up error:", error);
+      sonnerToast.error("Error al registrarse", {
+        description: error.message || "Hubo un problema al crear la cuenta"
       });
+      
+      return Promise.reject(error); // Propagar el error para que el componente pueda manejarlo
     } finally {
       setLoading(false);
     }
@@ -176,21 +185,27 @@ export const useAuthProvider = () => {
 
   const signOut = async () => {
     try {
+      console.log("Auth: Attempting to sign out");
       setLoading(true);
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
       
-      toast({
-        title: "Sesión cerrada",
-        description: "Has cerrado sesión correctamente",
+      if (error) {
+        throw error;
+      }
+      
+      sonnerToast.success("Sesión cerrada", {
+        description: "Has cerrado sesión correctamente"
       });
       
+      console.log("Auth: Sign out successful, navigating to auth page");
       navigate("/auth");
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Hubo un problema al cerrar sesión",
-        variant: "destructive",
+      console.error("Auth: Sign out error:", error);
+      sonnerToast.error("Error al cerrar sesión", {
+        description: error.message || "Hubo un problema al cerrar sesión"
       });
+      
+      return Promise.reject(error); // Propagar el error para que el componente pueda manejarlo
     } finally {
       setLoading(false);
     }
