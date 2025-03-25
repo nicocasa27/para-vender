@@ -61,6 +61,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   
   // Function to check authorization status
   const checkAuthorization = () => {
+    // Don't check authorization if we're still loading roles or auth
+    if (rolesLoading || authLoading) {
+      console.log("ProtectedRoute: Still loading, deferring authorization check");
+      return;
+    }
+    
     if (!user) {
       console.log("ProtectedRoute: No user found, unauthorized");
       setIsAuthorized(false);
@@ -92,6 +98,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         setIsAuthorized(false);
         setAuthCheckComplete(true);
         
+        // Only show error if roles are loaded and we know authorization actually failed
         if (userRoles.length > 0) {
           toast.error("Acceso denegado", {
             description: "No tienes los permisos necesarios para acceder a esta página"
@@ -141,9 +148,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       console.log("ProtectedRoute: User authenticated but no roles, refreshing");
       forceRoleRefresh();
     } else if (!authLoading && !rolesLoading) {
-      // Auth and roles are not loading, check authorization
+      // Only check authorization when both auth and roles are done loading
       console.log("ProtectedRoute: Ready to check authorization");
       setTimeout(checkAuthorization, 100); // Small delay to ensure state is settled
+    } else {
+      // Still loading either auth or roles, do not check authorization yet
+      console.log("ProtectedRoute: Still loading auth or roles, deferring authorization check");
     }
     
     return () => {
@@ -164,8 +174,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     session
   ]);
 
-  // Loading screen with retry button for long waits
-  if ((authLoading || rolesLoading || !authCheckComplete) && !longTimeoutReached) {
+  // Always show loading state while roles are being loaded or auth check is incomplete
+  if (authLoading || rolesLoading || (isAuthorized === null && !authCheckComplete)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-2">
@@ -180,7 +190,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
   
-  // Very long wait screen with manual retry option
+  // Very long wait screen with manual retry option - only show if we're still waiting after long timeout
   if (longTimeoutReached && isAuthorized === null && user) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
@@ -214,6 +224,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
+  // Handle unauthenticated users
   if (!user) {
     console.log("ProtectedRoute: No authenticated user, redirecting to login");
     toast.error("Sesión no válida", {
@@ -222,7 +233,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  if (isAuthorized === false) {
+  // Handle unauthorized users - only redirect if we've completed authorization check
+  if (isAuthorized === false && authCheckComplete) {
     console.log("ProtectedRoute: User not authorized, redirecting to unauthorized");
     return <Navigate to="/unauthorized" state={{ from: location, requiredRole: effectiveRequiredRole }} replace />;
   }
