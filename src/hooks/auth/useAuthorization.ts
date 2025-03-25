@@ -60,44 +60,46 @@ export function useAuthorization(
     
     console.log("Authorization: Checking for user:", user.id);
     console.log("Authorization: Session state:", session ? "Valid" : "Missing");
-    console.log("Authorization: Required role:", requiredRole);
+    console.log("Authorization: Required role:", requiredRole || "None specified");
     console.log("Authorization: Current roles:", userRoles);
     
-    if (requiredRole) {
-      const authorized = hasRole(requiredRole, storeId);
-      console.log(`Authorization: User has role ${requiredRole}?`, authorized);
-      
-      if (authorized) {
-        console.log("Authorization: User is authorized");
-        setIsAuthorized(true);
-        setAuthCheckComplete(true);
-      } else if (userRoles.length === 0 && roleRefreshAttempts < 3 && !maxAttemptsReached) {
-        // No roles found, but we haven't exhausted our refresh attempts
-        console.log("Authorization: No roles found but attempts remain, will retry");
-        setIsAuthorized(null); // Keep authorization pending
-        
-        // Only continue trying to refresh if we haven't exceeded the limit
-        if (roleRefreshAttempts < 3) {
-          forceRoleRefresh();
-        }
-      } else {
-        // User doesn't have the required role or we've exhausted retries
-        console.log("Authorization: User is not authorized or retries exhausted");
-        setIsAuthorized(false);
-        setAuthCheckComplete(true);
-        
-        // Only show error if roles are loaded and we know authorization actually failed
-        if (userRoles.length > 0) {
-          toast.error("Acceso denegado", {
-            description: "No tienes los permisos necesarios para acceder a esta página"
-          });
-        }
-      }
-    } else {
-      // No specific role required
+    // If no specific role is required, consider authorized
+    if (!requiredRole) {
       console.log("Authorization: No specific role required, access granted");
       setIsAuthorized(true);
       setAuthCheckComplete(true);
+      return;
+    }
+    
+    // Check if user has the required role
+    const authorized = hasRole(requiredRole, storeId);
+    console.log(`Authorization: User has role ${requiredRole}?`, authorized);
+    
+    if (authorized) {
+      console.log("Authorization: User is authorized");
+      setIsAuthorized(true);
+      setAuthCheckComplete(true);
+    } else if (userRoles.length === 0 && roleRefreshAttempts < 3 && !maxAttemptsReached) {
+      // No roles found, but we haven't exhausted our refresh attempts
+      console.log("Authorization: No roles found but attempts remain, will retry");
+      setIsAuthorized(null); // Keep authorization pending
+      
+      // Only continue trying to refresh if we haven't exceeded the limit
+      if (roleRefreshAttempts < 3) {
+        forceRoleRefresh();
+      }
+    } else {
+      // User doesn't have the required role or we've exhausted retries
+      console.log("Authorization: User is not authorized or retries exhausted");
+      setIsAuthorized(false);
+      setAuthCheckComplete(true);
+      
+      // Only show error if roles are loaded and we know authorization actually failed
+      if (userRoles.length > 0) {
+        toast.error("Acceso denegado", {
+          description: "No tienes los permisos necesarios para acceder a esta página"
+        });
+      }
     }
   };
   
@@ -108,6 +110,7 @@ export function useAuthorization(
     
     console.log("Authorization: Initializing check");
     console.log("Authorization: Roles loading:", rolesLoading);
+    console.log("Authorization: Required role:", requiredRole);
     
     // Set up timeouts for loading indicators
     const timeoutTimer = setTimeout(() => {

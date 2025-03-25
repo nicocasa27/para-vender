@@ -27,13 +27,22 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   } = useAuth();
   
   const location = useLocation();
-  const isUsersRoute = useMatch("/users");
-  const isConfigRoute = useMatch("/config");
+  const isUsersRoute = Boolean(useMatch("/users"));
+  const isConfigRoute = Boolean(useMatch("/config"));
   
+  // Determinar el rol requerido basado en la ruta o el prop proporcionado
   const effectiveRequiredRole = 
     isUsersRoute ? "admin" : 
     isConfigRoute ? "manager" : 
     requiredRole;
+  
+  console.log("ProtectedRoute: Route check", {
+    path: location.pathname,
+    isUsersRoute,
+    isConfigRoute,
+    providedRole: requiredRole,
+    effectiveRole: effectiveRequiredRole
+  });
   
   const {
     isAuthorized,
@@ -117,8 +126,22 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Handle unauthorized users - only redirect if we've completed authorization check
   if (isAuthorized === false && authCheckComplete) {
-    console.log("ProtectedRoute: User not authorized, redirecting to unauthorized");
-    return <Navigate to="/unauthorized" state={{ from: location, requiredRole: effectiveRequiredRole }} replace />;
+    console.log("ProtectedRoute: User not authorized, redirecting to unauthorized", { 
+      requiredRole: effectiveRequiredRole,
+      userRoles: userRoles.map(r => r.role),
+      storeId
+    });
+    return (
+      <Navigate 
+        to="/unauthorized" 
+        state={{ 
+          from: location, 
+          requiredRole: effectiveRequiredRole || "viewer", // Asegurar que siempre hay un valor para requiredRole
+          path: location.pathname 
+        }} 
+        replace 
+      />
+    );
   }
 
   console.log("ProtectedRoute: User is authenticated and authorized");

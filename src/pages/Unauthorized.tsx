@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Shield, User, Home, LogOut, AlertTriangle, Copy, Check, RefreshCw } from "lucide-react";
@@ -6,23 +7,37 @@ import { useAuth } from "@/contexts/auth";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Unauthorized() {
-  const { user, userRoles, hasRole, refreshUserRoles, signOut, rolesLoading } = useAuth();
+  const { user, userRoles, refreshUserRoles, signOut, rolesLoading } = useAuth();
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [requiredRole, setRequiredRole] = useState<string | null>(null);
   const [authDetails, setAuthDetails] = useState<any>(null);
+  const [sourcePath, setSourcePath] = useState<string | null>(null);
   const location = useLocation();
 
-  useState(() => {
-    const state = location.state as { requiredRole?: string } | undefined;
+  useEffect(() => {
+    const state = location.state as { 
+      requiredRole?: string; 
+      from?: { pathname: string }; 
+      path?: string 
+    } | undefined;
+    
+    console.log("Unauthorized: Location state:", state);
+    
     if (state?.requiredRole) {
       setRequiredRole(state.requiredRole);
+    }
+    
+    if (state?.path) {
+      setSourcePath(state.path);
+    } else if (state?.from?.pathname) {
+      setSourcePath(state.from.pathname);
     }
     
     const checkAuthStatus = async () => {
@@ -31,7 +46,7 @@ export default function Unauthorized() {
     };
     
     checkAuthStatus();
-  });
+  }, [location]);
 
   const getDebugInfo = () => {
     const info = {
@@ -53,7 +68,7 @@ export default function Unauthorized() {
       })),
       requiredRole: requiredRole || "Unknown",
       timestamp: new Date().toISOString(),
-      path: location.pathname,
+      path: sourcePath || location.pathname,
       referrer: location.state?.from?.pathname || "Unknown",
     };
     
@@ -118,6 +133,11 @@ export default function Unauthorized() {
               <span>Su cuenta no tiene el rol <strong>{requiredRole}</strong> necesario para acceder a este recurso.</span>
             ) : (
               <span>Su cuenta no tiene los privilegios necesarios para acceder a este recurso.</span>
+            )}
+            {sourcePath && (
+              <span className="block mt-1 text-xs opacity-75">
+                Ruta protegida: {sourcePath}
+              </span>
             )}
           </AlertDescription>
         </Alert>
