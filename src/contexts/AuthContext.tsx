@@ -185,20 +185,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // Memoize hasRole to prevent unnecessary recalculations
+  // Improved hasRole function with better debugging
   const hasRole = useCallback((role: UserRole, storeId?: string): boolean => {
     console.log("Checking role:", role, "for store:", storeId);
-    console.log("User roles:", userRoles);
+    console.log("Current user roles:", userRoles);
+    
+    if (!userRoles || userRoles.length === 0) {
+      console.log("No roles found for user, denying access");
+      return false;
+    }
     
     // Admin can do anything
-    if (userRoles.some(r => r.role === 'admin')) {
-      console.log("User is admin, granting access");
+    const isAdmin = userRoles.some(r => r.role === 'admin');
+    if (isAdmin) {
+      console.log("User is admin, granting access to all areas");
       return true;
     }
     
     // Manager can do anything except admin-specific tasks
     if (role !== 'admin' && userRoles.some(r => r.role === 'manager')) {
-      console.log("User is manager, granting access to non-admin role");
+      console.log("User is manager, granting access to non-admin role:", role);
       return true;
     }
     
@@ -206,7 +212,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (storeId && userRoles.some(r => 
       r.role === role && r.almacen_id === storeId
     )) {
-      console.log("User has store-specific role, granting access");
+      console.log("User has store-specific role for requested store, granting access");
       return true;
     }
     

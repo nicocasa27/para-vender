@@ -16,7 +16,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredRole,
   storeId 
 }) => {
-  const { user, loading, hasRole, userRoles } = useAuth();
+  const { user, loading: authLoading, hasRole, userRoles } = useAuth();
   const location = useLocation();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [authCheckComplete, setAuthCheckComplete] = useState(false);
@@ -40,6 +40,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     setTimeoutReached(false);
     
     console.log("ProtectedRoute: Checking authorization for role:", effectiveRequiredRole);
+    console.log("ProtectedRoute: Auth loading state:", authLoading);
+    console.log("ProtectedRoute: Current user roles:", userRoles);
+    console.log("ProtectedRoute: Current path:", location.pathname);
     
     // Add a shorter timeout to show "taking longer than expected" message
     const longWaitTimeout = setTimeout(() => {
@@ -52,18 +55,20 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       }
     }, 1500); // 1.5 second notification
     
-    // Add a timeout to prevent infinite loading
+    // Extended timeout to ensure roles have time to load
     const authCheckTimeout = setTimeout(() => {
       if (!authCheckComplete) {
-        console.log("ProtectedRoute: Auth check timed out, continuing with available information");
+        console.log("ProtectedRoute: Auth check timed out after 5s, continuing with available information");
         
         // If timeout is reached and still not authorized, redirect to appropriate page
         if (!user) {
+          console.log("ProtectedRoute: No user found after timeout");
           setIsAuthorized(false);
           toast.error("No se pudo verificar tu sesión", {
             description: "Por favor inicia sesión nuevamente."
           });
         } else if (userRoles.length === 0) {
+          console.log("ProtectedRoute: No roles found after timeout");
           setIsAuthorized(false);
           uiToast({
             title: "Error de autorización",
@@ -73,6 +78,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         } else {
           // Make a best-effort attempt with available information
           const hasRequiredRole = effectiveRequiredRole ? hasRole(effectiveRequiredRole, storeId) : true;
+          console.log(`ProtectedRoute: After timeout - user has role ${effectiveRequiredRole}?`, hasRequiredRole);
           setIsAuthorized(hasRequiredRole);
           
           if (!hasRequiredRole) {
@@ -84,39 +90,51 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         
         setAuthCheckComplete(true);
       }
-    }, 3000); // 3 second hard timeout
+    }, 5000); // Extended to 5 second hard timeout
     
     // Only check authorization when user and roles are loaded
-    if (!loading) {
+    if (!authLoading) {
       if (user) {
         if (effectiveRequiredRole) {
-          const authorized = hasRole(effectiveRequiredRole, storeId);
-          console.log(`ProtectedRoute: User has role ${effectiveRequiredRole}?`, authorized);
-          setIsAuthorized(authorized);
-          
-          if (!authorized) {
-            toast.error("Acceso denegado", {
-              description: "No tienes los permisos necesarios para acceder a esta página"
-            });
-          }
+          // Add a small delay to ensure roles have been properly loaded
+          setTimeout(() => {
+            const authorized = hasRole(effectiveRequiredRole, storeId);
+            console.log(`ProtectedRoute: User has role ${effectiveRequiredRole}?`, authorized);
+            console.log("ProtectedRoute: User roles available:", userRoles);
+            
+            setIsAuthorized(authorized);
+            
+            if (!authorized) {
+              console.log("ProtectedRoute: Access denied - user doesn't have required role");
+              toast.error("Acceso denegado", {
+                description: "No tienes los permisos necesarios para acceder a esta página"
+              });
+            }
+            
+            setAuthCheckComplete(true);
+          }, 100); // Small delay for roles to be properly set
         } else {
+          console.log("ProtectedRoute: No specific role required, access granted");
           setIsAuthorized(true); // No specific role required
+          setAuthCheckComplete(true);
         }
       } else {
         console.log("ProtectedRoute: No user found, redirect to auth");
         setIsAuthorized(false);
+        setAuthCheckComplete(true);
       }
-      setAuthCheckComplete(true);
+    } else {
+      console.log("ProtectedRoute: Auth still loading, waiting...");
     }
     
     return () => {
       clearTimeout(authCheckTimeout);
       clearTimeout(longWaitTimeout);
     };
-  }, [loading, user, effectiveRequiredRole, storeId, hasRole, userRoles, location.pathname]);
+  }, [authLoading, user, effectiveRequiredRole, storeId, hasRole, userRoles, location.pathname]);
 
   // Still loading auth state - but with a timeout to prevent infinite loading
-  if (loading && !authCheckComplete) {
+  if ((authLoading || !authCheckComplete) && !timeoutReached) {
     console.log("ProtectedRoute: Still loading authentication state");
     return (
       <div className="min-h-screen flex items-center justify-center">
