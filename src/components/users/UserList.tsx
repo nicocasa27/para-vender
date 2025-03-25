@@ -1,3 +1,4 @@
+
 import { UserWithRoles } from "@/types/auth";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UserPlus, Users } from "lucide-react";
@@ -45,64 +46,43 @@ export const UserList = memo(function UserList({ users, isLoading, onDeleteRole,
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users.map((user) => {
-            // Group roles by role type to prevent duplicates
-            const rolesByType = new Map();
-            
-            // Process all roles and keep only one instance of each role type
-            // For roles with almacen_id, keep one per store
-            user.roles.forEach(role => {
-              const key = role.almacen_id 
-                ? `${role.role}-${role.almacen_id}` 
-                : role.role;
-                
-              // Only keep the first occurrence of each role type or role+store combination
-              if (!rolesByType.has(key)) {
-                rolesByType.set(key, role);
-              }
-            });
-            
-            // Convert the Map values back to an array
-            const uniqueRoles = Array.from(rolesByType.values());
-            
-            return (
-              <TableRow key={user.id}>
-                <TableCell>
-                  <div>
-                    <div className="font-medium">{user.full_name || "Sin nombre"}</div>
-                    <div className="text-sm text-muted-foreground">{user.email}</div>
+          {users.map((user) => (
+            <TableRow key={user.id}>
+              <TableCell>
+                <div>
+                  <div className="font-medium">{user.full_name || "Sin nombre"}</div>
+                  <div className="text-sm text-muted-foreground">{user.email}</div>
+                </div>
+              </TableCell>
+              <TableCell>
+                {user.roles.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {user.roles.map((role) => (
+                      <UserRoleBadge
+                        key={role.id}
+                        id={role.id}
+                        role={role.role}
+                        storeName={role.almacen_nombre}
+                        onDelete={onDeleteRole}
+                      />
+                    ))}
                   </div>
-                </TableCell>
-                <TableCell>
-                  {uniqueRoles.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {uniqueRoles.map((role) => (
-                        <UserRoleBadge
-                          key={role.id}
-                          id={role.id}
-                          role={role.role as any}
-                          storeName={role.almacen_nombre}
-                          onDelete={onDeleteRole}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground text-sm">Sin roles asignados</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onAddRole(user)}
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    <span className="sr-only">Asignar rol</span>
-                  </Button>
-                </TableCell>
-              </TableRow>
-            );
-          })}
+                ) : (
+                  <span className="text-muted-foreground text-sm">Sin roles asignados</span>
+                )}
+              </TableCell>
+              <TableCell className="text-right">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onAddRole(user)}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  <span className="sr-only">Asignar rol</span>
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     </div>
