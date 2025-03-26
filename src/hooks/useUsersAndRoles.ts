@@ -19,55 +19,119 @@ export function useUsersAndRoles(isAdmin: boolean) {
         return;
       }
 
-      console.log("Iniciando carga de usuarios con JOIN a roles desde Supabase...");
+      console.log("Iniciando carga de usuarios con roles desde Supabase...");
       
-      // Obtener perfiles con sus roles usando JOIN
-      const { data, error } = await supabase
-        .from("profiles")
+      // Fetch all users with their roles using a direct query to user_roles
+      const { data: userRolesData, error: userRolesError } = await supabase
+        .from('user_roles')
         .select(`
           id,
-          email,
-          full_name,
+          user_id,
+          role,
+          almacen_id,
           created_at,
-          user_roles(
-            id,
-            user_id,
-            role,
-            almacen_id,
-            created_at,
-            almacenes:almacen_id(nombre)
-          )
+          profiles:user_id(id, email, full_name),
+          almacenes:almacen_id(nombre)
         `)
         .order('created_at', { ascending: false });
         
-      if (error) {
-        console.error("Error al cargar perfiles con roles:", error);
-        throw error;
+      if (userRolesError) {
+        console.error("Error fetching user roles:", userRolesError);
+        throw userRolesError;
       }
       
-      if (!data || data.length === 0) {
-        console.log("No se encontraron perfiles de usuario");
-        setUsers([]);
-        return;
-      }
+      // Get unique user IDs from the roles
+      const userIds = [...new Set(userRolesData.map(role => role.user_id))];
       
-      console.log(`Perfiles con roles cargados: ${data.length}`);
-      
-      // Transformar los datos al formato esperado
-      const usersWithRoles: UserWithRoles[] = data.map(profile => {
-        const userRoles = (profile.user_roles || []).map(role => ({
-          ...role,
-          almacen_nombre: role.almacenes?.nombre || null
-        }));
+      if (userIds.length === 0) {
+        console.log("No user roles found");
         
-        return {
+        // Fetch profiles without roles as a fallback
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (profilesError) {
+          console.error("Error fetching profiles:", profilesError);
+          throw profilesError;
+        }
+        
+        if (!profiles || profiles.length === 0) {
+          console.log("No se encontraron perfiles de usuario");
+          setUsers([]);
+          return;
+        }
+        
+        // Transform profile data to match UserWithRoles format
+        const usersWithoutRoles = profiles.map(profile => ({
           id: profile.id,
           email: profile.email || "",
           full_name: profile.full_name || null,
           created_at: profile.created_at,
-          roles: userRoles,
-        };
+          roles: []
+        }));
+        
+        setUsers(usersWithoutRoles);
+        toast.success(`${usersWithoutRoles.length} usuarios cargados (sin roles)`);
+        return;
+      }
+      
+      // Group roles by user
+      const usersMap = new Map<string, UserWithRoles>();
+      
+      // Process each role and group by user_id
+      userRolesData.forEach(role => {
+        const userId = role.user_id;
+        const profile = role.profiles || { id: userId, email: "Unknown", full_name: null };
+        
+        // If this user isn't in our map yet, add them
+        if (!usersMap.has(userId)) {
+          usersMap.set(userId, {
+            id: userId,
+            email: profile.email || "Unknown",
+            full_name: profile.full_name || null,
+            created_at: role.created_at,
+            roles: []
+          });
+        }
+        
+        // Add this role to the user's roles array
+        const userEntry = usersMap.get(userId);
+        if (userEntry) {
+          userEntry.roles.push({
+            ...role,
+            almacen_nombre: role.almacenes?.nombre || null
+          });
+        }
       });
+      
+      // Fetch any users without roles to include them too
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        // Continue with what we have instead of throwing
+      } else if (profiles) {
+        // Add any profiles that weren't included in the roles query
+        profiles.forEach(profile => {
+          if (!usersMap.has(profile.id)) {
+            usersMap.set(profile.id, {
+              id: profile.id,
+              email: profile.email || "",
+              full_name: profile.full_name || null,
+              created_at: profile.created_at,
+              roles: []
+            });
+          }
+        });
+      }
+      
+      // Convert map values to array
+      const usersWithRoles = Array.from(usersMap.values());
       
       console.log(`Datos combinados: ${usersWithRoles.length} usuarios con sus roles`);
       setUsers(usersWithRoles);

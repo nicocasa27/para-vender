@@ -1,4 +1,3 @@
-
 import { UserRoleWithStore, UserRole } from "@/types/auth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,31 +16,26 @@ export const fetchUserRoles = async (userId: string): Promise<UserRoleWithStore[
     
     // Fetch user roles with JOIN to profiles and almacenes
     const { data, error } = await supabase
-      .from('profiles')
+      .from('user_roles')
       .select(`
         id,
-        email,
-        full_name,
-        user_roles(
-          id,
-          user_id,
-          role,
-          almacen_id,
-          created_at,
-          almacenes:almacen_id(nombre)
-        )
+        user_id,
+        role,
+        almacen_id,
+        created_at,
+        profiles:user_id(id, email, full_name),
+        almacenes:almacen_id(nombre)
       `)
-      .eq('id', userId)
-      .single();
+      .eq('user_id', userId);
 
     if (error) {
       console.error('AuthUtils: Error fetching user roles:', error);
       throw error;
     }
 
-    console.log("AuthUtils: Fetched user data with roles:", data);
+    console.log("AuthUtils: Fetched user roles data:", data);
     
-    if (!data || !data.user_roles || data.user_roles.length === 0) {
+    if (!data || data.length === 0) {
       console.log("AuthUtils: No roles found for user, checking if this is a first admin");
       
       // Try a direct connection check for new admin setup
@@ -91,7 +85,7 @@ export const fetchUserRoles = async (userId: string): Promise<UserRoleWithStore[
     }
 
     // Transform the data to match our expected format
-    const rolesWithStoreNames = data.user_roles.map(role => ({
+    const rolesWithStoreNames = data.map(role => ({
       ...role,
       almacen_nombre: role.almacenes?.nombre || null
     }));
