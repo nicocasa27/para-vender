@@ -7,56 +7,51 @@ import { UserWithRoles } from "@/types/auth";
  */
 export const fetchAllUsers = async (): Promise<UserWithRoles[]> => {
   try {
-    console.log("AuthUtils: Fetching all users");
+    console.log("AuthUtils: Fetching all users with roles");
     
-    // Get all profiles
-    const { data: profiles, error: profilesError } = await supabase
+    // Fetch all profiles with their roles using JOIN
+    const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select(`
+        id,
+        email,
+        full_name,
+        created_at,
+        user_roles(
+          id,
+          user_id,
+          role,
+          almacen_id,
+          created_at,
+          almacenes:almacen_id(nombre)
+        )
+      `)
       .order('created_at', { ascending: false });
       
-    if (profilesError) {
-      console.error("AuthUtils: Error fetching profiles:", profilesError);
-      throw profilesError;
+    if (error) {
+      console.error("AuthUtils: Error fetching profiles with roles:", error);
+      throw error;
     }
     
-    if (!profiles || profiles.length === 0) {
+    if (!data || data.length === 0) {
       console.log("AuthUtils: No profiles found");
       return [];
     }
     
-    console.log(`AuthUtils: Found ${profiles.length} profiles`);
+    console.log(`AuthUtils: Found ${data.length} profiles with roles`);
     
-    // Get all roles
-    const { data: roles, error: rolesError } = await supabase
-      .from('user_roles')
-      .select(`
-        id,
-        user_id,
-        role,
-        almacen_id,
-        created_at,
-        almacenes:almacen_id(nombre)
-      `);
-      
-    if (rolesError) {
-      console.error("AuthUtils: Error fetching roles:", rolesError);
-      throw rolesError;
-    }
-    
-    // Combine data
-    const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
-      const userRoles = roles
-        ?.filter(r => r.user_id === profile.id)
-        .map(role => ({
-          ...role,
-          almacen_nombre: role.almacenes?.nombre || null
-        })) || [];
+    // Transform the data to match our expected format
+    const usersWithRoles: UserWithRoles[] = data.map(profile => {
+      const userRoles = (profile.user_roles || []).map(role => ({
+        ...role,
+        almacen_nombre: role.almacenes?.nombre || null
+      }));
       
       return {
         id: profile.id,
         email: profile.email || "",
         full_name: profile.full_name || null,
+        created_at: profile.created_at,
         roles: userRoles,
       };
     });

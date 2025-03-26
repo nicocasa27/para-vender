@@ -15,27 +15,33 @@ export const fetchUserRoles = async (userId: string): Promise<UserRoleWithStore[
       return [];
     }
     
-    // First, attempt to fetch from the user_roles table directly
+    // Fetch user roles with JOIN to profiles and almacenes
     const { data, error } = await supabase
-      .from('user_roles')
+      .from('profiles')
       .select(`
         id,
-        user_id,
-        role,
-        almacen_id,
-        almacenes:almacen_id(nombre),
-        created_at
+        email,
+        full_name,
+        user_roles(
+          id,
+          user_id,
+          role,
+          almacen_id,
+          created_at,
+          almacenes:almacen_id(nombre)
+        )
       `)
-      .eq('user_id', userId);
+      .eq('id', userId)
+      .single();
 
     if (error) {
       console.error('AuthUtils: Error fetching user roles:', error);
       throw error;
     }
 
-    console.log("AuthUtils: Fetched roles data:", data);
+    console.log("AuthUtils: Fetched user data with roles:", data);
     
-    if (!data || data.length === 0) {
+    if (!data || !data.user_roles || data.user_roles.length === 0) {
       console.log("AuthUtils: No roles found for user, checking if this is a first admin");
       
       // Try a direct connection check for new admin setup
@@ -84,7 +90,8 @@ export const fetchUserRoles = async (userId: string): Promise<UserRoleWithStore[
       return [];
     }
 
-    const rolesWithStoreNames = data.map(role => ({
+    // Transform the data to match our expected format
+    const rolesWithStoreNames = data.user_roles.map(role => ({
       ...role,
       almacen_nombre: role.almacenes?.nombre || null
     }));

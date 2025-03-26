@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { UserWithRoles } from '@/types/auth';
@@ -20,54 +19,46 @@ export function useUsersAndRoles(isAdmin: boolean) {
         return;
       }
 
-      console.log("Iniciando carga de usuarios desde Supabase...");
+      console.log("Iniciando carga de usuarios con JOIN a roles desde Supabase...");
       
-      // Obtener perfiles con información completa
-      const { data: profiles, error: profilesError } = await supabase
+      // Obtener perfiles con sus roles usando JOIN
+      const { data, error } = await supabase
         .from("profiles")
-        .select("*")
+        .select(`
+          id,
+          email,
+          full_name,
+          created_at,
+          user_roles(
+            id,
+            user_id,
+            role,
+            almacen_id,
+            created_at,
+            almacenes:almacen_id(nombre)
+          )
+        `)
         .order('created_at', { ascending: false });
         
-      if (profilesError) {
-        console.error("Error al cargar perfiles:", profilesError);
-        throw profilesError;
+      if (error) {
+        console.error("Error al cargar perfiles con roles:", error);
+        throw error;
       }
       
-      if (!profiles || profiles.length === 0) {
+      if (!data || data.length === 0) {
         console.log("No se encontraron perfiles de usuario");
         setUsers([]);
         return;
       }
       
-      console.log(`Perfiles cargados: ${profiles.length}`);
+      console.log(`Perfiles con roles cargados: ${data.length}`);
       
-      // Obtener roles de usuario con información de almacén
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select(`
-          id,
-          user_id,
-          role,
-          almacen_id,
-          created_at,
-          almacenes:almacen_id(nombre)
-        `);
-        
-      if (rolesError) {
-        console.error("Error al cargar roles:", rolesError);
-        throw rolesError;
-      }
-      
-      console.log(`Roles cargados: ${roles?.length || 0}`);
-      
-      // Crear objeto combinado con usuarios y sus roles
-      const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
-        const userRoles = roles
-          ?.filter(r => r.user_id === profile.id)
-          .map(role => ({
-            ...role,
-            almacen_nombre: role.almacenes?.nombre || null
-          })) || [];
+      // Transformar los datos al formato esperado
+      const usersWithRoles: UserWithRoles[] = data.map(profile => {
+        const userRoles = (profile.user_roles || []).map(role => ({
+          ...role,
+          almacen_nombre: role.almacenes?.nombre || null
+        }));
         
         return {
           id: profile.id,

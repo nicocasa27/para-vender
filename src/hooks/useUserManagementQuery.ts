@@ -16,52 +16,44 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
           return [];
         }
         
-        // Traer TODOS los perfiles sin filtros para asegurar que obtenemos todos los usuarios
-        console.log("Intentando obtener TODOS los perfiles de usuario sin filtros");
-        const { data: profiles, error: profilesError } = await supabase
+        // Obtener todos los perfiles con sus roles usando JOIN
+        console.log("Fetching all profiles with their roles using JOIN");
+        const { data, error } = await supabase
           .from("profiles")
-          .select("*")
+          .select(`
+            id,
+            email,
+            full_name,
+            created_at,
+            user_roles(
+              id,
+              user_id,
+              role,
+              almacen_id,
+              created_at,
+              almacenes:almacen_id(nombre)
+            )
+          `)
           .order('created_at', { ascending: false });
           
-        if (profilesError) {
-          console.error("Error fetching profiles:", profilesError);
-          throw profilesError;
+        if (error) {
+          console.error("Error fetching profiles with roles:", error);
+          throw error;
         }
         
-        if (!profiles || profiles.length === 0) {
+        if (!data || data.length === 0) {
           console.log("No profiles found");
           return [];
         }
         
-        console.log("Profiles fetched:", profiles.length);
+        console.log("Profiles with roles fetched:", data.length);
         
-        // Traer TODOS los roles de usuario con JOIN a almacenes
-        const { data: roles, error: rolesError } = await supabase
-          .from("user_roles")
-          .select(`
-            id,
-            user_id,
-            role,
-            almacen_id,
-            created_at,
-            almacenes:almacen_id(nombre)
-          `);
-          
-        if (rolesError) {
-          console.error("Error fetching roles:", rolesError);
-          throw rolesError;
-        }
-        
-        console.log("Roles fetched:", roles?.length || 0);
-        
-        // Combinar los datos 
-        const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
-          const userRoles = roles
-            ?.filter(r => r.user_id === profile.id)
-            .map(role => ({
-              ...role,
-              almacen_nombre: role.almacenes?.nombre || null
-            })) || [];
+        // Transformar los datos al formato esperado
+        const usersWithRoles: UserWithRoles[] = data.map(profile => {
+          const userRoles = (profile.user_roles || []).map(role => ({
+            ...role,
+            almacen_nombre: role.almacenes?.nombre || null
+          }));
           
           return {
             id: profile.id,
@@ -72,8 +64,7 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
           };
         });
         
-        console.log("Combined users with roles:", usersWithRoles.length);
-        
+        console.log("Processed users with roles:", usersWithRoles.length);
         return usersWithRoles;
       } catch (error) {
         console.error("Error fetching users:", error);
