@@ -1,3 +1,4 @@
+
 import { UserRoleWithStore, UserRole } from "@/types/auth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,7 +24,11 @@ export const fetchUserRoles = async (userId: string): Promise<UserRoleWithStore[
         role,
         almacen_id,
         created_at,
-        profiles:user_id(id, email, full_name),
+        profiles:user_id(
+          id,
+          email,
+          full_name
+        ),
         almacenes:almacen_id(nombre)
       `)
       .eq('user_id', userId);

@@ -18,7 +18,11 @@ export const fetchAllUsers = async (): Promise<UserWithRoles[]> => {
         role,
         almacen_id,
         created_at,
-        profiles:user_id(id, email, full_name),
+        profiles:user_id(
+          id,
+          email,
+          full_name
+        ),
         almacenes:almacen_id(nombre)
       `)
       .order('created_at', { ascending: false });

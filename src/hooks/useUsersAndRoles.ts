@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { UserWithRoles } from '@/types/auth';
@@ -30,7 +31,11 @@ export function useUsersAndRoles(isAdmin: boolean) {
           role,
           almacen_id,
           created_at,
-          profiles:user_id(id, email, full_name),
+          profiles:user_id(
+            id,
+            email,
+            full_name
+          ),
           almacenes:almacen_id(nombre)
         `)
         .order('created_at', { ascending: false });
