@@ -76,7 +76,7 @@ export const fetchAllUsers = async (): Promise<UserWithRoles[]> => {
       if (!usersMap.has(userId)) {
         usersMap.set(userId, {
           id: userId,
-          email: profile.email || "Unknown",
+          email: profile.email || "",
           full_name: profile.full_name || null,
           created_at: role.created_at,
           roles: []
