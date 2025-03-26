@@ -20,4 +20,9 @@ export interface UserWithRoles {
   full_name: string | null;
   created_at?: string;
   roles: UserRoleWithStore[];
+  profiles?: {
+    id: string;
+    email: string;
+    full_name: string | null;
+  };
 }

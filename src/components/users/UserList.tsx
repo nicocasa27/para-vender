@@ -50,8 +50,8 @@ export const UserList = memo(function UserList({ users, isLoading, onDeleteRole,
             <TableRow key={user.id}>
               <TableCell>
                 <div>
-                  <div className="font-medium">{user.full_name || "Sin nombre"}</div>
-                  <div className="text-sm text-muted-foreground">{user.email || "Sin email"}</div>
+                  <div className="font-medium">{user.profiles?.full_name || user.full_name || "Sin nombre"}</div>
+                  <div className="text-sm text-muted-foreground">{user.profiles?.email || user.email || "Sin email"}</div>
                 </div>
               </TableCell>
               <TableCell>
