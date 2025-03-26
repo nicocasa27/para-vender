@@ -61,7 +61,7 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
             return [];
           }
           
-          // Transform profile data to match UserWithRoles format
+          // Transform profile data to match UserWithRoles format and normalize
           return profiles.map(profile => ({
             id: profile.id,
             email: profile.email || "",

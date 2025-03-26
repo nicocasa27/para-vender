@@ -17,16 +17,12 @@ interface UserRowProps {
 }
 
 export function UserRow({ user, onAddRole, onDeleteRole }: UserRowProps) {
-  // Verificamos si los datos del perfil existen en el objeto user.profiles
-  const fullName = user.profiles?.full_name || user.full_name || "Sin nombre";
-  const email = user.profiles?.email || user.email || "Sin email";
-  
   return (
     <TableRow>
       <TableCell>
         <div className="flex flex-col">
-          <span className="font-medium">{fullName}</span>
-          <span className="text-sm text-muted-foreground">{email}</span>
+          <span className="font-medium">{user.full_name || "Sin nombre"}</span>
+          <span className="text-sm text-muted-foreground">{user.email || "Sin email"}</span>
           {user.created_at && (
             <span className="text-xs text-muted-foreground">
               {format(new Date(user.created_at), "PPP", { locale: es })}

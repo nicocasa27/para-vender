@@ -68,7 +68,7 @@ export function useUsersAndRoles(isAdmin: boolean) {
           return;
         }
         
-        // Transform profile data to match UserWithRoles format
+        // Transform profile data to match UserWithRoles format (normalizado)
         const usersWithoutRoles = profiles.map(profile => ({
           id: profile.id,
           email: profile.email || "",

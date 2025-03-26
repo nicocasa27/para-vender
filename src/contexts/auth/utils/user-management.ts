@@ -54,7 +54,7 @@ export const fetchAllUsers = async (): Promise<UserWithRoles[]> => {
         return [];
       }
       
-      // Transform profile data to match UserWithRoles format
+      // Transform profile data to match UserWithRoles format (normalizado)
       return profiles.map(profile => ({
         id: profile.id,
         email: profile.email || "",
