@@ -17,6 +17,14 @@ interface UserRowProps {
 }
 
 export function UserRow({ user, onAddRole, onDeleteRole }: UserRowProps) {
+  // Log para depurar
+  console.log("UserRow props:", { 
+    id: user.id,
+    email: user.email, 
+    full_name: user.full_name,
+    roles: user.roles.length
+  });
+
   return (
     <TableRow>
       <TableCell>

@@ -45,6 +45,8 @@ export function useFetchUsers(isAdmin: boolean) {
         throw userRolesError;
       }
       
+      console.log("Datos de user_roles cargados:", userRolesData);
+      
       // Get unique user IDs from the roles
       const userIds = [...new Set(userRolesData.map(role => role.user_id))];
       
@@ -53,6 +55,7 @@ export function useFetchUsers(isAdmin: boolean) {
         
         // Si no hay roles, obtener directamente los perfiles
         const users = await fetchProfilesWithoutRoles();
+        console.log("Usuarios sin roles cargados:", users);
         setUsers(users);
         toast.success(`${users.length} usuarios cargados (sin roles)`);
         return;
@@ -61,7 +64,7 @@ export function useFetchUsers(isAdmin: boolean) {
       const usersWithRoles = await processUserRolesData(userRolesData);
       console.log(`Datos combinados: ${usersWithRoles.length} usuarios con sus roles`);
       
-      // Log para depurar si hay información de full_name y email
+      // Log detallado para depurar si hay información de full_name y email
       console.log("Muestra de datos de usuarios:", 
         usersWithRoles.slice(0, 3).map(u => ({ 
           id: u.id, 
@@ -97,6 +100,8 @@ export function useFetchUsers(isAdmin: boolean) {
       throw profilesError;
     }
     
+    console.log("Perfiles cargados desde Supabase:", profiles);
+    
     if (!profiles || profiles.length === 0) {
       console.log("No se encontraron perfiles de usuario");
       return [];
@@ -119,10 +124,21 @@ export function useFetchUsers(isAdmin: boolean) {
     // Group roles by user
     const usersMap = new Map<string, UserWithRoles>();
     
+    console.log("Procesando datos de roles...");
+    
     // Process each role and group by user_id
     userRolesData.forEach(role => {
       const userId = role.user_id;
       const profile = role.profiles || { id: userId, email: "Unknown", full_name: null };
+      
+      console.log("Procesando rol para usuario:", { 
+        userId, 
+        profile_info: { 
+          id: profile.id, 
+          email: profile.email,
+          full_name: profile.full_name 
+        } 
+      });
       
       // If this user isn't in our map yet, add them
       if (!usersMap.has(userId)) {
@@ -155,9 +171,17 @@ export function useFetchUsers(isAdmin: boolean) {
       console.error("Error fetching profiles:", profilesError);
       // Continue with what we have instead of throwing
     } else if (profiles) {
+      console.log("Perfiles adicionales cargados:", profiles.length);
+      
       // Add any profiles that weren't included in the roles query
       profiles.forEach(profile => {
         if (!usersMap.has(profile.id)) {
+          console.log("Añadiendo perfil sin roles:", { 
+            id: profile.id, 
+            email: profile.email, 
+            full_name: profile.full_name 
+          });
+          
           usersMap.set(profile.id, {
             id: profile.id,
             email: profile.email || "",
@@ -170,7 +194,9 @@ export function useFetchUsers(isAdmin: boolean) {
     }
     
     // Convert map values to array and return
-    return Array.from(usersMap.values());
+    const result = Array.from(usersMap.values());
+    console.log("Resultado final de usuarios procesados:", result.slice(0, 2));
+    return result;
   };
 
   // Cargar usuarios al montar el componente o cuando cambie isAdmin

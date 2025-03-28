@@ -15,6 +15,17 @@ interface UserListProps {
 
 // Memoize the component to prevent unnecessary re-renders
 export const UserList = memo(function UserList({ users, isLoading, onDeleteRole, onAddRole }: UserListProps) {
+  // Log para depurar
+  console.log("UserList props:", { 
+    users_count: users.length,
+    users_sample: users.slice(0, 2).map(u => ({
+      id: u.id,
+      email: u.email,
+      full_name: u.full_name,
+      roles: u.roles.length
+    }))
+  });
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">

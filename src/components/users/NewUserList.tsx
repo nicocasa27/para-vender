@@ -24,6 +24,17 @@ interface UserListProps {
 export function NewUserList({ users, isLoading, onDeleteRole, onSuccess }: UserListProps) {
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   
+  // Log para depurar
+  console.log("NewUserList props:", { 
+    users_count: users.length,
+    users_sample: users.slice(0, 2).map(u => ({
+      id: u.id,
+      email: u.email,
+      full_name: u.full_name,
+      roles: u.roles ? u.roles.length : 0
+    }))
+  });
+  
   if (isLoading) {
     return (
       <Card className="w-full">
