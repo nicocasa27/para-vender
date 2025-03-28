@@ -51,6 +51,7 @@ export function useFetchUsers(isAdmin: boolean) {
       if (userIds.length === 0) {
         console.log("No user roles found");
         
+        // Si no hay roles, obtener directamente los perfiles
         const users = await fetchProfilesWithoutRoles();
         setUsers(users);
         toast.success(`${users.length} usuarios cargados (sin roles)`);
@@ -59,6 +60,17 @@ export function useFetchUsers(isAdmin: boolean) {
       
       const usersWithRoles = await processUserRolesData(userRolesData);
       console.log(`Datos combinados: ${usersWithRoles.length} usuarios con sus roles`);
+      
+      // Log para depurar si hay información de full_name y email
+      console.log("Muestra de datos de usuarios:", 
+        usersWithRoles.slice(0, 3).map(u => ({ 
+          id: u.id, 
+          email: u.email,
+          full_name: u.full_name,
+          roles_count: u.roles.length 
+        }))
+      );
+      
       setUsers(usersWithRoles);
       toast.success(`${usersWithRoles.length} usuarios cargados correctamente`);
     } catch (error: any) {
@@ -74,9 +86,10 @@ export function useFetchUsers(isAdmin: boolean) {
 
   // Fetch profiles without roles as a fallback
   const fetchProfilesWithoutRoles = async (): Promise<UserWithRoles[]> => {
+    console.log("Cargando perfiles de usuario sin roles asignados");
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, email, full_name, created_at')
       .order('created_at', { ascending: false });
       
     if (profilesError) {
@@ -88,6 +101,8 @@ export function useFetchUsers(isAdmin: boolean) {
       console.log("No se encontraron perfiles de usuario");
       return [];
     }
+    
+    console.log(`Se encontraron ${profiles.length} perfiles de usuario sin roles`);
     
     // Transform profile data to match UserWithRoles format (normalizado)
     return profiles.map(profile => ({
@@ -133,7 +148,7 @@ export function useFetchUsers(isAdmin: boolean) {
     // Fetch any users without roles to include them too
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, email, full_name, created_at')
       .order('created_at', { ascending: false });
       
     if (profilesError) {
@@ -154,7 +169,7 @@ export function useFetchUsers(isAdmin: boolean) {
       });
     }
     
-    // Convert map values to array
+    // Convert map values to array and return
     return Array.from(usersMap.values());
   };
 
