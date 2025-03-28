@@ -79,7 +79,10 @@ export function useAuthCredentials(refreshUserRoles: () => Promise<any[]>) {
 
         console.log("Auth: Usuario registrado correctamente:", data);
         
-        console.log("Auth: Esperando a que los triggers de Supabase creen el perfil y asignen roles");
+        // Eliminada la referencia a la confirmación de correo
+        sonnerToast.success("Registro exitoso", {
+          description: "Tu cuenta ha sido creada correctamente. Ya puedes iniciar sesión."
+        });
         
         return data;
       } catch (error: any) {

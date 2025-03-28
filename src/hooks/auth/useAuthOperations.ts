@@ -87,11 +87,11 @@ export function useAuthOperations({
         throw error;
       }
 
-      // Ya no necesitamos manejar la asignación del rol aquí, pues lo hace el trigger
+      // Eliminada referencia a confirmación de correo, añadiendo mensaje para login inmediato
       console.log("Auth: Sign up successful, role will be assigned by database trigger");
       
       sonnerToast.success("Registro exitoso", {
-        description: "Se ha creado el usuario correctamente"
+        description: "Tu cuenta ha sido creada correctamente. Ya puedes iniciar sesión."
       });
       
       return data;
