@@ -31,6 +31,7 @@ export function NewUserList({ users, isLoading, onDeleteRole, onSuccess }: UserL
       id: u.id,
       email: u.email,
       full_name: u.full_name,
+      profiles_full_name: u.profiles?.full_name,
       roles: u.roles ? u.roles.length : 0
     }))
   });

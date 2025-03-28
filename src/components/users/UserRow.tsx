@@ -22,15 +22,20 @@ export function UserRow({ user, onAddRole, onDeleteRole }: UserRowProps) {
     id: user.id,
     email: user.email, 
     full_name: user.full_name,
+    profiles_full_name: user.profiles?.full_name,
     roles: user.roles.length
   });
+
+  // Usar nombre de profiles si está disponible, si no, usar el de top-level o fallback a "Sin nombre"
+  const displayName = user.profiles?.full_name || user.full_name || "Sin nombre";
+  const displayEmail = user.email || "Sin email";
 
   return (
     <TableRow>
       <TableCell>
         <div className="flex flex-col">
-          <span className="font-medium">{user.full_name || "Sin nombre"}</span>
-          <span className="text-sm text-muted-foreground">{user.email || "Sin email"}</span>
+          <span className="font-medium">{displayName}</span>
+          <span className="text-sm text-muted-foreground">{displayEmail}</span>
           {user.created_at && (
             <span className="text-xs text-muted-foreground">
               {format(new Date(user.created_at), "PPP", { locale: es })}

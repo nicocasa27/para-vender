@@ -22,6 +22,7 @@ export const UserList = memo(function UserList({ users, isLoading, onDeleteRole,
       id: u.id,
       email: u.email,
       full_name: u.full_name,
+      profiles_full_name: u.profiles?.full_name,
       roles: u.roles.length
     }))
   });
@@ -57,43 +58,48 @@ export const UserList = memo(function UserList({ users, isLoading, onDeleteRole,
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users.map((user) => (
-            <TableRow key={user.id}>
-              <TableCell>
-                <div>
-                  <div className="font-medium">{user.full_name || "Sin nombre"}</div>
-                  <div className="text-sm text-muted-foreground">{user.email || "Sin email"}</div>
-                </div>
-              </TableCell>
-              <TableCell>
-                {user.roles.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {user.roles.map((role) => (
-                      <UserRoleBadge
-                        key={role.id}
-                        id={role.id}
-                        role={role.role}
-                        storeName={role.almacen_nombre}
-                        onDelete={onDeleteRole}
-                      />
-                    ))}
+          {users.map((user) => {
+            // Usar nombre de profiles si está disponible, si no, usar el de top-level o fallback a "Sin nombre"
+            const displayName = user.profiles?.full_name || user.full_name || "Sin nombre";
+            
+            return (
+              <TableRow key={user.id}>
+                <TableCell>
+                  <div>
+                    <div className="font-medium">{displayName}</div>
+                    <div className="text-sm text-muted-foreground">{user.email || "Sin email"}</div>
                   </div>
-                ) : (
-                  <span className="text-muted-foreground text-sm">Sin roles asignados</span>
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onAddRole(user)}
-                >
-                  <UserPlus className="h-4 w-4" />
-                  <span className="sr-only">Asignar rol</span>
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
+                </TableCell>
+                <TableCell>
+                  {user.roles.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {user.roles.map((role) => (
+                        <UserRoleBadge
+                          key={role.id}
+                          id={role.id}
+                          role={role.role}
+                          storeName={role.almacen_nombre}
+                          onDelete={onDeleteRole}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">Sin roles asignados</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onAddRole(user)}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    <span className="sr-only">Asignar rol</span>
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
