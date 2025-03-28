@@ -17,18 +17,19 @@ interface UserRowProps {
 }
 
 export function UserRow({ user, onAddRole, onDeleteRole }: UserRowProps) {
-  // Log para depurar
+  // Log para depurar la estructura completa del usuario
   console.log("UserRow props:", { 
     id: user.id,
     email: user.email, 
     full_name: user.full_name,
+    profiles_email: user.profiles?.email,
     profiles_full_name: user.profiles?.full_name,
     roles: user.roles.length
   });
 
   // Usar nombre de profiles si está disponible, si no, usar el de top-level o fallback a "Sin nombre"
   const displayName = user.profiles?.full_name || user.full_name || "Sin nombre";
-  const displayEmail = user.email || "Sin email";
+  const displayEmail = user.profiles?.email || user.email || "Sin email";
 
   return (
     <TableRow>

@@ -61,13 +61,14 @@ export const UserList = memo(function UserList({ users, isLoading, onDeleteRole,
           {users.map((user) => {
             // Usar nombre de profiles si está disponible, si no, usar el de top-level o fallback a "Sin nombre"
             const displayName = user.profiles?.full_name || user.full_name || "Sin nombre";
+            const displayEmail = user.profiles?.email || user.email || "Sin email";
             
             return (
               <TableRow key={user.id}>
                 <TableCell>
                   <div>
                     <div className="font-medium">{displayName}</div>
-                    <div className="text-sm text-muted-foreground">{user.email || "Sin email"}</div>
+                    <div className="text-sm text-muted-foreground">{displayEmail}</div>
                   </div>
                 </TableCell>
                 <TableCell>
