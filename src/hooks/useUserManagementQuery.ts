@@ -16,6 +16,59 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
           return [];
         }
         
+        // Intentar usar la vista user_roles_with_name que ya incluye el join con profiles
+        const { data: viewData, error: viewError } = await supabase
+          .from('user_roles_with_name')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (viewError) {
+          console.error("Error fetching from view:", viewError);
+          console.log("Falling back to manual join query...");
+        } else if (viewData && viewData.length > 0) {
+          console.log("Successfully retrieved data from user_roles_with_name view:", viewData.length);
+          
+          // Agrupar resultados por usuario
+          const usersMap = new Map<string, UserWithRoles>();
+          
+          // Procesar cada fila de la vista
+          viewData.forEach(row => {
+            const userId = row.user_id;
+            
+            // Si este usuario aún no está en nuestro mapa, añadirlo
+            if (!usersMap.has(userId)) {
+              usersMap.set(userId, {
+                id: userId,
+                email: row.email || "",
+                full_name: row.full_name || "Usuario sin perfil",
+                created_at: row.created_at,
+                roles: []
+              });
+            }
+            
+            // Añadir este rol al array de roles del usuario
+            const userEntry = usersMap.get(userId);
+            if (userEntry && row.role) {
+              userEntry.roles.push({
+                id: row.id || "",
+                user_id: userId,
+                role: row.role,
+                almacen_id: row.almacen_id || null,
+                created_at: row.created_at || new Date().toISOString(),
+                almacen_nombre: row.almacen_nombre || null
+              });
+            }
+          });
+          
+          // Convertir Map a array
+          const processedUsers = Array.from(usersMap.values());
+          console.log(`Processed ${processedUsers.length} users from view data`);
+          return processedUsers;
+        }
+        
+        // Método alternativo: consulta manual con join
+        console.log("Using manual join query for user data...");
+        
         // Fetch all users with their roles using a direct query to user_roles
         const { data: userRolesData, error: userRolesError } = await supabase
           .from('user_roles')
@@ -65,7 +118,7 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
           return profiles.map(profile => ({
             id: profile.id,
             email: profile.email || "",
-            full_name: profile.full_name || null,
+            full_name: profile.full_name || "Usuario sin perfil",
             created_at: profile.created_at,
             roles: []
           }));
@@ -77,14 +130,14 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
         // Process each role and group by user_id
         userRolesData.forEach(role => {
           const userId = role.user_id;
-          const profile = role.profiles || { id: userId, email: "Unknown", full_name: null };
+          const profile = role.profiles || { id: userId, email: null, full_name: null };
           
           // If this user isn't in our map yet, add them
           if (!usersMap.has(userId)) {
             usersMap.set(userId, {
               id: userId,
               email: profile.email || "",
-              full_name: profile.full_name || null,
+              full_name: profile.full_name || "Usuario sin perfil",
               created_at: role.created_at,
               roles: []
             });
@@ -116,7 +169,7 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
               usersMap.set(profile.id, {
                 id: profile.id,
                 email: profile.email || "",
-                full_name: profile.full_name || null,
+                full_name: profile.full_name || "Usuario sin perfil",
                 created_at: profile.created_at,
                 roles: []
               });

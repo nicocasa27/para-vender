@@ -4,7 +4,7 @@ import { UserWithRoles } from "@/types/auth";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { UserList } from "@/components/users/UserList";
+import { NewUserList } from "@/components/users/NewUserList";
 import { RefreshCw, UserPlus, X } from "lucide-react";
 import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
 import { UserRoleForm } from "@/components/users/UserRoleForm";
@@ -21,6 +21,8 @@ interface UserSidePanelProps {
   onRefresh: () => void;
   onDeleteRole: (roleId: string) => void;
   onAddRole: (user: UserWithRoles) => void;
+  selectedUser: UserWithRoles | null;
+  setSelectedUser: (user: UserWithRoles | null) => void;
 }
 
 export function UserSidePanel({
@@ -30,22 +32,13 @@ export function UserSidePanel({
   loading,
   onRefresh,
   onDeleteRole,
-  onAddRole
+  onAddRole,
+  selectedUser,
+  setSelectedUser
 }: UserSidePanelProps) {
-  const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
-
-  const handleAddRole = (user: UserWithRoles) => {
-    setSelectedUser(user);
-    setDialogOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-    setSelectedUser(null);
-  };
 
   const handleRoleAssigned = () => {
     setDialogOpen(false);
@@ -76,7 +69,7 @@ export function UserSidePanel({
       if (error) throw error;
 
       toast.success("Usuario creado correctamente", {
-        description: "Se ha enviado un correo de confirmación al usuario"
+        description: "El usuario ha sido registrado exitosamente"
       });
 
       // Cerrar el diálogo y refrescar la lista
@@ -93,7 +86,8 @@ export function UserSidePanel({
     }
   };
 
-  return <Sheet open={open} onOpenChange={onOpenChange}>
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md overflow-hidden" side="right">
         <SheetHeader className="pb-4">
           <SheetTitle className="text-2xl">Gestión de Usuarios</SheetTitle>
@@ -109,21 +103,29 @@ export function UserSidePanel({
           </Button>
           <Dialog open={createUserDialogOpen} onOpenChange={setCreateUserDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="">
+              <Button size="sm">
                 <UserPlus className="h-4 w-4 mr-2" />
                 Nuevo Usuario
               </Button>
             </DialogTrigger>
-            <UserCreateForm 
-              onCreateUser={handleCreateUser} 
-              onCancel={() => setCreateUserDialogOpen(false)}
-              isCreating={isCreatingUser}
-            />
+            <DialogContent>
+              <UserCreateForm 
+                onCreateUser={handleCreateUser} 
+                onCancel={() => setCreateUserDialogOpen(false)}
+                isCreating={isCreatingUser}
+              />
+            </DialogContent>
           </Dialog>
         </div>
         
         <ScrollArea className="flex-1 h-[calc(100vh-11rem)]">
-          <UserList users={users} isLoading={loading} onDeleteRole={onDeleteRole} onAddRole={handleAddRole} />
+          <NewUserList 
+            users={users} 
+            isLoading={loading} 
+            onDeleteRole={onDeleteRole} 
+            onAddRole={onAddRole}
+            onSuccess={onRefresh}
+          />
         </ScrollArea>
         
         <SheetFooter className="mt-4">
@@ -136,8 +138,23 @@ export function UserSidePanel({
         </SheetFooter>
       </SheetContent>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        {selectedUser && <UserRoleForm selectedUser={selectedUser} onSuccess={handleRoleAssigned} onCancel={handleCloseDialog} />}
+      <Dialog open={dialogOpen || !!selectedUser} onOpenChange={(open) => {
+        setDialogOpen(open);
+        if (!open) setSelectedUser(null);
+      }}>
+        {selectedUser && (
+          <DialogContent>
+            <UserRoleForm 
+              selectedUser={selectedUser} 
+              onSuccess={handleRoleAssigned} 
+              onCancel={() => {
+                setDialogOpen(false);
+                setSelectedUser(null);
+              }}
+            />
+          </DialogContent>
+        )}
       </Dialog>
-    </Sheet>;
+    </Sheet>
+  );
 }

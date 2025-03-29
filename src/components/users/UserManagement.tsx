@@ -14,6 +14,7 @@ export function UserManagement() {
   const { user, hasRole } = useAuth();
   const isAdmin = hasRole('admin');
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   
   // Usar React Query para manejar el estado de carga y actualización de datos
   const { 
@@ -52,33 +53,8 @@ export function UserManagement() {
     }
   };
 
-  const handleAddRole = async (userId: string, roleName: "admin" | "manager" | "sales" | "viewer", almacenId?: string) => {
-    try {
-      console.log(`Añadiendo rol ${roleName} al usuario ${userId}${almacenId ? ` para almacén ${almacenId}` : ''}`);
-      
-      const { error } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: roleName,
-          almacen_id: almacenId || null
-        });
-        
-      if (error) throw error;
-      
-      toast.success("Rol asignado correctamente");
-      
-      // Actualizar la lista de usuarios
-      await refetch();
-    } catch (error: any) {
-      console.error("Error al añadir rol:", error);
-      toast.error("Error al asignar rol", {
-        description: error.message
-      });
-    }
-  };
-
-  const handleOpenUserPanel = (user: UserWithRoles) => {
+  const handleAddRole = async (user: UserWithRoles) => {
+    setSelectedUser(user);
     setSidePanelOpen(true);
   };
 
@@ -138,7 +114,9 @@ export function UserManagement() {
         loading={loading}
         onRefresh={handleRefresh}
         onDeleteRole={handleDeleteRole}
-        onAddRole={handleOpenUserPanel}
+        onAddRole={handleAddRole}
+        selectedUser={selectedUser}
+        setSelectedUser={setSelectedUser}
       />
     </Card>
   );

@@ -27,8 +27,8 @@ export function UserRow({ user, onAddRole, onDeleteRole }: UserRowProps) {
     roles: user.roles.length
   });
 
-  // Usar nombre de profiles si está disponible, si no, usar el de top-level o fallback a "Sin nombre"
-  const displayName = user.profiles?.full_name || user.full_name || "Sin nombre";
+  // Usar nombre de profiles si está disponible, si no, usar el de top-level o fallback a "Usuario sin perfil"
+  const displayName = user.profiles?.full_name || user.full_name || "Usuario sin perfil";
   const displayEmail = user.profiles?.email || user.email || "Sin email";
 
   return (

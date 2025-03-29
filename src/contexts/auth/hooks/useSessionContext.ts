@@ -4,6 +4,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRoleWithStore } from '@/types/auth';
 import { fetchUserRoles } from '../auth-utils';
+import { toast } from 'sonner';
 
 const MAX_ROLE_LOADING_RETRIES = 3;
 const ROLE_LOADING_RETRY_DELAY = 1000; // ms
@@ -83,7 +84,37 @@ export function useSessionContext() {
     }
     
     console.log("Auth: Manually refreshing user roles for:", user.id, force ? "(forced)" : "");
-    return await loadUserRoles(user.id, force);
+    
+    try {
+      const roles = await loadUserRoles(user.id, force);
+      
+      if (roles.length === 0) {
+        console.warn("Auth: No roles found after refresh");
+        // Solo mostrar toast si es un refresh manual (force=true)
+        if (force) {
+          toast.warning("No se encontraron roles", {
+            description: "No tienes ningún rol asignado en el sistema"
+          });
+        }
+      } else {
+        console.log("Auth: Successfully refreshed roles:", roles);
+        // Solo mostrar toast si es un refresh manual (force=true)
+        if (force) {
+          toast.success(`${roles.length} roles cargados correctamente`);
+        }
+      }
+      
+      return roles;
+    } catch (error) {
+      console.error("Auth: Error refreshing roles:", error);
+      // Solo mostrar toast si es un refresh manual (force=true)
+      if (force) {
+        toast.error("Error al actualizar roles", {
+          description: "Intenta nuevamente más tarde"
+        });
+      }
+      return [];
+    }
   };
 
   // Configurar el listener de autenticación
