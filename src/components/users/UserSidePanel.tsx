@@ -1,4 +1,3 @@
-
 import React from "react";
 import { UserWithRoles } from "@/types/auth";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose, SheetFooter } from "@/components/ui/sheet";
@@ -90,6 +89,31 @@ export function UserSidePanel({
       });
 
       if (error) throw error;
+
+      // Asegurarnos de crear el perfil explícitamente en caso de que el trigger falle
+      if (data.user) {
+        try {
+          // Esperar un momento para dar tiempo a que el trigger de Supabase cree el perfil
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Intentar crear perfil por si el trigger falló
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              full_name: userData.fullName,
+              email: userData.email
+            })
+            .select();
+            
+          if (profileError && profileError.code !== '23505') { // Ignora error de duplicado
+            console.log("Error al crear perfil:", profileError);
+          }
+        } catch (profileErr) {
+          console.error("Error al crear perfil:", profileErr);
+          // Continuar de todos modos, esto es solo para garantizar que exista
+        }
+      }
 
       toast.success("Usuario creado correctamente", {
         description: "El usuario ha sido registrado exitosamente"

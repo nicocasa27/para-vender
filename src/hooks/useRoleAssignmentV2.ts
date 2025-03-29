@@ -140,6 +140,40 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
         return;
       }
       
+      // Intentar crear el perfil primero si es necesario
+      try {
+        console.log("Verificando si existe el perfil para el usuario:", selectedUserId);
+        const { data: existingProfile, error: profileCheckError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', selectedUserId)
+          .single();
+          
+        if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+          // Si hay un error que no sea "no se encontró ningún registro"
+          console.log("No se encontró perfil, intentando crear uno...");
+          const { error: createProfileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: selectedUserId,
+              full_name: userName || 'Usuario sin perfil',
+              email: null
+            });
+            
+          if (createProfileError) {
+            console.error("Error al crear perfil:", createProfileError);
+            // Continuamos de todos modos, ya que ahora tenemos un trigger que lo manejará
+          } else {
+            console.log("Perfil creado exitosamente");
+          }
+        } else {
+          console.log("El perfil ya existe:", existingProfile);
+        }
+      } catch (profileError) {
+        console.error("Error al verificar/crear perfil:", profileError);
+        // Continuamos con la inserción del rol, el trigger debería manejar esto
+      }
+      
       // Insertar el nuevo rol con UUID válido
       const insertData = {
         user_id: selectedUserId,
