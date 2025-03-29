@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import { UserWithRoles } from "@/types/auth";
 
 // Función helper para validar UUID
-const isValidUUID = (uuid: string) => {
+const isValidUUID = (uuid: string | null | undefined) => {
+  if (!uuid) return false;
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(uuid);
 };

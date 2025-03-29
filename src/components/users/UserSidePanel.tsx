@@ -51,6 +51,15 @@ export function UserSidePanel({
     await onRefresh();
   };
 
+  // Validar que el usuario seleccionado tenga un ID válido antes de mostrar el modal
+  const isSelectedUserValid = () => {
+    if (!selectedUser || !selectedUser.id) return false;
+    
+    // Validación básica de UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(selectedUser.id);
+  };
+
   const handleCreateUser = async (userData: { email: string; password: string; fullName: string }) => {
     try {
       setIsCreatingUser(true);
@@ -138,7 +147,7 @@ export function UserSidePanel({
         </SheetFooter>
       </SheetContent>
 
-      <Dialog open={dialogOpen || !!selectedUser} onOpenChange={(open) => {
+      <Dialog open={dialogOpen || (!!selectedUser && isSelectedUserValid())} onOpenChange={(open) => {
         setDialogOpen(open);
         if (!open) setSelectedUser(null);
       }}>
