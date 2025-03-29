@@ -1,22 +1,30 @@
 
-import { toast } from 'sonner';
+import { useState, useRef } from 'react';
+import { User } from '@supabase/supabase-js';
 import { UserRoleWithStore } from '@/types/auth';
 import { fetchUserRoles } from '@/contexts/auth/auth-utils';
 
-const MAX_ROLE_LOADING_RETRIES = 3;
-const ROLE_LOADING_RETRY_DELAY = 1000; // ms
+interface UseRoleLoaderParams {
+  setRolesLoading: (loading: boolean) => void;
+  setUserRoles: (roles: UserRoleWithStore[]) => void;
+  setRoleLoadingAttempt: (attempt: number) => void;
+  pendingRoleLoadRef: React.MutableRefObject<Promise<UserRoleWithStore[]> | null>;
+}
 
 /**
- * Hook para manejar la carga de roles de usuario
+ * Hook para cargar los roles de usuario
  */
-export function useRoleLoader(
-  setRolesLoading: (loading: boolean) => void,
-  setUserRoles: (roles: UserRoleWithStore[]) => void,
-  setRoleLoadingAttempt: (attempt: number) => void,
-  pendingRoleLoadRef: React.MutableRefObject<Promise<UserRoleWithStore[]> | null>
-) {
+export function useRoleLoader({
+  setRolesLoading,
+  setUserRoles,
+  setRoleLoadingAttempt,
+  pendingRoleLoadRef
+}: UseRoleLoaderParams) {
+  const MAX_ROLE_LOADING_RETRIES = 3;
+  const ROLE_LOADING_RETRY_DELAY = 1000; // ms
+
   /**
-   * Carga los roles del usuario
+   * Carga los roles de un usuario
    */
   const loadUserRoles = async (userId: string, forceRefresh = false): Promise<UserRoleWithStore[]> => {
     if (!userId) return [];
@@ -76,7 +84,7 @@ export function useRoleLoader(
   };
 
   /**
-   * Actualiza manualmente los roles del usuario
+   * Actualiza los roles de un usuario
    */
   const refreshUserRoles = async (user: User | null, force = true): Promise<UserRoleWithStore[]> => {
     if (!user) {
@@ -84,42 +92,9 @@ export function useRoleLoader(
       return [];
     }
     
-    console.log("Auth: Manually refreshing user roles for:", user.id, force ? "(forced)" : "");
-    
-    try {
-      const roles = await loadUserRoles(user.id, force);
-      
-      if (roles.length === 0) {
-        console.warn("Auth: No roles found after refresh");
-        // Solo mostrar toast si es un refresh manual (force=true)
-        if (force) {
-          toast.warning("No se encontraron roles", {
-            description: "No tienes ningún rol asignado en el sistema"
-          });
-        }
-      } else {
-        console.log("Auth: Successfully refreshed roles:", roles);
-        // Solo mostrar toast si es un refresh manual (force=true)
-        if (force) {
-          toast.success(`${roles.length} roles cargados correctamente`);
-        }
-      }
-      
-      return roles;
-    } catch (error) {
-      console.error("Auth: Error refreshing roles:", error);
-      // Solo mostrar toast si es un refresh manual (force=true)
-      if (force) {
-        toast.error("Error al actualizar roles", {
-          description: "Intenta nuevamente más tarde"
-        });
-      }
-      return [];
-    }
+    console.log("Auth: Refreshing user roles for:", user.id, force ? "(forced)" : "");
+    return await loadUserRoles(user.id, force);
   };
 
-  return {
-    loadUserRoles,
-    refreshUserRoles
-  };
+  return { loadUserRoles, refreshUserRoles };
 }
