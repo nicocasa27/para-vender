@@ -11,8 +11,8 @@ import {
 import { useStores } from "@/hooks/useStores";
 import { RoleSelector } from "./RoleSelector";
 import { StoreSelector } from "./StoreSelector";
-import { useRoleAssignment } from "@/hooks/useRoleAssignment";
-import { useMemo } from "react";
+import { useRoleAssignmentV2 } from "@/hooks/useRoleAssignmentV2";
+import { useEffect } from "react";
 
 interface UserRoleFormProps {
   selectedUser: UserWithRoles | null;
@@ -27,25 +27,19 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
     currentRole, 
     needsStore, 
     isSubmitting, 
-    handleAddRole 
-  } = useRoleAssignment(selectedUser, stores, onSuccess);
+    handleAddRole,
+    selectUser,
+    selectedUserId,
+    userName
+  } = useRoleAssignmentV2(onSuccess);
 
-  // Verificar si el usuario tiene un ID válido
-  const isUserIdValid = useMemo(() => {
-    if (!selectedUser || !selectedUser.id || selectedUser.id === "null") return false;
-    // Validación básica de UUID
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(selectedUser.id);
+  // Configurar usuario seleccionado cuando cambia el prop
+  useEffect(() => {
+    selectUser(selectedUser);
   }, [selectedUser]);
 
-  // Log para depuración
-  console.log("UserRoleForm - Usuario seleccionado:", {
-    id: selectedUser?.id,
-    tipo: selectedUser?.id ? typeof selectedUser.id : 'null/undefined',
-    esValido: isUserIdValid,
-  });
-
-  const userName = selectedUser?.full_name || selectedUser?.email || selectedUser?.profiles?.full_name || "Usuario desconocido";
+  // Verificar si se puede mostrar el formulario
+  const canShowForm = !!selectedUserId;
 
   return (
     <DialogContent className="sm:max-w-[425px]">
@@ -56,7 +50,7 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
         </DialogDescription>
       </DialogHeader>
       
-      {!isUserIdValid && (
+      {!canShowForm && (
         <div className="p-3 mb-3 text-sm bg-destructive/10 text-destructive rounded-md">
           No se puede asignar un rol a este usuario porque no tiene un ID válido. 
           Intente con otro usuario o contacte al administrador del sistema.
@@ -81,8 +75,8 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
             </Button>
             <Button 
               type="submit" 
-              disabled={isSubmitting || !isUserIdValid}
-              title={!isUserIdValid ? "No se puede asignar rol a este usuario" : undefined}
+              disabled={isSubmitting || !canShowForm}
+              title={!canShowForm ? "No se puede asignar rol a este usuario" : undefined}
             >
               {isSubmitting ? "Asignando..." : "Asignar Rol"}
             </Button>

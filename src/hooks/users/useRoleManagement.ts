@@ -4,7 +4,7 @@ import { toast } from "sonner";
 
 // Función helper para validar UUID
 const isValidUUID = (uuid: string | null | undefined) => {
-  if (!uuid) return false;
+  if (!uuid || uuid === "null" || uuid === "undefined") return false;
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(uuid);
 };
@@ -14,7 +14,7 @@ export function useRoleManagement() {
   const deleteRole = async (roleId: string, onSuccess?: () => void) => {
     try {
       // Validar el ID del rol
-      if (!roleId || !isValidUUID(roleId)) {
+      if (!isValidUUID(roleId)) {
         toast.error("ID de rol inválido");
         console.error("ID de rol inválido:", roleId);
         return;
@@ -50,21 +50,13 @@ export function useRoleManagement() {
   ) => {
     try {
       // Validación defensiva del ID de usuario
-      if (!userId || userId === "null") {
-        toast.error("No se puede asignar rol: ID de usuario inválido");
-        console.error("ID de usuario inválido o es 'null':", userId);
-        return;
-      }
-
-      // Validación adicional del formato UUID
       if (!isValidUUID(userId)) {
-        toast.error("ID de usuario con formato inválido");
-        console.error("ID de usuario con formato inválido:", userId);
+        toast.error("No se puede asignar rol: ID de usuario inválido");
+        console.error("ID de usuario inválido:", userId);
         return;
       }
 
       console.log(`Añadiendo rol ${roleName} al usuario ${userId}${almacenId ? ` para almacén ${almacenId}` : ''}`);
-      console.log("Tipo de userId:", typeof userId);
       
       // Verificar si el perfil existe, si no, crearlo
       const { data: existingProfile, error: profileCheckError } = await supabase
@@ -97,11 +89,30 @@ export function useRoleManagement() {
         console.log(`Perfil creado exitosamente para el usuario ${userId}`);
       }
       
+      // Verificar si ya existe el mismo rol para el usuario
+      const { data: existingRoles, error: checkError } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('role', roleName)
+        .eq('almacen_id', almacenId || null);
+        
+      if (checkError) {
+        console.error("Error al verificar roles existentes:", checkError);
+        throw checkError;
+      }
+      
+      if (existingRoles && existingRoles.length > 0) {
+        toast.info("El usuario ya tiene este rol asignado");
+        if (onSuccess) onSuccess();
+        return;
+      }
+      
       // Insertar el rol
       const { error } = await supabase
         .from('user_roles')
         .insert({
-          user_id: String(userId), // Asegurar que sea un string
+          user_id: userId,
           role: roleName,
           almacen_id: almacenId || null
         });

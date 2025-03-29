@@ -13,6 +13,13 @@ import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
+// Función helper para validar UUID
+const isValidUUID = (uuid: string | null | undefined) => {
+  if (!uuid || uuid === "null" || uuid === "undefined") return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+};
+
 interface UserSidePanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -53,21 +60,19 @@ export function UserSidePanel({
 
   // Validar que el usuario seleccionado tenga un ID válido antes de mostrar el modal
   const isSelectedUserValid = useCallback(() => {
-    if (!selectedUser || !selectedUser.id || selectedUser.id === "null") return false;
-    
-    // Validación básica de UUID
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(selectedUser.id);
+    return selectedUser && isValidUUID(selectedUser.id);
   }, [selectedUser]);
 
-  // Log para depuración
-  if (selectedUser) {
-    console.log("UserSidePanel - Usuario seleccionado:", {
-      id: selectedUser.id,
-      tipo: typeof selectedUser.id,
-      esValido: isSelectedUserValid(),
-    });
-  }
+  // Log para depuración cuando cambia el usuario seleccionado
+  React.useEffect(() => {
+    if (selectedUser) {
+      console.log("UserSidePanel - Usuario seleccionado:", {
+        id: selectedUser.id,
+        tipo: typeof selectedUser.id,
+        esValido: isValidUUID(selectedUser.id),
+      });
+    }
+  }, [selectedUser]);
 
   const handleCreateUser = async (userData: { email: string; password: string; fullName: string }) => {
     try {
@@ -142,13 +147,13 @@ export function UserSidePanel({
             isLoading={loading} 
             onDeleteRole={onDeleteRole} 
             onAddRole={(user) => {
-              // Validación adicional antes de mostrar el modal
-              if (!user.id || user.id === "null" || !isValidUUID(user.id)) {
+              if (!isValidUUID(user.id)) {
                 toast.error("No se puede asignar rol: ID de usuario inválido");
                 console.error("ID de usuario inválido:", user.id);
                 return;
               }
-              onAddRole(user);
+              setSelectedUser(user);
+              setDialogOpen(true);
             }}
             onSuccess={handleRefresh}
           />
@@ -184,10 +189,3 @@ export function UserSidePanel({
     </Sheet>
   );
 }
-
-// Función helper para validar UUID (duplicada para uso interno)
-const isValidUUID = (uuid: string | null | undefined) => {
-  if (!uuid) return false;
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(uuid);
-};
