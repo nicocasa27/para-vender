@@ -174,11 +174,12 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
         // Continuamos con la inserción del rol, el trigger debería manejar esto
       }
       
-      // Insertar el nuevo rol con UUID válido
+      // CORRECCIÓN CRÍTICA: Asegurar que almacen_id sea null explícitamente cuando no se proporciona
+      // Este es el cambio clave para resolver el error "invalid input syntax for type uuid: 'null'"
       const insertData = {
         user_id: selectedUserId,
         role: values.role,
-        almacen_id: values.store_id || null,
+        almacen_id: values.store_id && values.store_id.trim() !== "" ? values.store_id : null,
       };
       
       console.log("Datos a insertar:", insertData);
