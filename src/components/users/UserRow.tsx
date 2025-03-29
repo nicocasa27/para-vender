@@ -10,6 +10,13 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { UserPlus, Trash } from "lucide-react";
 
+// Validador de UUID
+const isValidUUID = (uuid: string | null | undefined): boolean => {
+  if (!uuid || uuid === "null" || uuid === "undefined") return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+};
+
 interface UserRowProps {
   user: UserWithRoles;
   onAddRole: (user: UserWithRoles) => void;
@@ -76,7 +83,7 @@ export function UserRow({ user, onAddRole, onDeleteRole }: UserRowProps) {
           size="sm"
           onClick={() => {
             // Verificar que el ID sea válido antes de intentar añadir rol
-            if (!user.id || user.id === "null" || user.id === "undefined") {
+            if (!isValidUUID(user.id)) {
               console.error("ID de usuario inválido:", user.id);
               return;
             }

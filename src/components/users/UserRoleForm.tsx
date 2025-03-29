@@ -13,12 +13,20 @@ import { RoleSelector } from "./RoleSelector";
 import { StoreSelector } from "./StoreSelector";
 import { useRoleAssignmentV2 } from "@/hooks/useRoleAssignmentV2";
 import { useEffect } from "react";
+import { toast } from "sonner";
 
 interface UserRoleFormProps {
   selectedUser: UserWithRoles | null;
   onSuccess: () => void;
   onCancel: () => void;
 }
+
+// Validador de UUID
+const isValidUUID = (uuid: string | null | undefined): boolean => {
+  if (!uuid || uuid === "null" || uuid === "undefined") return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+};
 
 export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleFormProps) {
   const { stores } = useStores();
@@ -41,17 +49,30 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
       fullName: selectedUser?.full_name
     });
     
+    if (!selectedUser) {
+      console.error("UserRoleForm - No hay usuario seleccionado");
+      return;
+    }
+    
+    // Verificación explícita del ID
+    if (!isValidUUID(selectedUser.id)) {
+      console.error("UserRoleForm - ID de usuario inválido:", selectedUser.id);
+      toast.error("No se puede asignar rol: ID de usuario inválido");
+      return;
+    }
+    
+    // Si el ID es válido, seleccionar el usuario
     const selected = selectUser(selectedUser);
     
     console.log("UserRoleForm - Usuario configurado:", {
       éxito: selected,
       userId: selectedUserId,
-      userName
+      userName: userName
     });
   }, [selectedUser, selectUser, selectedUserId, userName]);
 
   // Verificar si se puede mostrar el formulario
-  const canShowForm = !!selectedUserId;
+  const canShowForm = !!selectedUserId && isValidUUID(selectedUserId);
 
   return (
     <div>
