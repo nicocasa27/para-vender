@@ -11,7 +11,8 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  Store
+  Store,
+  Users
 } from "lucide-react";
 
 interface SideNavProps {
@@ -47,6 +48,11 @@ export const SideNav: React.FC<SideNavProps> = ({ open, setOpen }) => {
       title: "Configuration",
       href: "/config",
       icon: Settings,
+    },
+    {
+      title: "User Roles",
+      href: "/user-roles",
+      icon: Users,
     },
   ];
 

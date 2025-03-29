@@ -13,6 +13,7 @@ import Inventory from "./pages/Inventory";
 import PointOfSale from "./pages/PointOfSale";
 import Analytics from "./pages/Analytics";
 import Configuration from "./pages/Configuration";
+import UserRoles from "./pages/UserRoles";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import Unauthorized from "./pages/Unauthorized";
@@ -54,6 +55,7 @@ const App = () => {
                   
                   {/* Config route */}
                   <Route path="/config" element={<Configuration />} />
+                  <Route path="/user-roles" element={<UserRoles />} />
                   
                   {/* All authenticated users */}
                   <Route path="/profile" element={<Profile />} />

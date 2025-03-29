@@ -2,6 +2,9 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserManagement } from "@/components/users/UserManagement";
 import { useAuth } from "@/contexts/auth";
+import { Link } from "react-router-dom";
+import { PlusCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Configuration() {
   const { hasRole } = useAuth();
@@ -24,6 +27,17 @@ export default function Configuration() {
         </TabsList>
         
         <TabsContent value="users" className="mt-6">
+          <div className="mb-4">
+            <Link to="/user-roles">
+              <Button variant="outline" className="flex items-center gap-2">
+                <PlusCircle className="h-4 w-4" />
+                Nueva gestión de roles
+              </Button>
+            </Link>
+            <p className="text-xs text-muted-foreground mt-1">
+              Hemos implementado una nueva página dedicada a la gestión de roles.
+            </p>
+          </div>
           <UserManagement />
         </TabsContent>
         
