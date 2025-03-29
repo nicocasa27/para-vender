@@ -27,12 +27,12 @@ export function useSessionContext() {
   } = useSessionManager();
 
   // Obtener funciones para cargar roles
-  const { loadUserRoles, refreshUserRoles: refreshRoles } = useRoleLoader(
+  const { loadUserRoles, refreshUserRoles: refreshRoles } = useRoleLoader({
     setRolesLoading,
     setUserRoles,
     setRoleLoadingAttempt,
     pendingRoleLoadRef
-  );
+  });
 
   // Configurar el listener de autenticación
   useAuthListener(

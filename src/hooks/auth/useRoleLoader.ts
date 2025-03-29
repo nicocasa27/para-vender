@@ -1,5 +1,4 @@
 
-import { useState, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import { UserRoleWithStore } from '@/types/auth';
 import { fetchUserRoles } from '@/contexts/auth/auth-utils';
