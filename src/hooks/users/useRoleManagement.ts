@@ -50,9 +50,9 @@ export function useRoleManagement() {
   ) => {
     try {
       // Validación defensiva del ID de usuario
-      if (!userId) {
+      if (!userId || userId === "null") {
         toast.error("No se puede asignar rol: ID de usuario inválido");
-        console.error("ID de usuario inválido");
+        console.error("ID de usuario inválido o es 'null':", userId);
         return;
       }
 
@@ -64,6 +64,7 @@ export function useRoleManagement() {
       }
 
       console.log(`Añadiendo rol ${roleName} al usuario ${userId}${almacenId ? ` para almacén ${almacenId}` : ''}`);
+      console.log("Tipo de userId:", typeof userId);
       
       // Verificar si el perfil existe, si no, crearlo
       const { data: existingProfile, error: profileCheckError } = await supabase
@@ -100,7 +101,7 @@ export function useRoleManagement() {
       const { error } = await supabase
         .from('user_roles')
         .insert({
-          user_id: userId,
+          user_id: String(userId), // Asegurar que sea un string
           role: roleName,
           almacen_id: almacenId || null
         });

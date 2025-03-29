@@ -32,11 +32,18 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
 
   // Verificar si el usuario tiene un ID válido
   const isUserIdValid = useMemo(() => {
-    if (!selectedUser || !selectedUser.id) return false;
+    if (!selectedUser || !selectedUser.id || selectedUser.id === "null") return false;
     // Validación básica de UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(selectedUser.id);
   }, [selectedUser]);
+
+  // Log para depuración
+  console.log("UserRoleForm - Usuario seleccionado:", {
+    id: selectedUser?.id,
+    tipo: selectedUser?.id ? typeof selectedUser.id : 'null/undefined',
+    esValido: isUserIdValid,
+  });
 
   const userName = selectedUser?.full_name || selectedUser?.email || selectedUser?.profiles?.full_name || "Usuario desconocido";
 

@@ -57,9 +57,9 @@ export function useRoleAssignment(
     }
     
     // Validación defensiva del ID de usuario
-    if (!selectedUser.id) {
+    if (!selectedUser.id || selectedUser.id === "null") {
       toast.error("No se puede asignar rol: ID de usuario inválido");
-      console.error("ID de usuario inválido:", selectedUser);
+      console.error("ID de usuario inválido o es 'null':", selectedUser);
       return;
     }
 
@@ -69,6 +69,8 @@ export function useRoleAssignment(
       console.error("ID de usuario con formato inválido:", selectedUser.id);
       return;
     }
+    
+    console.log("Asignando a:", selectedUser.id, "tipo:", typeof selectedUser.id);
     
     setIsSubmitting(true);
     
@@ -95,11 +97,11 @@ export function useRoleAssignment(
         return;
       }
       
-      // Insertar el nuevo rol
+      // Insertar el nuevo rol - asegurarse que el user_id es un string válido
       const { error } = await supabase
         .from("user_roles")
         .insert({
-          user_id: selectedUser.id,
+          user_id: String(selectedUser.id), // Asegurar que sea un string
           role: values.role,
           almacen_id: values.store_id || null,
         });
