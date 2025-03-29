@@ -58,7 +58,8 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
     }
     
     // Validación explícita del email y retroalimentación visual
-    if (!isValidEmail(selectedUser.email)) {
+    if (!isValidEmail(selectedUser.email) && 
+        !isValidEmail(selectedUser.profiles?.email)) {
       console.error("UserRoleForm - Email de usuario inválido:", selectedUser.email);
       toast.error("No se puede asignar rol: Email de usuario inválido");
       return;

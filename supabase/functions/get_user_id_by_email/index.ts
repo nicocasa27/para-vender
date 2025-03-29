@@ -33,7 +33,22 @@ serve(async (req) => {
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     )
 
-    // Buscar usuario por email en auth.users
+    // Primero intentar buscar el usuario por email en profiles
+    const { data: profileData, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle()
+
+    if (profileData?.id) {
+      console.log('Usuario encontrado en profiles:', profileData.id)
+      return new Response(
+        JSON.stringify(profileData.id),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
+    }
+
+    // Si no se encuentra en profiles, buscar en auth.users
     const { data: user, error } = await supabaseAdmin.auth.admin.getUserByEmail(email)
 
     if (error) {
@@ -53,7 +68,7 @@ serve(async (req) => {
 
     // Devolver el ID del usuario
     return new Response(
-      JSON.stringify(user.id),
+      JSON.stringify(user.user.id),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (err) {

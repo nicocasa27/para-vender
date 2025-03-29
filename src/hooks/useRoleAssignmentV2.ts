@@ -17,7 +17,9 @@ const roleSchema = z.object({
 
 type RoleFormValues = z.infer<typeof roleSchema>;
 
-// Validador de UUID mejorado
+/**
+ * Validador de UUID mejorado con mensajes de diagnóstico
+ */
 const isValidUUID = (uuid: string | null | undefined): boolean => {
   // Validación primaria: verificar si es nulo o vacío
   if (!uuid || uuid === "null" || uuid === "undefined" || uuid.trim() === "") {
@@ -34,6 +36,80 @@ const isValidUUID = (uuid: string | null | undefined): boolean => {
   }
   
   return isValid;
+};
+
+/**
+ * Validador de email
+ */
+const isValidEmail = (email: string | null | undefined): boolean => {
+  if (!email || email === "null" || email === "undefined" || email.trim() === "") return false;
+  // Validación básica de email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+/**
+ * Función para obtener un UUID válido a partir de un email
+ * Implementa la lógica sugerida, intentando obtener el UUID desde Supabase
+ */
+const getUserIdByEmail = async (email: string): Promise<string | null> => {
+  console.log("Buscando usuario por email:", email);
+  
+  if (!isValidEmail(email)) {
+    console.error("Email inválido, no se puede buscar usuario");
+    return null;
+  }
+
+  try {
+    // Primero intentamos buscar en la tabla profiles
+    console.log("Método 1: Buscando en tabla profiles");
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+    
+    if (profileError) {
+      console.error("Error al buscar en profiles:", profileError);
+    }
+    
+    // Si encontramos el perfil, usamos su ID
+    if (profileData?.id && isValidUUID(profileData.id)) {
+      console.log("Usuario encontrado en profiles:", profileData.id);
+      return profileData.id;
+    }
+    
+    // Si no, intentamos usar la Edge Function
+    console.log("Método 2: Usando Edge Function");
+    const { data: userData, error: edgeFunctionError } = await supabase.functions
+      .invoke("get_user_id_by_email", {
+        body: { email }
+      });
+      
+    if (edgeFunctionError) {
+      console.error("Error en Edge Function:", edgeFunctionError);
+      throw new Error(`Error al buscar usuario: ${edgeFunctionError.message || 'Error desconocido'}`);
+    }
+    
+    if (!userData) {
+      console.error("Edge Function no retornó datos");
+      return null;
+    }
+    
+    const userId = userData as string;
+    
+    if (!isValidUUID(userId)) {
+      console.error("Edge Function retornó un UUID inválido:", userId);
+      return null;
+    }
+    
+    console.log("Usuario encontrado con Edge Function:", userId);
+    return userId;
+    
+  } catch (error) {
+    console.error("Error al buscar usuario por email:", error);
+    return null;
+  }
 };
 
 /**
@@ -73,7 +149,7 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
       return false;
     }
     
-    // Log detallado para depurar el problema
+    // Log detallado para depurar 
     console.log("useRoleAssignmentV2: Validando usuario:", {
       id: user.id,
       tipo: typeof user.id,
@@ -83,8 +159,10 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
       profiles: user.profiles ? "presente" : "ausente"
     });
     
-    // Validación del email como identificador principal
-    if (!user.email) {
+    // Priorizar el email como identificador principal
+    const email = user.email || user.profiles?.email;
+    
+    if (!isValidEmail(email)) {
       console.error("useRoleAssignmentV2: Email de usuario no disponible");
       toast.error("No se puede asignar rol: Email de usuario no disponible");
       setSelectedUserId(null);
@@ -92,19 +170,20 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
       return false;
     }
     
-    // Establecer también el UUID si está disponible y es válido
+    setUserEmail(email);
+    
+    // Si el UUID es válido, úsalo directamente
     if (isValidUUID(user.id)) {
       setSelectedUserId(user.id);
+      console.log("useRoleAssignmentV2: UUID válido configurado:", user.id);
     } else {
-      // Si el UUID no es válido, intentaremos usar solo el correo
+      // Si el UUID no es válido, marcar como null para buscarlo por email después
       setSelectedUserId(null);
-      console.log("useRoleAssignmentV2: UUID no válido, usando solo email:", user.email);
+      console.log("useRoleAssignmentV2: UUID no válido, se usará email para búsqueda:", email);
     }
     
     // Establecer la información del usuario seleccionado
-    setUserEmail(user.email);
-    setUserName(user.full_name || user.email || "Usuario");
-    console.log("useRoleAssignmentV2: Usuario seleccionado con éxito, email:", user.email);
+    setUserName(user.full_name || user.profiles?.full_name || email || "Usuario");
     return true;
   };
 
@@ -113,7 +192,7 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
    */
   const handleAddRole = async (values: RoleFormValues) => {
     // Validación defensiva del email de usuario
-    if (!userEmail || userEmail === "correo@ejemplo.com") {
+    if (!isValidEmail(userEmail)) {
       toast.error("No se puede asignar rol: Email de usuario no válido");
       console.error("Email de usuario no válido:", userEmail);
       return;
@@ -127,60 +206,42 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
       console.log(`Asignando rol: ${values.role} a usuario: ${userName} (${userEmail})`);
       console.log("Almacén seleccionado:", values.store_id || "Ninguno");
       
-      // Primero verificamos si existe el usuario por email y obtenemos su ID
+      // Obtener un UUID válido, ya sea usando el seleccionado o buscando por email
       let userId = selectedUserId;
       
-      // Si no tenemos un ID válido, buscarlo por email
-      if (!userId) {
-        console.log("Buscando usuario por email:", userEmail);
-        const { data: userData, error: userError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("email", userEmail)
-          .single();
-          
-        if (userError) {
-          console.log("No se encontró perfil por email, intentando crear uno...");
-          
-          // Intentar buscar en auth.users usando la Edge Function
-          try {
-            const { data: authUserData, error: fetchError } = await supabase.functions
-              .invoke("get_user_id_by_email", {
-                body: { email: userEmail }
-              });
-
-            if (fetchError || !authUserData) {
-              console.error("No se pudo encontrar usuario por email:", fetchError || "No hay datos");
-              throw new Error("No se encontró usuario con ese email");
-            }
-            
-            userId = authUserData as string;
-            console.log("ID de usuario encontrado:", userId);
-            
-            // Crear perfil para este usuario
-            const { error: createProfileError } = await supabase
-              .from('profiles')
-              .insert({
-                id: userId,
-                full_name: userName,
-                email: userEmail
-              });
-              
-            if (createProfileError && createProfileError.code !== '23505') { // Ignorar error de duplicado
-              console.error("Error al crear perfil:", createProfileError);
-            }
-          } catch (error) {
-            console.error("Error al buscar usuario por email:", error);
-            throw new Error("No se pudo obtener el ID del usuario");
-          }
-        } else {
-          userId = userData.id;
-          console.log("ID de usuario encontrado en profiles:", userId);
+      // Si no tenemos un ID válido o es null, buscarlo por email
+      if (!userId || !isValidUUID(userId)) {
+        console.log("Buscando usuario por email porque no hay UUID válido");
+        userId = await getUserIdByEmail(userEmail);
+        
+        if (!userId) {
+          throw new Error(`No se pudo encontrar un UUID válido para el email ${userEmail}`);
         }
       }
       
-      if (!userId) {
-        throw new Error("No se pudo obtener un ID válido para el usuario");
+      console.log("UUID a usar para la asignación:", userId);
+      
+      // Verificar que el usuario existe en tabla profiles
+      const { data: profileExists } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", userId)
+        .maybeSingle();
+      
+      // Si no existe el perfil, crearlo
+      if (!profileExists) {
+        console.log("Creando perfil para el usuario:", userId);
+        const { error: createProfileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            full_name: userName,
+            email: userEmail
+          });
+          
+        if (createProfileError && createProfileError.code !== '23505') {
+          console.error("Error al crear perfil:", createProfileError);
+        }
       }
       
       // Verificar si el rol ya existe para este usuario
@@ -202,14 +263,14 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
         return;
       }
       
-      // CORRECCIÓN CRÍTICA: Asegurar que almacen_id sea null explícitamente cuando no se proporciona
+      // Asegurar que almacen_id sea null explícitamente cuando no se proporciona
       const insertData = {
         user_id: userId,
         role: values.role,
         almacen_id: values.store_id && values.store_id.trim() !== "" ? values.store_id : null,
       };
       
-      console.log("Datos a insertar:", insertData);
+      console.log("Datos finales a insertar:", insertData);
       
       const { data, error } = await supabase
         .from("user_roles")
