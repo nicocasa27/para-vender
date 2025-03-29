@@ -94,8 +94,16 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
     setIsSubmitting(true);
     
     try {
+      // Logging defensivo antes de hacer el insert
+      console.log("---- DATOS DE INSERCIÓN DE ROL ----");
       console.log(`Asignando rol: ${values.role} a usuario: ${selectedUserId} (${userName})`);
       console.log("Almacén seleccionado:", values.store_id || "Ninguno");
+      console.log("Estado del ID de usuario:", {
+        valor: selectedUserId,
+        tipo: typeof selectedUserId,
+        esValido: isValidUUID(selectedUserId),
+        longitud: selectedUserId.length
+      });
       
       // Verificar si el rol ya existe para este usuario
       const { data: existingRoles, error: checkError } = await supabase
@@ -116,18 +124,25 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
       }
       
       // Insertar el nuevo rol con UUID válido
-      const { error } = await supabase
+      const insertData = {
+        user_id: selectedUserId,
+        role: values.role,
+        almacen_id: values.store_id || null,
+      };
+      
+      console.log("Datos a insertar:", insertData);
+      
+      const { data, error } = await supabase
         .from("user_roles")
-        .insert({
-          user_id: selectedUserId,
-          role: values.role,
-          almacen_id: values.store_id || null,
-        });
+        .insert(insertData)
+        .select();
         
       if (error) {
+        console.error("Error de inserción:", error);
         throw new Error(error.message);
       }
       
+      console.log("Rol asignado correctamente:", data);
       toast.success(`Rol de ${values.role} asignado correctamente a ${userName}`);
       form.reset();
       
