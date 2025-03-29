@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { UserWithRoles } from "@/types/auth";
 
-// Esquema de validación para el formulario de roles
+// Esquema de validación para el formulario de roles con más restricciones
 const roleSchema = z.object({
   role: z.enum(["admin", "manager", "sales", "viewer"], {
     required_error: "Debes seleccionar un rol",
@@ -17,15 +17,27 @@ const roleSchema = z.object({
 
 type RoleFormValues = z.infer<typeof roleSchema>;
 
-// Validador de UUID
+// Validador de UUID mejorado
 const isValidUUID = (uuid: string | null | undefined): boolean => {
-  if (!uuid || uuid === "null" || uuid === "undefined") return false;
+  // Validación primaria: verificar si es nulo o vacío
+  if (!uuid || uuid === "null" || uuid === "undefined" || uuid.trim() === "") {
+    console.error("UUID inválido: valor nulo o vacío");
+    return false;
+  }
+  
+  // Validación secundaria: verificar formato con regex
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(uuid);
+  const isValid = uuidRegex.test(uuid);
+  
+  if (!isValid) {
+    console.error(`UUID inválido: formato incorrecto - "${uuid}"`);
+  }
+  
+  return isValid;
 };
 
 /**
- * Hook para manejar la asignación de roles a usuarios
+ * Hook para manejar la asignación de roles a usuarios con validación mejorada
  */
 export function useRoleAssignmentV2(onSuccess?: () => void) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,11 +59,13 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
   const needsStore = currentRole === "sales";
 
   /**
-   * Configura el usuario seleccionado para asignación de rol
+   * Configura el usuario seleccionado para asignación de rol con validación mejorada
    */
   const selectUser = (user: UserWithRoles | null) => {
+    // Validación inicial del objeto usuario
     if (!user) {
-      console.log("useRoleAssignmentV2: Usuario nulo, no se puede seleccionar");
+      console.error("useRoleAssignmentV2: Usuario nulo, no se puede seleccionar");
+      toast.error("No se puede seleccionar usuario: Datos inválidos");
       setSelectedUserId(null);
       setUserName("Usuario");
       return false;
@@ -61,11 +75,13 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
     console.log("useRoleAssignmentV2: Validando usuario:", {
       id: user.id,
       tipo: typeof user.id,
+      longitud: user.id ? user.id.length : 0,
       nombre: user.full_name || user.email || "Sin nombre",
-      email: user.email || "Sin email"
+      email: user.email || "Sin email",
+      profiles: user.profiles ? "presente" : "ausente"
     });
     
-    // Validación de seguridad para el ID
+    // Validación estricta del ID
     if (!isValidUUID(user.id)) {
       console.error("useRoleAssignmentV2: ID de usuario inválido:", user.id);
       toast.error("No se puede asignar rol: ID de usuario inválido");
@@ -73,7 +89,7 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
       return false;
     }
     
-    // Establecer el usuario seleccionado
+    // Establecer el usuario seleccionado si pasa todas las validaciones
     console.log("useRoleAssignmentV2: Usuario válido seleccionado con ID:", user.id);
     setSelectedUserId(user.id);
     setUserName(user.full_name || user.email || "Usuario");
@@ -81,13 +97,13 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
   };
 
   /**
-   * Maneja el envío del formulario para asignar un rol
+   * Maneja el envío del formulario para asignar un rol con validación robusta
    */
   const handleAddRole = async (values: RoleFormValues) => {
     // Validación defensiva del ID de usuario
     if (!selectedUserId || !isValidUUID(selectedUserId)) {
-      toast.error("No se puede asignar rol: ID de usuario inválido");
-      console.error("ID de usuario inválido:", selectedUserId);
+      toast.error("No se puede asignar rol: ID de usuario inválido o no seleccionado");
+      console.error("ID de usuario inválido o no seleccionado:", selectedUserId);
       return;
     }
     
@@ -114,6 +130,7 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
         .eq("almacen_id", values.store_id || null);
         
       if (checkError) {
+        console.error("Error al verificar roles existentes:", checkError);
         throw new Error(checkError.message);
       }
       

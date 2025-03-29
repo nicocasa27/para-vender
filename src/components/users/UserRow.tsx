@@ -9,10 +9,11 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { UserPlus, Trash } from "lucide-react";
+import { toast } from "sonner";
 
-// Validador de UUID
+// Validador de UUID mejorado
 const isValidUUID = (uuid: string | null | undefined): boolean => {
-  if (!uuid || uuid === "null" || uuid === "undefined") return false;
+  if (!uuid || uuid === "null" || uuid === "undefined" || uuid.trim() === "") return false;
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(uuid);
 };
@@ -31,12 +32,36 @@ export function UserRow({ user, onAddRole, onDeleteRole }: UserRowProps) {
     full_name: user.full_name,
     profiles_email: user.profiles?.email,
     profiles_full_name: user.profiles?.full_name,
-    roles: user.roles.length
+    roles: user.roles.length,
+    tipo_id: typeof user.id,
+    valido: isValidUUID(user.id)
   });
 
   // Usar nombre de profiles si está disponible, si no, usar el de top-level o fallback a "Usuario sin perfil"
   const displayName = user.profiles?.full_name || user.full_name || "Usuario sin perfil";
   const displayEmail = user.profiles?.email || user.email || "Sin email";
+
+  // Función para manejar la adición de rol con validación
+  const handleAddRole = () => {
+    // Verificación explícita del ID
+    if (!isValidUUID(user.id)) {
+      console.error("UserRow - ID de usuario inválido:", user.id);
+      toast.error("No se puede asignar rol: ID de usuario inválido");
+      return;
+    }
+    
+    // Crear una copia limpia del usuario para evitar problemas de referencia
+    const sanitizedUser: UserWithRoles = {
+      id: user.id, // ID validado
+      email: user.email || user.profiles?.email || "",
+      full_name: user.full_name || user.profiles?.full_name || "",
+      roles: user.roles || [],
+      profiles: user.profiles
+    };
+    
+    console.log("UserRow - Pasando usuario sanitizado para asignación:", sanitizedUser);
+    onAddRole(sanitizedUser);
+  };
 
   return (
     <TableRow>
@@ -81,14 +106,9 @@ export function UserRow({ user, onAddRole, onDeleteRole }: UserRowProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => {
-            // Verificar que el ID sea válido antes de intentar añadir rol
-            if (!isValidUUID(user.id)) {
-              console.error("ID de usuario inválido:", user.id);
-              return;
-            }
-            onAddRole(user);
-          }}
+          onClick={handleAddRole}
+          disabled={!isValidUUID(user.id)}
+          title={!isValidUUID(user.id) ? "ID de usuario inválido" : "Asignar rol a este usuario"}
           className="flex items-center gap-2"
         >
           <UserPlus className="h-4 w-4" />

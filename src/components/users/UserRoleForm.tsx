@@ -21,9 +21,9 @@ interface UserRoleFormProps {
   onCancel: () => void;
 }
 
-// Validador de UUID
+// Validador de UUID compartido
 const isValidUUID = (uuid: string | null | undefined): boolean => {
-  if (!uuid || uuid === "null" || uuid === "undefined") return false;
+  if (!uuid || uuid === "null" || uuid === "undefined" || uuid.trim() === "") return false;
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(uuid);
 };
@@ -41,12 +41,14 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
     userName
   } = useRoleAssignmentV2(onSuccess);
 
-  // Configurar usuario seleccionado cuando cambia el prop y loguear información para depuración
+  // Configurar usuario seleccionado cuando cambia el prop con logs detallados
   useEffect(() => {
     console.log("UserRoleForm - Intentando configurar usuario:", {
       id: selectedUser?.id,
       email: selectedUser?.email,
-      fullName: selectedUser?.full_name
+      fullName: selectedUser?.full_name,
+      isNull: selectedUser === null,
+      isValid: selectedUser ? isValidUUID(selectedUser.id) : false
     });
     
     if (!selectedUser) {
@@ -54,7 +56,7 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
       return;
     }
     
-    // Verificación explícita del ID
+    // Validación explícita del ID y retroalimentación visual
     if (!isValidUUID(selectedUser.id)) {
       console.error("UserRoleForm - ID de usuario inválido:", selectedUser.id);
       toast.error("No se puede asignar rol: ID de usuario inválido");
@@ -64,7 +66,7 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
     // Si el ID es válido, seleccionar el usuario
     const selected = selectUser(selectedUser);
     
-    console.log("UserRoleForm - Usuario configurado:", {
+    console.log("UserRoleForm - Resultado de configuración de usuario:", {
       éxito: selected,
       userId: selectedUserId,
       userName: userName
