@@ -142,29 +142,36 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
         if (userError) {
           console.log("No se encontró perfil por email, intentando crear uno...");
           
-          // Intentar buscar en auth.users (esto requiere función RPC o Edge Function)
-          const { data: authUserData, error: authUserError } = await supabase
-            .rpc("get_user_id_by_email", { email_param: userEmail });
+          // Intentar buscar en auth.users usando la Edge Function
+          try {
+            const { data: authUserData, error: fetchError } = await supabase.functions
+              .invoke("get_user_id_by_email", {
+                body: { email: userEmail }
+              });
+
+            if (fetchError || !authUserData) {
+              console.error("No se pudo encontrar usuario por email:", fetchError || "No hay datos");
+              throw new Error("No se encontró usuario con ese email");
+            }
             
-          if (authUserError || !authUserData) {
-            console.error("No se pudo encontrar usuario por email:", authUserError || "No hay datos");
-            throw new Error("No se encontró usuario con ese email");
-          }
-          
-          userId = authUserData;
-          console.log("ID de usuario encontrado en auth:", userId);
-          
-          // Crear perfil para este usuario
-          const { error: createProfileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: userId,
-              full_name: userName,
-              email: userEmail
-            });
+            userId = authUserData as string;
+            console.log("ID de usuario encontrado:", userId);
             
-          if (createProfileError && createProfileError.code !== '23505') { // Ignorar error de duplicado
-            console.error("Error al crear perfil:", createProfileError);
+            // Crear perfil para este usuario
+            const { error: createProfileError } = await supabase
+              .from('profiles')
+              .insert({
+                id: userId,
+                full_name: userName,
+                email: userEmail
+              });
+              
+            if (createProfileError && createProfileError.code !== '23505') { // Ignorar error de duplicado
+              console.error("Error al crear perfil:", createProfileError);
+            }
+          } catch (error) {
+            console.error("Error al buscar usuario por email:", error);
+            throw new Error("No se pudo obtener el ID del usuario");
           }
         } else {
           userId = userData.id;
