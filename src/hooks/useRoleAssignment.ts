@@ -7,6 +7,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { UserWithRoles } from "@/types/auth";
 
+// Función helper para validar UUID
+const isValidUUID = (uuid: string) => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+};
+
 const roleSchema = z.object({
   role: z.enum(["admin", "manager", "sales", "viewer"], {
     required_error: "Debes seleccionar un rol",
@@ -53,6 +59,13 @@ export function useRoleAssignment(
     if (!selectedUser.id) {
       toast.error("No se puede asignar rol: ID de usuario inválido");
       console.error("ID de usuario inválido:", selectedUser);
+      return;
+    }
+
+    // Validación adicional del formato UUID
+    if (!isValidUUID(selectedUser.id)) {
+      toast.error("ID de usuario con formato inválido");
+      console.error("ID de usuario con formato inválido:", selectedUser.id);
       return;
     }
     

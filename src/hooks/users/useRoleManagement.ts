@@ -2,10 +2,23 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+// Función helper para validar UUID
+const isValidUUID = (uuid: string) => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+};
+
 export function useRoleManagement() {
   // Función para eliminar un rol
   const deleteRole = async (roleId: string, onSuccess?: () => void) => {
     try {
+      // Validar el ID del rol
+      if (!roleId || !isValidUUID(roleId)) {
+        toast.error("ID de rol inválido");
+        console.error("ID de rol inválido:", roleId);
+        return;
+      }
+      
       console.log(`Eliminando rol con ID: ${roleId}`);
       
       const { error } = await supabase
@@ -39,6 +52,13 @@ export function useRoleManagement() {
       if (!userId) {
         toast.error("No se puede asignar rol: ID de usuario inválido");
         console.error("ID de usuario inválido");
+        return;
+      }
+
+      // Validación adicional del formato UUID
+      if (!isValidUUID(userId)) {
+        toast.error("ID de usuario con formato inválido");
+        console.error("ID de usuario con formato inválido:", userId);
         return;
       }
 
