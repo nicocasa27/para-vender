@@ -4,6 +4,18 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { UserWithRoles } from "@/types/auth";
 
+// Define la interface para la estructura de datos de user_roles_with_name
+interface UserRoleWithName {
+  id?: string;
+  user_id: string;
+  role: "admin" | "manager" | "sales" | "viewer";
+  almacen_id: string | null;
+  created_at: string;
+  full_name: string | null;
+  email: string | null;
+  almacen_nombre?: string | null;
+}
+
 export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
   return useQuery({
     queryKey: ['users'],
@@ -32,7 +44,7 @@ export function useUserManagementQuery(user: any, hasAdminRole: boolean) {
           const usersMap = new Map<string, UserWithRoles>();
           
           // Procesar cada fila de la vista
-          viewData.forEach(row => {
+          (viewData as UserRoleWithName[]).forEach(row => {
             const userId = row.user_id;
             
             // Si este usuario aún no está en nuestro mapa, añadirlo

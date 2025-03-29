@@ -19,7 +19,7 @@ interface UserSidePanelProps {
   users: UserWithRoles[];
   loading: boolean;
   onRefresh: () => void;
-  onDeleteRole: (roleId: string) => void;
+  onDeleteRole: (roleId: string) => Promise<void>;
   onAddRole: (user: UserWithRoles) => void;
   selectedUser: UserWithRoles | null;
   setSelectedUser: (user: UserWithRoles | null) => void;
@@ -40,15 +40,15 @@ export function UserSidePanel({
   const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
 
-  const handleRoleAssigned = () => {
+  const handleRoleAssigned = async () => {
     setDialogOpen(false);
     setSelectedUser(null);
-    onRefresh();
+    await onRefresh();
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     toast.info("Actualizando lista de usuarios...");
-    onRefresh();
+    await onRefresh();
   };
 
   const handleCreateUser = async (userData: { email: string; password: string; fullName: string }) => {
@@ -74,7 +74,7 @@ export function UserSidePanel({
 
       // Cerrar el diálogo y refrescar la lista
       setCreateUserDialogOpen(false);
-      onRefresh();
+      await onRefresh();
       
     } catch (error: any) {
       console.error("Error al crear usuario:", error);
@@ -124,7 +124,7 @@ export function UserSidePanel({
             isLoading={loading} 
             onDeleteRole={onDeleteRole} 
             onAddRole={onAddRole}
-            onSuccess={onRefresh}
+            onSuccess={handleRefresh}
           />
         </ScrollArea>
         

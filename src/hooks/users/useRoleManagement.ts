@@ -35,6 +35,13 @@ export function useRoleManagement() {
     onSuccess?: () => void
   ) => {
     try {
+      // Validación defensiva del ID de usuario
+      if (!userId) {
+        toast.error("No se puede asignar rol: ID de usuario inválido");
+        console.error("ID de usuario inválido");
+        return;
+      }
+
       console.log(`Añadiendo rol ${roleName} al usuario ${userId}${almacenId ? ` para almacén ${almacenId}` : ''}`);
       
       // Verificar si el perfil existe, si no, crearlo

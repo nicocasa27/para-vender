@@ -44,12 +44,23 @@ export function useRoleAssignment(
   }, [needsStore, form]);
 
   const handleAddRole = async (values: z.infer<typeof roleSchema>) => {
-    if (!selectedUser) return;
+    if (!selectedUser) {
+      toast.error("No se puede asignar rol: usuario no seleccionado");
+      return;
+    }
+    
+    // Validación defensiva del ID de usuario
+    if (!selectedUser.id) {
+      toast.error("No se puede asignar rol: ID de usuario inválido");
+      console.error("ID de usuario inválido:", selectedUser);
+      return;
+    }
     
     setIsSubmitting(true);
     
     try {
       console.log("Añadiendo rol:", values.role, "a usuario:", selectedUser.id);
+      console.log("Usuario seleccionado:", selectedUser);
       console.log("Almacén seleccionado:", values.store_id || "Ninguno");
       
       // Verificar si el rol ya existe para este usuario

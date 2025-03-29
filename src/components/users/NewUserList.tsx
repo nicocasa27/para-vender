@@ -18,10 +18,11 @@ interface UserListProps {
   users: UserWithRoles[];
   isLoading: boolean;
   onDeleteRole: (roleId: string) => Promise<void>;
+  onAddRole: (user: UserWithRoles) => void;
   onSuccess: () => Promise<void>;
 }
 
-export function NewUserList({ users, isLoading, onDeleteRole, onSuccess }: UserListProps) {
+export function NewUserList({ users, isLoading, onDeleteRole, onAddRole, onSuccess }: UserListProps) {
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   
   // Log para depurar
