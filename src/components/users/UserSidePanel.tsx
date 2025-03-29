@@ -147,12 +147,24 @@ export function UserSidePanel({
             isLoading={loading} 
             onDeleteRole={onDeleteRole} 
             onAddRole={(user) => {
+              // Verificar explícitamente que el ID sea un UUID válido
               if (!isValidUUID(user.id)) {
                 toast.error("No se puede asignar rol: ID de usuario inválido");
                 console.error("ID de usuario inválido:", user.id);
                 return;
               }
-              setSelectedUser(user);
+              
+              // Crear una copia limpia del usuario con solo los campos necesarios
+              const cleanUser: UserWithRoles = {
+                id: user.id,
+                email: user.email || user.profiles?.email || "",
+                full_name: user.full_name || user.profiles?.full_name || "",
+                roles: user.roles || [],
+                profiles: user.profiles
+              };
+              
+              console.log("UserSidePanel - Usuario limpio para asignación:", cleanUser);
+              setSelectedUser(cleanUser);
               setDialogOpen(true);
             }}
             onSuccess={handleRefresh}
@@ -169,11 +181,11 @@ export function UserSidePanel({
         </SheetFooter>
       </SheetContent>
 
-      <Dialog open={dialogOpen || (!!selectedUser && isSelectedUserValid())} onOpenChange={(open) => {
+      <Dialog open={dialogOpen && isSelectedUserValid()} onOpenChange={(open) => {
         setDialogOpen(open);
         if (!open) setSelectedUser(null);
       }}>
-        {selectedUser && (
+        {selectedUser && isSelectedUserValid() && (
           <DialogContent>
             <UserRoleForm 
               selectedUser={selectedUser} 

@@ -74,7 +74,14 @@ export function UserRow({ user, onAddRole, onDeleteRole }: UserRowProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => onAddRole(user)}
+          onClick={() => {
+            // Verificar que el ID sea válido antes de intentar añadir rol
+            if (!user.id || user.id === "null" || user.id === "undefined") {
+              console.error("ID de usuario inválido:", user.id);
+              return;
+            }
+            onAddRole(user);
+          }}
           className="flex items-center gap-2"
         >
           <UserPlus className="h-4 w-4" />

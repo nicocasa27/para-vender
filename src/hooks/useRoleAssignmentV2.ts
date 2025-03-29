@@ -51,24 +51,31 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
    */
   const selectUser = (user: UserWithRoles | null) => {
     if (!user) {
+      console.log("useRoleAssignmentV2: Usuario nulo, no se puede seleccionar");
       setSelectedUserId(null);
       setUserName("Usuario");
       return false;
     }
     
-    // Validación de seguridad para el ID
-    const userId = user.id?.toString();
-    const isValid = isValidUUID(userId);
+    // Log detallado para depurar el problema
+    console.log("useRoleAssignmentV2: Validando usuario:", {
+      id: user.id,
+      tipo: typeof user.id,
+      nombre: user.full_name || user.email || "Sin nombre",
+      email: user.email || "Sin email"
+    });
     
-    if (!isValid) {
-      console.error("ID de usuario inválido:", userId);
+    // Validación de seguridad para el ID
+    if (!isValidUUID(user.id)) {
+      console.error("useRoleAssignmentV2: ID de usuario inválido:", user.id);
       toast.error("No se puede asignar rol: ID de usuario inválido");
       setSelectedUserId(null);
       return false;
     }
     
     // Establecer el usuario seleccionado
-    setSelectedUserId(userId);
+    console.log("useRoleAssignmentV2: Usuario válido seleccionado con ID:", user.id);
+    setSelectedUserId(user.id);
     setUserName(user.full_name || user.email || "Usuario");
     return true;
   };

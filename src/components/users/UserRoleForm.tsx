@@ -33,16 +33,28 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
     userName
   } = useRoleAssignmentV2(onSuccess);
 
-  // Configurar usuario seleccionado cuando cambia el prop
+  // Configurar usuario seleccionado cuando cambia el prop y loguear información para depuración
   useEffect(() => {
-    selectUser(selectedUser);
-  }, [selectedUser]);
+    console.log("UserRoleForm - Intentando configurar usuario:", {
+      id: selectedUser?.id,
+      email: selectedUser?.email,
+      fullName: selectedUser?.full_name
+    });
+    
+    const selected = selectUser(selectedUser);
+    
+    console.log("UserRoleForm - Usuario configurado:", {
+      éxito: selected,
+      userId: selectedUserId,
+      userName
+    });
+  }, [selectedUser, selectUser, selectedUserId, userName]);
 
   // Verificar si se puede mostrar el formulario
   const canShowForm = !!selectedUserId;
 
   return (
-    <DialogContent className="sm:max-w-[425px]">
+    <div>
       <DialogHeader>
         <DialogTitle>Asignar Rol</DialogTitle>
         <DialogDescription>
@@ -83,6 +95,6 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
           </div>
         </form>
       </Form>
-    </DialogContent>
+    </div>
   );
 }
