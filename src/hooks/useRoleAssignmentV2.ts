@@ -42,6 +42,7 @@ const isValidUUID = (uuid: string | null | undefined): boolean => {
 export function useRoleAssignmentV2(onSuccess?: () => void) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string>("correo@ejemplo.com");
   const [userName, setUserName] = useState<string>("Usuario");
   
   // Configuración del formulario con validación de Zod
@@ -68,6 +69,7 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
       toast.error("No se puede seleccionar usuario: Datos inválidos");
       setSelectedUserId(null);
       setUserName("Usuario");
+      setUserEmail("correo@ejemplo.com");
       return false;
     }
     
@@ -81,29 +83,39 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
       profiles: user.profiles ? "presente" : "ausente"
     });
     
-    // Validación estricta del ID
-    if (!isValidUUID(user.id)) {
-      console.error("useRoleAssignmentV2: ID de usuario inválido:", user.id);
-      toast.error("No se puede asignar rol: ID de usuario inválido");
+    // Validación del email como identificador principal
+    if (!user.email) {
+      console.error("useRoleAssignmentV2: Email de usuario no disponible");
+      toast.error("No se puede asignar rol: Email de usuario no disponible");
       setSelectedUserId(null);
+      setUserEmail("correo@ejemplo.com");
       return false;
     }
     
-    // Establecer el usuario seleccionado si pasa todas las validaciones
-    console.log("useRoleAssignmentV2: Usuario válido seleccionado con ID:", user.id);
-    setSelectedUserId(user.id);
+    // Establecer también el UUID si está disponible y es válido
+    if (isValidUUID(user.id)) {
+      setSelectedUserId(user.id);
+    } else {
+      // Si el UUID no es válido, intentaremos usar solo el correo
+      setSelectedUserId(null);
+      console.log("useRoleAssignmentV2: UUID no válido, usando solo email:", user.email);
+    }
+    
+    // Establecer la información del usuario seleccionado
+    setUserEmail(user.email);
     setUserName(user.full_name || user.email || "Usuario");
+    console.log("useRoleAssignmentV2: Usuario seleccionado con éxito, email:", user.email);
     return true;
   };
 
   /**
-   * Maneja el envío del formulario para asignar un rol con validación robusta
+   * Maneja el envío del formulario para asignar un rol usando primariamente el email
    */
   const handleAddRole = async (values: RoleFormValues) => {
-    // Validación defensiva del ID de usuario
-    if (!selectedUserId || !isValidUUID(selectedUserId)) {
-      toast.error("No se puede asignar rol: ID de usuario inválido o no seleccionado");
-      console.error("ID de usuario inválido o no seleccionado:", selectedUserId);
+    // Validación defensiva del email de usuario
+    if (!userEmail || userEmail === "correo@ejemplo.com") {
+      toast.error("No se puede asignar rol: Email de usuario no válido");
+      console.error("Email de usuario no válido:", userEmail);
       return;
     }
     
@@ -111,23 +123,66 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
     
     try {
       // Logging defensivo antes de hacer el insert
-      console.log("---- DATOS DE INSERCIÓN DE ROL ----");
-      console.log(`Asignando rol: ${values.role} a usuario: ${selectedUserId} (${userName})`);
+      console.log("---- DATOS DE ASIGNACIÓN DE ROL ----");
+      console.log(`Asignando rol: ${values.role} a usuario: ${userName} (${userEmail})`);
       console.log("Almacén seleccionado:", values.store_id || "Ninguno");
-      console.log("Estado del ID de usuario:", {
-        valor: selectedUserId,
-        tipo: typeof selectedUserId,
-        esValido: isValidUUID(selectedUserId),
-        longitud: selectedUserId.length
-      });
+      
+      // Primero verificamos si existe el usuario por email y obtenemos su ID
+      let userId = selectedUserId;
+      
+      // Si no tenemos un ID válido, buscarlo por email
+      if (!userId) {
+        console.log("Buscando usuario por email:", userEmail);
+        const { data: userData, error: userError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("email", userEmail)
+          .single();
+          
+        if (userError) {
+          console.log("No se encontró perfil por email, intentando crear uno...");
+          
+          // Intentar buscar en auth.users (esto requiere función RPC o Edge Function)
+          const { data: authUserData, error: authUserError } = await supabase
+            .rpc("get_user_id_by_email", { email_param: userEmail });
+            
+          if (authUserError || !authUserData) {
+            console.error("No se pudo encontrar usuario por email:", authUserError || "No hay datos");
+            throw new Error("No se encontró usuario con ese email");
+          }
+          
+          userId = authUserData;
+          console.log("ID de usuario encontrado en auth:", userId);
+          
+          // Crear perfil para este usuario
+          const { error: createProfileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              full_name: userName,
+              email: userEmail
+            });
+            
+          if (createProfileError && createProfileError.code !== '23505') { // Ignorar error de duplicado
+            console.error("Error al crear perfil:", createProfileError);
+          }
+        } else {
+          userId = userData.id;
+          console.log("ID de usuario encontrado en profiles:", userId);
+        }
+      }
+      
+      if (!userId) {
+        throw new Error("No se pudo obtener un ID válido para el usuario");
+      }
       
       // Verificar si el rol ya existe para este usuario
       const { data: existingRoles, error: checkError } = await supabase
         .from("user_roles")
         .select("id")
-        .eq("user_id", selectedUserId)
+        .eq("user_id", userId)
         .eq("role", values.role)
-        .eq("almacen_id", values.store_id || null);
+        .eq("almacen_id", values.store_id && values.store_id.trim() !== "" ? values.store_id : null);
         
       if (checkError) {
         console.error("Error al verificar roles existentes:", checkError);
@@ -140,44 +195,9 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
         return;
       }
       
-      // Intentar crear el perfil primero si es necesario
-      try {
-        console.log("Verificando si existe el perfil para el usuario:", selectedUserId);
-        const { data: existingProfile, error: profileCheckError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', selectedUserId)
-          .single();
-          
-        if (profileCheckError && profileCheckError.code !== 'PGRST116') {
-          // Si hay un error que no sea "no se encontró ningún registro"
-          console.log("No se encontró perfil, intentando crear uno...");
-          const { error: createProfileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: selectedUserId,
-              full_name: userName || 'Usuario sin perfil',
-              email: null
-            });
-            
-          if (createProfileError) {
-            console.error("Error al crear perfil:", createProfileError);
-            // Continuamos de todos modos, ya que ahora tenemos un trigger que lo manejará
-          } else {
-            console.log("Perfil creado exitosamente");
-          }
-        } else {
-          console.log("El perfil ya existe:", existingProfile);
-        }
-      } catch (profileError) {
-        console.error("Error al verificar/crear perfil:", profileError);
-        // Continuamos con la inserción del rol, el trigger debería manejar esto
-      }
-      
       // CORRECCIÓN CRÍTICA: Asegurar que almacen_id sea null explícitamente cuando no se proporciona
-      // Este es el cambio clave para resolver el error "invalid input syntax for type uuid: 'null'"
       const insertData = {
-        user_id: selectedUserId,
+        user_id: userId,
         role: values.role,
         almacen_id: values.store_id && values.store_id.trim() !== "" ? values.store_id : null,
       };
@@ -215,6 +235,7 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
   const resetForm = () => {
     form.reset();
     setSelectedUserId(null);
+    setUserEmail("correo@ejemplo.com");
     setUserName("Usuario");
   };
 
@@ -227,6 +248,7 @@ export function useRoleAssignmentV2(onSuccess?: () => void) {
     selectUser,
     resetForm,
     selectedUserId,
+    userEmail,
     userName,
   };
 }

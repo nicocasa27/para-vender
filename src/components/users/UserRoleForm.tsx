@@ -21,11 +21,11 @@ interface UserRoleFormProps {
   onCancel: () => void;
 }
 
-// Validador de UUID compartido
-const isValidUUID = (uuid: string | null | undefined): boolean => {
-  if (!uuid || uuid === "null" || uuid === "undefined" || uuid.trim() === "") return false;
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(uuid);
+// Validador de email compartido
+const isValidEmail = (email: string | null | undefined): boolean => {
+  if (!email || email === "null" || email === "undefined" || email.trim() === "") return false;
+  // Validación básica de email
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 };
 
 export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleFormProps) {
@@ -38,6 +38,7 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
     handleAddRole,
     selectUser,
     selectedUserId,
+    userEmail,
     userName
   } = useRoleAssignmentV2(onSuccess);
 
@@ -48,7 +49,7 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
       email: selectedUser?.email,
       fullName: selectedUser?.full_name,
       isNull: selectedUser === null,
-      isValid: selectedUser ? isValidUUID(selectedUser.id) : false
+      emailValido: selectedUser ? isValidEmail(selectedUser.email) : false
     });
     
     if (!selectedUser) {
@@ -56,25 +57,26 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
       return;
     }
     
-    // Validación explícita del ID y retroalimentación visual
-    if (!isValidUUID(selectedUser.id)) {
-      console.error("UserRoleForm - ID de usuario inválido:", selectedUser.id);
-      toast.error("No se puede asignar rol: ID de usuario inválido");
+    // Validación explícita del email y retroalimentación visual
+    if (!isValidEmail(selectedUser.email)) {
+      console.error("UserRoleForm - Email de usuario inválido:", selectedUser.email);
+      toast.error("No se puede asignar rol: Email de usuario inválido");
       return;
     }
     
-    // Si el ID es válido, seleccionar el usuario
+    // Si el email es válido, seleccionar el usuario
     const selected = selectUser(selectedUser);
     
     console.log("UserRoleForm - Resultado de configuración de usuario:", {
       éxito: selected,
       userId: selectedUserId,
+      userEmail: userEmail,
       userName: userName
     });
-  }, [selectedUser, selectUser, selectedUserId, userName]);
+  }, [selectedUser, selectUser, selectedUserId, userEmail, userName]);
 
   // Verificar si se puede mostrar el formulario
-  const canShowForm = !!selectedUserId && isValidUUID(selectedUserId);
+  const canShowForm = !!userEmail && isValidEmail(userEmail);
 
   return (
     <div>
@@ -87,7 +89,7 @@ export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleForm
       
       {!canShowForm && (
         <div className="p-3 mb-3 text-sm bg-destructive/10 text-destructive rounded-md">
-          No se puede asignar un rol a este usuario porque no tiene un ID válido. 
+          No se puede asignar un rol a este usuario porque no tiene información válida. 
           Intente con otro usuario o contacte al administrador del sistema.
         </div>
       )}

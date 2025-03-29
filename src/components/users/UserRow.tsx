@@ -11,11 +11,10 @@ import { es } from "date-fns/locale";
 import { UserPlus, Trash } from "lucide-react";
 import { toast } from "sonner";
 
-// Validador de UUID mejorado
-const isValidUUID = (uuid: string | null | undefined): boolean => {
-  if (!uuid || uuid === "null" || uuid === "undefined" || uuid.trim() === "") return false;
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(uuid);
+// Validador de email
+const isValidEmail = (email: string | null | undefined): boolean => {
+  if (!email || email === "null" || email === "undefined" || email.trim() === "") return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 };
 
 interface UserRowProps {
@@ -34,7 +33,7 @@ export function UserRow({ user, onAddRole, onDeleteRole }: UserRowProps) {
     profiles_full_name: user.profiles?.full_name,
     roles: user.roles.length,
     tipo_id: typeof user.id,
-    valido: isValidUUID(user.id)
+    email_valido: isValidEmail(user.email)
   });
 
   // Usar nombre de profiles si está disponible, si no, usar el de top-level o fallback a "Usuario sin perfil"
@@ -43,16 +42,16 @@ export function UserRow({ user, onAddRole, onDeleteRole }: UserRowProps) {
 
   // Función para manejar la adición de rol con validación
   const handleAddRole = () => {
-    // Verificación explícita del ID
-    if (!isValidUUID(user.id)) {
-      console.error("UserRow - ID de usuario inválido:", user.id);
-      toast.error("No se puede asignar rol: ID de usuario inválido");
+    // Verificación explícita del email
+    if (!isValidEmail(user.email)) {
+      console.error("UserRow - Email de usuario inválido:", user.email);
+      toast.error("No se puede asignar rol: Email de usuario inválido");
       return;
     }
     
     // Crear una copia limpia del usuario para evitar problemas de referencia
     const sanitizedUser: UserWithRoles = {
-      id: user.id, // ID validado
+      id: user.id,
       email: user.email || user.profiles?.email || "",
       full_name: user.full_name || user.profiles?.full_name || "",
       roles: user.roles || [],
@@ -107,8 +106,8 @@ export function UserRow({ user, onAddRole, onDeleteRole }: UserRowProps) {
           variant="outline"
           size="sm"
           onClick={handleAddRole}
-          disabled={!isValidUUID(user.id)}
-          title={!isValidUUID(user.id) ? "ID de usuario inválido" : "Asignar rol a este usuario"}
+          disabled={!isValidEmail(user.email)}
+          title={!isValidEmail(user.email) ? "Email de usuario inválido" : "Asignar rol a este usuario"}
           className="flex items-center gap-2"
         >
           <UserPlus className="h-4 w-4" />
