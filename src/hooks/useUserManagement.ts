@@ -1,7 +1,7 @@
-================
+
 import { useCallback } from 'react';
-import { UserRole, UserWithRoles } from '@/types/auth';
-import { fetchAllUsers } from '../auth-utils';
+import { UserRole, UserWithRoles } from '@/hooks/users/types/userManagementTypes';
+import { fetchAllUsers } from '../contexts/auth/auth-utils';
 import { toast as sonnerToast } from "sonner";
 import { Session } from '@supabase/supabase-js';
 
