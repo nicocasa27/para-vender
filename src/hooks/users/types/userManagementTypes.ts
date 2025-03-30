@@ -16,7 +16,7 @@ export interface UserRoleWithStore {
   user_id: string;
   role: string;
   almacen_id: string | null;
-  created_at: string;
+  created_at?: string;
   email?: string;
   full_name?: string | null;
   almacen_nombre?: string | null;
@@ -28,4 +28,9 @@ export interface UserWithRoles {
   email: string;
   full_name: string | null;
   roles: UserRole[];
+  profiles?: {
+    id?: string;
+    email?: string;
+    full_name?: string | null;
+  } | null;
 }

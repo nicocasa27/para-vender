@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -16,7 +15,11 @@ type InventorySummaryItem = {
   }>;
 };
 
-export const InventorySummary = () => {
+interface InventorySummaryProps {
+  showLowStock?: boolean;
+}
+
+export const InventorySummary = ({ showLowStock = true }: InventorySummaryProps) => {
   const [inventorySummary, setInventorySummary] = useState<InventorySummaryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -126,7 +129,7 @@ export const InventorySummary = () => {
       <Card className="transition-all duration-300 hover:shadow-elevation">
         <CardHeader>
           <CardTitle className="text-base font-medium">
-            Resumen de Inventario
+            {showLowStock ? "Alertas de Stock Bajo" : "Capacidad de Inventario"}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -142,7 +145,7 @@ export const InventorySummary = () => {
     <Card className="transition-all duration-300 hover:shadow-elevation">
       <CardHeader>
         <CardTitle className="text-base font-medium">
-          Resumen de Inventario
+          {showLowStock ? "Alertas de Stock Bajo" : "Capacidad de Inventario"}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -162,7 +165,7 @@ export const InventorySummary = () => {
                 </div>
                 <Progress value={store.capacity} className="h-2" />
                 
-                {store.lowStock.length > 0 && (
+                {showLowStock && store.lowStock.length > 0 && (
                   <div className="mt-4 space-y-2">
                     <h5 className="text-sm font-medium flex items-center text-amber-500">
                       <AlertTriangle className="h-4 w-4 mr-1" />

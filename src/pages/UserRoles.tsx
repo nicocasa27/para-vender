@@ -1,128 +1,157 @@
-import { useState, useEffect } from "react";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import UserRolesTable from "@/components/users/UserRolesTable";
-import UserRoleForm from "@/components/users/UserRoleForm";
-import { useUsersAndRoles } from "@/hooks/useUsersAndRoles";
-import { useAuth } from "@/contexts/auth";
+import { ChevronDown, HelpCircle, RefreshCw } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { getUserRolesByUserId } from "@/hooks/users/api/userDataQueries";
 import { UserRole } from "@/hooks/users/types/userManagementTypes";
-import { supabase } from "@/integrations/supabase/client";
+import UserRolesTable from "@/components/users/UserRolesTable";
+import { useUserRoles } from "@/hooks/useUserRoles";
 
-export default function UserRoles() {
-  const { user, hasRole } = useAuth();
-  const isAdmin = hasRole("admin");
-  const { deleteRole, addRole, loading: apiLoading } = useUsersAndRoles(isAdmin);
-  const [roles, setRoles] = useState<UserRole[]>([]);
-  const [loading, setLoading] = useState(true);
+const UserRoles = () => {
+  const [selectedStore, setSelectedStore] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("all");
 
-  useEffect(() => {
-    fetchAllRoles();
-  }, []);
+  const { 
+    roles, 
+    stores,
+    isLoadingRoles,
+    isLoadingStores,
+    deleteRole,
+    refreshRoles
+  } = useUserRoles();
 
-  const fetchAllRoles = async () => {
-    setLoading(true);
-    try {
-      const allRoles = await fetchRolesFromDatabase();
-      setRoles(allRoles);
-    } catch (error) {
-      console.error("Error fetching roles:", error);
-      toast.error("Error al cargar roles");
-    } finally {
-      setLoading(false);
+  const handleRefresh = async () => {
+    await refreshRoles();
+    toast.success("Roles actualizados correctamente");
+  };
+
+  const handleDeleteRole = async (roleId: string) => {
+    if (!confirm("¿Está seguro que desea eliminar este rol?")) {
+      return;
     }
-  };
 
-  const fetchRolesFromDatabase = async () => {
-    const { data, error } = await supabase
-      .from("user_roles")
-      .select(`
-        id,
-        user_id,
-        role,
-        almacen_id,
-        created_at,
-        profiles:user_id(
-          email,
-          full_name
-        ),
-        almacenes:almacen_id(
-          nombre
-        )
-      `);
-
-    if (error) throw error;
-
-    return (data || []).map(role => ({
-      id: role.id,
-      user_id: role.user_id,
-      role: role.role,
-      almacen_id: role.almacen_id,
-      created_at: role.created_at,
-      email: role.profiles?.email || "",
-      full_name: role.profiles?.full_name || null,
-      almacen_nombre: role.almacenes?.nombre || null
-    }));
-  };
-
-  const handleRoleDelete = async (roleId: string) => {
     try {
       await deleteRole(roleId);
-      await fetchAllRoles();
       toast.success("Rol eliminado correctamente");
     } catch (error) {
-      console.error("Error al eliminar rol:", error);
-      toast.error("Error al eliminar rol");
+      console.error("Error eliminando rol:", error);
+      toast.error("Error al eliminar el rol");
     }
   };
 
-  const handleRoleAssign = async (values: any) => {
-    try {
-      const { email, role, storeIds } = values;
-      
-      if (storeIds?.length && (role === "manager" || role === "sales")) {
-        for (const storeId of storeIds) {
-          await addRole(email, role, storeId);
-        }
-      } else {
-        await addRole(email, role);
-      }
-      
-      await fetchAllRoles();
-      toast.success("Rol asignado correctamente");
-    } catch (error) {
-      console.error("Error al asignar rol:", error);
-      toast.error("Error al asignar rol");
-      throw error;
+  const getFilteredRoles = (): UserRole[] => {
+    let filteredRoles = roles;
+
+    // Filter by tab
+    if (activeTab === "admin") {
+      filteredRoles = filteredRoles.filter(role => role.role === "admin");
+    } else if (activeTab === "manager") {
+      filteredRoles = filteredRoles.filter(role => role.role === "manager");
+    } else if (activeTab === "employee") {
+      filteredRoles = filteredRoles.filter(role => 
+        role.role !== "admin" && role.role !== "manager"
+      );
     }
+
+    // Then filter by store
+    if (selectedStore) {
+      filteredRoles = filteredRoles.filter(role => 
+        role.almacen_id === selectedStore
+      );
+    }
+
+    return filteredRoles;
   };
 
   return (
-    <div className="container py-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Roles de Usuario</h1>
-          <p className="text-muted-foreground">Gestiona los roles y permisos de los usuarios</p>
+          <h2 className="text-3xl font-bold tracking-tight">Gestión de Roles</h2>
+          <p className="text-muted-foreground">
+            Administre los roles y permisos de los usuarios
+          </p>
         </div>
-        <Button onClick={fetchAllRoles} variant="outline">Actualizar</Button>
+
+        <div className="flex gap-2">
+          <Button variant="outline" size="icon" onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4" />
+            <span className="sr-only">Refrescar</span>
+          </Button>
+          <Button>
+            Asignar Nuevo Rol
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-2">
+      <Card>
+        <CardHeader className="flex flex-row justify-between items-center">
+          <CardTitle>Roles de Usuario</CardTitle>
+          
+          <div className="flex items-center gap-2">
+            <Tabs 
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-auto"
+            >
+              <TabsList>
+                <TabsTrigger value="all">Todos</TabsTrigger>
+                <TabsTrigger value="admin">Admin</TabsTrigger>
+                <TabsTrigger value="manager">Gerentes</TabsTrigger>
+                <TabsTrigger value="employee">Empleados</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            {!isLoadingStores && stores.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="ml-2">
+                    {selectedStore 
+                      ? stores.find(store => store.id === selectedStore)?.name || "Sucursal" 
+                      : "Todas las sucursales"}
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem onClick={() => setSelectedStore(null)}>
+                      Todas las sucursales
+                    </DropdownMenuItem>
+                    {stores.map(store => (
+                      <DropdownMenuItem 
+                        key={store.id}
+                        onClick={() => setSelectedStore(store.id)}
+                      >
+                        {store.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </CardHeader>
+        
+        <CardContent>
           <UserRolesTable 
-            roles={roles} 
-            onDelete={handleRoleDelete} 
-            isLoading={loading}
+            roles={getFilteredRoles()}
+            loading={isLoadingRoles}
+            onDeleteRole={handleDeleteRole}
           />
-        </div>
-        <div>
-          <UserRoleForm 
-            onSubmit={handleRoleAssign}
-            isLoading={apiLoading}
-          />
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
-}
+};
+
+export default UserRoles;

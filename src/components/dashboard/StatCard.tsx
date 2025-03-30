@@ -1,3 +1,4 @@
+
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { LucideIcon } from "lucide-react";
@@ -5,7 +6,7 @@ import { LucideIcon } from "lucide-react";
 interface StatCardProps {
   title: string;
   value: string | number;
-  icon: LucideIcon | React.ReactNode;
+  icon: LucideIcon;
   description?: string;
   trend?: number;
   className?: string;
@@ -16,7 +17,7 @@ interface StatCardProps {
 export const StatCard: React.FC<StatCardProps> = ({
   title,
   value,
-  icon,
+  icon: Icon,
   description,
   trend,
   className,
@@ -56,7 +57,7 @@ export const StatCard: React.FC<StatCardProps> = ({
               )}
             </div>
             <div className="rounded-full p-2 bg-primary/10 text-primary">
-              {React.isValidElement(icon) ? icon : icon({ className: "h-6 w-6" })}
+              <Icon className="h-6 w-6" />
             </div>
           </div>
         )}

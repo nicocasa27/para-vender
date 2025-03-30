@@ -21,7 +21,6 @@ export function UserManagement() {
   };
 
   const handleUserSelect = (user: UserWithRoles) => {
-    // No conversion needed since we're using the same type
     setSelectedUser(user);
   };
 

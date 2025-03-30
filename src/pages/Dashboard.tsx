@@ -8,7 +8,7 @@ import { useCurrentStores } from "@/hooks/useCurrentStores";
 import { DollarSign, ShoppingBag, Truck, Users } from "lucide-react";
 
 const Dashboard = () => {
-  const { stores, isLoading: loadingStores } = useCurrentStores();
+  const { storeIds, isLoading: loadingStores } = useCurrentStores();
   const [storeIds, setStoreIds] = useState<string[]>([]);
   
   useEffect(() => {
