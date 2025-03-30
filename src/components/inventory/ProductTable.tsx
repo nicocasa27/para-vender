@@ -1,41 +1,36 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Product } from "@/types/inventory";
+import { ProductCard } from "./ProductCard";
 
-interface UserRole {
-  id: string;
-  user_id: string;
-  role: "admin" | "manager" | "sales" | "viewer";
-  almacen_id: string;
-}
-
-export function UserRolesList() {
-  const [roles, setRoles] = useState<UserRole[]>([]);
+export function ProductTable() {
+  const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    const fetchRoles = async () => {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("id, user_id, role, almacen_id");
+    const fetchProducts = async () => {
+      const { data, error } = await supabase.from("productos").select(`
+        id,
+        nombre,
+        precio_venta,
+        stock_total,
+        almacen_id
+      `);
 
       if (error) {
-        console.error("Error cargando roles:", error);
+        console.error("Error al cargar productos:", error.message);
         return;
       }
 
-      setRoles(data as UserRole[]);
+      setProducts(data ?? []);
     };
 
-    fetchRoles();
+    fetchProducts();
   }, []);
 
   return (
-    <div className="space-y-4">
-      {roles.map((role) => (
-        <div key={role.id} className="border rounded p-4">
-          <p><strong>User ID:</strong> {role.user_id}</p>
-          <p><strong>Rol:</strong> {role.role}</p>
-          <p><strong>Almacén:</strong> {role.almacen_id}</p>
-        </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+      {products.map((product) => (
+        <ProductCard key={product.id} product={product} />
       ))}
     </div>
   );
