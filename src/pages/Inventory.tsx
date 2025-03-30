@@ -1,5 +1,5 @@
 
-import { ProductTable } from "@/components/inventory/ProductTable";
+import ProductTable from "@/components/inventory/ProductTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StoreManagement } from "@/components/inventory/StoreManagement";
