@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { UserWithRoles } from '@/types/auth';
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client"; // Added supabase import
 import { fetchUserRolesData, fetchFromUserRolesView } from './api/userDataApi';
 import { processUserData } from './utils/userDataProcessing';
 import { transformViewData } from './utils/viewDataTransformer';

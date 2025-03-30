@@ -1,32 +1,23 @@
-import { UserWithRoles } from "../types/userManagementTypes";
 
-// Esta función procesa los roles de usuario (ejemplo)
-export function groupRolesByUser(data: any[]): UserWithRoles[] {
-  const grouped: { [userId: string]: UserWithRoles } = {};
+import { UserWithRoles, UserRole } from "../types/userManagementTypes";
 
-  data.forEach((item) => {
-    if (!grouped[item.user_id]) {
-      grouped[item.user_id] = {
-        id: item.user_id,
-        profiles: {
-          full_name: item.profiles?.full_name,
-          email: item.profiles?.email,
-        },
-        roles: [],
-      };
-    }
-
-    grouped[item.user_id].roles.push({
-      id: item.id,
-      user_id: item.user_id,
-      almacen_id: item.almacen_id,
-      role: item.role,
-      created_at: item.created_at,
-      almacenes: {
-        nombre: item.almacenes?.nombre,
-      },
-    });
+/**
+ * Processes raw user data from Supabase into structured format
+ */
+export function processUserData(profiles: any[], roles: any[]): UserWithRoles[] {
+  return profiles.map(profile => {
+    const userRoles = roles
+      ?.filter(r => r.user_id === profile.id)
+      .map(role => ({
+        ...role,
+        almacen_nombre: role.almacenes?.nombre || null
+      })) || [];
+      
+    return {
+      id: profile.id, // Ensure id is included
+      email: profile.email || "",
+      full_name: profile.full_name || null,
+      roles: userRoles as UserRole[],
+    };
   });
-
-  return Object.values(grouped);
 }

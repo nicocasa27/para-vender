@@ -21,7 +21,7 @@ export function UserManagement() {
   };
 
   const handleUserSelect = (user: UserWithRoles) => {
-    // Convert auth.UserWithRoles to userManagementTypes.UserWithRoles if needed
+    // Convert auth.UserWithRoles to userManagementTypes.UserWithRoles
     const formattedUser: UserWithRoles = {
       id: user.id,
       email: user.email,
@@ -32,7 +32,7 @@ export function UserManagement() {
         user_id: role.user_id,
         role: role.role,
         almacen_id: role.almacen_id,
-        created_at: role.created_at || '',
+        created_at: role.created_at || new Date().toISOString(), // Ensure created_at is not undefined
         almacen_nombre: role.almacen_nombre
       }))
     };

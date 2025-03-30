@@ -20,7 +20,7 @@ const ProductTable = () => {
       // Fetch products and calculate stock_total from inventario
       const { data: productsData, error: productsError } = await supabase
         .from('productos')
-        .select('id, nombre, precio_venta, almacen_id');
+        .select('id, nombre, precio_venta');
 
       if (productsError) {
         throw productsError;
@@ -47,7 +47,7 @@ const ProductTable = () => {
           nombre: product.nombre,
           precio_venta: Number(product.precio_venta),
           stock_total: stockTotal,
-          almacen_id: product.almacen_id || ''
+          almacen_id: '' // Add an empty string as default value
         };
       });
 

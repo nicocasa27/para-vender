@@ -1,105 +1,95 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatCard } from "@/components/dashboard/StatCard";
-import { RecentSalesTable } from "@/components/dashboard/RecentSalesTable";
-import { InventorySummary } from "@/components/dashboard/InventorySummary";
-import { SalesChart } from "@/components/dashboard/SalesChart";
+import StatCard from "@/components/dashboard/StatCard";
+import SalesChart from "@/components/dashboard/SalesChart";
+import RecentSalesTable from "@/components/dashboard/RecentSalesTable";
+import InventorySummary from "@/components/dashboard/InventorySummary";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DollarSign, ShoppingBag, Truck, Users } from "lucide-react";
 
-export default function Dashboard() {
-  const { stores, isLoading, hasStores } = useCurrentStores();
+const Dashboard = () => {
+  const { stores, isLoading: loadingStores } = useCurrentStores();
+  const [storeIds, setStoreIds] = useState<string[]>([]);
   
-  // Create a storeIds map for the child components
-  const storeIdsMap = stores.reduce((acc, store) => {
-    acc[store.id] = store.nombre;
-    return acc;
-  }, {} as Record<string, string>);
+  useEffect(() => {
+    if (stores && stores.length > 0) {
+      setStoreIds(stores.map(store => store.id));
+    }
+  }, [stores]);
   
-  // Convert to array format for components that expect an array
-  const storeIdsArray = stores.map(store => store.id);
+  // Convert string values to numbers for proper typing
+  const stats = [
+    {
+      title: "Ventas Hoy",
+      value: 1254, // Number instead of string
+      icon: <DollarSign className="h-5 w-5" />,
+      description: "+12% respecto a ayer",
+    },
+    {
+      title: "Nuevos Clientes",
+      value: 34, // Number instead of string
+      icon: <Users className="h-5 w-5" />,
+      description: "+2% respecto a ayer",
+    },
+    {
+      title: "Productos Vendidos",
+      value: 324, // Number instead of string
+      icon: <ShoppingBag className="h-5 w-5" />,
+      description: "+8% respecto a ayer",
+    },
+    {
+      title: "Transferencias",
+      value: 12, // Number instead of string
+      icon: <Truck className="h-5 w-5" />,
+      description: "+4% respecto a ayer",
+    },
+  ];
 
   return (
-    <div>
-      <MainLayout>
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-            <p className="text-muted-foreground">
-              Vista general del rendimiento del negocio y estadísticas clave.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <StatCard 
-              title="Ventas Totales" 
-              value="$12,254" 
-              description="+20.1% desde el mes pasado" 
-              trend="up"
-            />
-            <StatCard 
-              title="Nuevos Clientes" 
-              value="132" 
-              description="+19% desde el mes pasado" 
-              trend="up"
-            />
-            <StatCard 
-              title="Productos Vendidos" 
-              value="2,845" 
-              description="+12.2% desde el mes pasado" 
-              trend="up"
-            />
-            <StatCard 
-              title="Rentabilidad" 
-              value="32.5%" 
-              description="-4% desde el mes pasado" 
-              trend="down"
-            />
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-7">
-            <Card className="col-span-4">
-              <CardHeader>
-                <CardTitle>Ventas Semanales</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <SalesChart storeIds={storeIdsArray} />
-              </CardContent>
-            </Card>
-            
-            <Card className="col-span-3">
-              <CardHeader>
-                <CardTitle>Ventas Recientes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RecentSalesTable storeIds={storeIdsArray} />
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Gestión de Inventario</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="low">
-                <TabsList>
-                  <TabsTrigger value="low">Stock Bajo</TabsTrigger>
-                  <TabsTrigger value="all">Todo el Inventario</TabsTrigger>
-                </TabsList>
-                <TabsContent value="low" className="mt-4">
-                  <InventorySummary storeIds={storeIdsArray} showLowStock={true} />
-                </TabsContent>
-                <TabsContent value="all" className="mt-4">
-                  <InventorySummary storeIds={storeIdsArray} showLowStock={false} />
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+    <MainLayout>
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-muted-foreground mt-2">
+            Resumen de las métricas más importantes de su negocio.
+          </p>
         </div>
-      </MainLayout>
-    </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat, index) => (
+            <StatCard
+              key={index}
+              title={stat.title}
+              value={stat.value}
+              icon={stat.icon}
+              description={stat.description}
+            />
+          ))}
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <SalesChart
+            storeIds={storeIds}
+          />
+          <RecentSalesTable
+            storeIds={storeIds}
+          />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
+          <InventorySummary
+            storeIds={storeIds}
+            showLowStock={true}
+          />
+          <InventorySummary
+            storeIds={storeIds}
+            showLowStock={false}
+          />
+        </div>
+      </div>
+    </MainLayout>
   );
-}
+};
+
+export default Dashboard;
