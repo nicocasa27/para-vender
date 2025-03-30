@@ -1,26 +1,96 @@
-import { Drawer } from "@/components/ui/drawer";
+
+import { useState } from "react";
 import { UserWithRoles } from "@/hooks/users/types/userManagementTypes";
-import { UserRoleForm } from "./UserRoleForm";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 
 interface Props {
-  selectedUser: UserWithRoles;
+  user: UserWithRoles;
   onSuccess: () => Promise<void>;
   onCancel: () => void;
 }
 
-export default function UserSidePanel({ selectedUser, onSuccess, onCancel }: Props) {
+const UserSidePanel = ({ user, onSuccess, onCancel }: Props) => {
+  const [activeTab, setActiveTab] = useState("roles");
+
   return (
-    <Drawer open={!!selectedUser} onClose={onCancel}>
-      <div className="p-4 space-y-4">
-        <h2 className="text-lg font-semibold">
-          Asignar roles a {selectedUser.profiles?.full_name ?? "usuario"}
-        </h2>
-        <UserRoleForm
-          user={selectedUser}
-          onSuccess={onSuccess}
-          onCancel={onCancel}
-        />
-      </div>
-    </Drawer>
+    <Sheet open={!!user} onOpenChange={() => onCancel()}>
+      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Gestionar Usuario</SheetTitle>
+        </SheetHeader>
+
+        <div className="mt-6">
+          <div className="mb-6 space-y-1">
+            <h3 className="font-medium">{user?.full_name || "Usuario"}</h3>
+            <p className="text-sm text-muted-foreground">{user?.email}</p>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="w-full">
+              <TabsTrigger value="roles" className="flex-1">Roles</TabsTrigger>
+              <TabsTrigger value="permissions" className="flex-1">Permisos</TabsTrigger>
+              <TabsTrigger value="info" className="flex-1">Información</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="roles" className="mt-4">
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Roles Actuales</h4>
+                
+                {user?.roles && user.roles.length > 0 ? (
+                  <div className="space-y-2">
+                    {user.roles.map(role => (
+                      <div key={role.id} className="flex items-center justify-between p-2 border rounded-md">
+                        <div>
+                          <p className="font-medium capitalize">{role.role}</p>
+                          {role.almacen_nombre && (
+                            <p className="text-xs text-muted-foreground">{role.almacen_nombre}</p>
+                          )}
+                        </div>
+                        <Button size="sm" variant="outline">
+                          Revocar
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Este usuario no tiene roles asignados.</p>
+                )}
+                
+                <Button className="w-full mt-4">Añadir Rol</Button>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="permissions" className="mt-4">
+              <p className="text-sm text-muted-foreground">
+                La gestión de permisos estará disponible próximamente.
+              </p>
+            </TabsContent>
+            
+            <TabsContent value="info" className="mt-4">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-medium">ID</h4>
+                  <p className="text-sm mt-1">{user?.id}</p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium">Email</h4>
+                  <p className="text-sm mt-1">{user?.email}</p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium">Nombre</h4>
+                  <p className="text-sm mt-1">{user?.full_name || "No especificado"}</p>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
-}
+};
+
+export default UserSidePanel;

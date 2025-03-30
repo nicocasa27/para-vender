@@ -7,7 +7,6 @@ interface Props {
   onClick?: () => void;
 }
 
-// Changed from 'export function ProductCard' to explicitly assign the component
 export function ProductCard({ product, onClick }: Props) {
   return (
     <Card onClick={onClick} className="cursor-pointer hover:shadow-lg transition">

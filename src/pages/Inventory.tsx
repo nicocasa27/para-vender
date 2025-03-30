@@ -1,6 +1,6 @@
 
-import MainLayout from "@/components/layout/MainLayout";
-import { ProductTable } from "@/components/inventory/ProductTable";
+import { MainLayout } from "@/components/layout/MainLayout";
+import ProductTable from "@/components/inventory/ProductTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StoreManagement } from "@/components/inventory/StoreManagement";

@@ -1,47 +1,44 @@
 
+import { useAuth } from "@/contexts/auth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "./auth/useAuth";
 
 /**
  * Devuelve las sucursales (almacenes) asignadas al usuario autenticado.
  */
 export function useCurrentStores() {
-  const { session } = useAuth();
-  const userId = session?.user.id;
+  const { user, loading } = useAuth();
+  const userId = user?.id;
 
   const { data: stores = [], isLoading, error } = useQuery({
     queryKey: ["currentUserStores", userId],
-    enabled: !!userId,
+    enabled: !!userId && !loading,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Primero obtenemos los IDs de almacenes del usuario
+      const { data: userRoles, error: rolesError } = await supabase
         .from("user_roles")
-        .select(`
-          almacen_id,
-          almacenes:almacen_id(
-            id,
-            nombre
-          )
-        `)
+        .select("almacen_id")
         .eq("user_id", userId)
-        .not("almacen_id", "is", null); // sólo roles con sucursal
+        .not("almacen_id", "is", null); // solo roles con sucursal
 
-      if (error) throw error;
+      if (rolesError) throw rolesError;
 
-      // Extract store info
-      const storeData = data
-        .filter(item => item.almacenes)
-        .map(item => ({
-          id: item.almacen_id,
-          nombre: item.almacenes.nombre
-        }));
+      // Extraer IDs únicos de almacenes
+      const storeIds = [...new Set(userRoles.map(r => r.almacen_id))];
 
-      // Return unique stores
-      const uniqueStores = Array.from(
-        new Map(storeData.map(store => [store.id, store])).values()
-      );
+      if (storeIds.length === 0) {
+        return [];
+      }
 
-      return uniqueStores;
+      // Obtener detalles de los almacenes
+      const { data: storesData, error: storesError } = await supabase
+        .from("almacenes")
+        .select("id, nombre")
+        .in("id", storeIds);
+
+      if (storesError) throw storesError;
+
+      return storesData || [];
     }
   });
 

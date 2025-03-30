@@ -1,6 +1,7 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { UserRoleWithStore } from "./types/userManagementTypes";
+import { UserRoleWithStore } from "@/hooks/users/types/userManagementTypes";
 
 export function useUserRoles(userId?: string) {
   const [roles, setRoles] = useState<UserRoleWithStore[]>([]);
@@ -35,8 +36,9 @@ export function useUserRoles(userId?: string) {
         setRoles(
           (data ?? []).map((item) => ({
             ...item,
-            email: item.email || item.profiles?.email,
-            full_name: item.full_name || item.profiles?.full_name,
+            email: item.profiles?.email || "",
+            full_name: item.profiles?.full_name || null,
+            almacen_nombre: item.almacenes?.nombre || null
           }))
         );
       }

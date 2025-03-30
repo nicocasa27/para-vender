@@ -1,24 +1,41 @@
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Role } from "@/types/auth";
+import { useState } from 'react';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-interface RoleSelectorProps {
-  value: Role | ""; // se puede usar "" para estado inicial
-  onChange: (role: Role | "") => void;
+interface Props {
+  value?: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
 }
 
-export default function RoleSelector({ value, onChange }: RoleSelectorProps) {
+const RoleSelector = ({ value, onChange, disabled = false }: Props) => {
+  const roles = [
+    { value: "admin", label: "Administrador" },
+    { value: "manager", label: "Gerente" },
+    { value: "sales", label: "Ventas" },
+    { value: "viewer", label: "Visitante" }
+  ];
+
   return (
-    <Select value={value} onValueChange={onChange as any}>
-      <SelectTrigger>
-        <SelectValue placeholder="Selecciona un rol" />
+    <Select
+      value={value}
+      onValueChange={onChange}
+      disabled={disabled}
+    >
+      <SelectTrigger className="w-full">
+        <SelectValue placeholder="Seleccionar rol" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="admin">Administrador</SelectItem>
-        <SelectItem value="manager">Encargado</SelectItem>
-        <SelectItem value="sales">Ventas</SelectItem>
-        <SelectItem value="viewer">Consulta</SelectItem>
+        <SelectGroup>
+          {roles.map(role => (
+            <SelectItem key={role.value} value={role.value}>
+              {role.label}
+            </SelectItem>
+          ))}
+        </SelectGroup>
       </SelectContent>
     </Select>
   );
-}
+};
+
+export default RoleSelector;
