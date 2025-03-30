@@ -1,11 +1,13 @@
-import { Product } from "@/types/inventory";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Product } from "@/types/inventory";
 
 interface Props {
   product: Product;
   onClick?: () => void;
 }
 
+// Changed from 'export function ProductCard' to explicitly assign the component
 export function ProductCard({ product, onClick }: Props) {
   return (
     <Card onClick={onClick} className="cursor-pointer hover:shadow-lg transition">
