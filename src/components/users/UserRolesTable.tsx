@@ -1,68 +1,56 @@
 
-import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { UserRole } from "@/hooks/users/types/userManagementTypes";
 
-interface Props {
+interface UserRolesTableProps {
   roles: UserRole[];
-  onDelete?: (roleId: string) => void;
-  onEdit?: (role: UserRole) => void;
-  isLoading?: boolean;
-  loading?: boolean;
-  onDeleteRole?: (roleId: string) => void;
+  loading: boolean;
+  onDeleteRole?: (id: string) => void;
 }
 
-const UserRolesTable = ({ 
-  roles, 
-  onDelete, 
-  onDeleteRole, 
-  onEdit, 
-  isLoading = false, 
-  loading = false 
-}: Props) => {
-  const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
-
-  const handleDelete = (roleId: string) => {
-    // Use whichever delete handler was provided
-    if (onDelete) {
-      onDelete(roleId);
-    } else if (onDeleteRole) {
-      onDeleteRole(roleId);
-    }
-    setRoleToDelete(null);
+export default function UserRolesTable({ roles, loading, onDeleteRole }: UserRolesTableProps) {
+  // Function to render a readable role name
+  const getRoleName = (role: string) => {
+    const roleMap: Record<string, string> = {
+      "admin": "Administrador",
+      "manager": "Gerente",
+      "employee": "Empleado",
+      "visitante": "Visitante"
+    };
+    
+    return roleMap[role] || role;
   };
 
-  // Use either isLoading or loading prop
-  const isLoadingState = isLoading || loading;
-
-  if (isLoadingState) {
+  if (loading) {
     return (
-      <div className="flex justify-center p-8">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      <div className="rounded-md border animate-pulse">
+        <div className="h-24 flex items-center justify-center">
+          <p className="text-muted-foreground">Cargando roles de usuario...</p>
+        </div>
       </div>
     );
   }
 
   if (roles.length === 0) {
     return (
-      <div className="text-center p-6 border rounded-md">
-        <p className="text-muted-foreground">No hay roles asignados</p>
+      <div className="rounded-md border">
+        <div className="h-24 flex items-center justify-center">
+          <p className="text-muted-foreground">No hay roles asignados</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <>
+    <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Usuario</TableHead>
             <TableHead>Rol</TableHead>
-            <TableHead>Tienda</TableHead>
+            <TableHead>Sucursal</TableHead>
+            <TableHead>Usuario</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -70,68 +58,32 @@ const UserRolesTable = ({
           {roles.map((role) => (
             <TableRow key={role.id}>
               <TableCell>
-                <div>
-                  <p className="font-medium">{role.full_name || "Sin nombre"}</p>
-                  <p className="text-xs text-muted-foreground">{role.email}</p>
-                </div>
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className="capitalize">
-                  {role.role}
+                <Badge variant="outline" className="capitalize font-medium">
+                  {getRoleName(role.role)}
                 </Badge>
               </TableCell>
+              <TableCell>{role.almacen_nombre || (role.almacenes?.nombre) || "Global"}</TableCell>
               <TableCell>
-                {role.almacen_nombre || "Global"}
+                <div className="flex flex-col">
+                  <span className="font-medium">{role.full_name || "Sin nombre"}</span>
+                  <span className="text-xs text-muted-foreground">{role.email || "Sin email"}</span>
+                </div>
               </TableCell>
               <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  {onEdit && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => onEdit(role)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {(onDelete || onDeleteRole) && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      className="text-destructive"
-                      onClick={() => setRoleToDelete(role.id)}
-                    >
-                      <Trash className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
+                {onDeleteRole && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDeleteRole(role.id)}
+                  >
+                    Eliminar
+                  </Button>
+                )}
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-
-      <AlertDialog open={!!roleToDelete} onOpenChange={() => setRoleToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar rol?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. El rol será eliminado permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => roleToDelete && handleDelete(roleToDelete)}
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+    </div>
   );
-};
-
-export default UserRolesTable;
+}

@@ -7,6 +7,8 @@ export interface UserRole {
   almacen_nombre?: string | null;
   almacenes?: { nombre: string } | null;
   user_id?: string;
+  full_name?: string | null;
+  email?: string;
 }
 
 export interface UserRoleWithStore {

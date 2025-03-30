@@ -6,23 +6,23 @@ import { LucideIcon } from "lucide-react";
 interface StatCardProps {
   title: string;
   value: string | number;
-  icon: LucideIcon;
+  icon: LucideIcon | React.ReactNode;
   description?: string;
   trend?: number;
   className?: string;
   isLoading?: boolean;
-  periodText?: string; // Added period text parameter
+  periodText?: string;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
   title,
   value,
-  icon: Icon,
+  icon,
   description,
   trend,
   className,
   isLoading = false,
-  periodText = "vs. mes anterior", // Updated default text
+  periodText = "vs. mes anterior",
 }) => {
   return (
     <Card className={cn("overflow-hidden transition-all duration-300 hover:shadow-elevation", className)}>
@@ -57,7 +57,10 @@ export const StatCard: React.FC<StatCardProps> = ({
               )}
             </div>
             <div className="rounded-full p-2 bg-primary/10 text-primary">
-              <Icon className="h-6 w-6" />
+              {typeof icon === 'function' ? 
+                icon({ className: "h-6 w-6" }) : 
+                icon
+              }
             </div>
           </div>
         )}

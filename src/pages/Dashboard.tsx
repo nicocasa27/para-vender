@@ -22,25 +22,25 @@ const Dashboard = () => {
     {
       title: "Ventas Hoy",
       value: 1254,
-      icon: <DollarSign className="h-5 w-5" />,
+      icon: DollarSign,
       description: "+12% respecto a ayer",
     },
     {
       title: "Nuevos Clientes",
       value: 34,
-      icon: <Users className="h-5 w-5" />,
+      icon: Users,
       description: "+2% respecto a ayer",
     },
     {
       title: "Productos Vendidos",
       value: 324,
-      icon: <ShoppingBag className="h-5 w-5" />,
+      icon: ShoppingBag,
       description: "+8% respecto a ayer",
     },
     {
       title: "Transferencias",
       value: 12,
-      icon: <Truck className="h-5 w-5" />,
+      icon: Truck,
       description: "+4% respecto a ayer",
     },
   ];
@@ -67,7 +67,6 @@ const Dashboard = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* We need to fix these component props */}
         <div className="col-span-2">
           <SalesChart />
         </div>
