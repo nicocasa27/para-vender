@@ -1,4 +1,3 @@
-
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { LucideIcon } from "lucide-react";
@@ -57,10 +56,7 @@ export const StatCard: React.FC<StatCardProps> = ({
               )}
             </div>
             <div className="rounded-full p-2 bg-primary/10 text-primary">
-              {typeof icon === 'function' ? 
-                icon({ className: "h-6 w-6" }) : 
-                icon
-              }
+              {React.isValidElement(icon) ? icon : icon({ className: "h-6 w-6" })}
             </div>
           </div>
         )}
