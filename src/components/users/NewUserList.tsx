@@ -1,41 +1,96 @@
 
 import { useState } from "react";
-import { UserWithRoles } from "@/hooks/users/types/userManagementTypes";
-import UserSidePanel from "./UserSidePanel";
+import { UserWithRoles } from "@/types/auth";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+} from "@/components/ui/table";
+import { Card } from "@/components/ui/card";
+import { UserRow } from "./UserRow";
+import { Dialog } from "@/components/ui/dialog";
+import { UserRoleForm } from "./UserRoleForm";
+import { Skeleton } from "@/components/ui/skeleton";
 
-interface NewUserListProps {
+interface UserListProps {
   users: UserWithRoles[];
-  onRolesUpdated: () => void;
+  isLoading: boolean;
+  onDeleteRole: (roleId: string) => Promise<void>;
+  onAddRole: (user: UserWithRoles) => void;
+  onSuccess: () => Promise<void>;
 }
 
-export default function NewUserList({ users, onRolesUpdated }: NewUserListProps) {
+export function NewUserList({ users, isLoading, onDeleteRole, onAddRole, onSuccess }: UserListProps) {
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
+  
+  // Log para depurar
+  console.log("NewUserList props:", { 
+    users_count: users.length,
+    users_sample: users.slice(0, 2).map(u => ({
+      id: u.id,
+      email: u.email,
+      full_name: u.full_name,
+      profiles_full_name: u.profiles?.full_name,
+      roles: u.roles ? u.roles.length : 0
+    }))
+  });
+  
+  if (isLoading) {
+    return (
+      <Card className="w-full">
+        <div className="p-4 space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-center space-x-4">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-[250px]" />
+                <Skeleton className="h-4 w-[200px]" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    );
+  }
 
   return (
-    <div>
-      <ul className="space-y-2">
-        {users.map((user) => (
-          <li
-            key={user.id}
-            className="cursor-pointer hover:bg-muted px-3 py-2 rounded-md"
-            onClick={() => setSelectedUser(user)}
-          >
-            <div className="font-medium">{user.full_name}</div>
-            <div className="text-sm text-muted-foreground">{user.email}</div>
-          </li>
-        ))}
-      </ul>
+    <>
+      <Card className="w-full">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Usuario</TableHead>
+              <TableHead>Roles</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users.map(user => (
+              <UserRow
+                key={user.id}
+                user={user}
+                onAddRole={(user) => setSelectedUser(user)}
+                onDeleteRole={onDeleteRole}
+              />
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
 
-      {selectedUser && (
-        <UserSidePanel
-          selectedUser={selectedUser}
-          onSuccess={async () => {
-            setSelectedUser(null);
-            onRolesUpdated();
-          }}
-          onCancel={() => setSelectedUser(null)}
-        />
-      )}
-    </div>
+      <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
+        {selectedUser && (
+          <UserRoleForm
+            selectedUser={selectedUser}
+            onSuccess={async () => {
+              await onSuccess();
+              setSelectedUser(null);
+            }}
+            onCancel={() => setSelectedUser(null)}
+          />
+        )}
+      </Dialog>
+    </>
   );
 }

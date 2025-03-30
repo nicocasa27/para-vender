@@ -1,66 +1,130 @@
-
-import { Badge } from "@/components/ui/badge";
+import { Role, UserRole } from "@/types/auth";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { UserWithRoles, UserRole } from "@/hooks/users/types/userManagementTypes";
-import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useStores } from "@/hooks/useStores";
+import { useState } from "react";
 
 interface Props {
-  user: UserWithRoles;
-  onRoleAdded: () => void;
-  onRoleDeleted: () => void;
+  roles: UserRole[];
+  isLoading: boolean;
+  onRoleUpdated?: () => void;
 }
 
-export function UserRolesList({ user, onRoleAdded, onRoleDeleted }: Props) {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+const ROLES: Role[] = ["admin", "manager", "sales", "viewer"];
 
-  const handleDeleteRole = async (roleId: string) => {
-    setLoading(true);
-    const { error } = await supabase.from("user_roles").delete().eq("id", roleId);
-    if (error) {
-      toast({
-        title: "Error al eliminar rol",
-        description: error.message,
-        variant: "destructive",
+export function UserRolesList({ roles, isLoading, onRoleUpdated }: Props) {
+  const { stores } = useStores();
+  const [selectedStores, setSelectedStores] = useState<string[]>([]);
+  const userId = roles[0]?.user_id;
+
+  const handleUpdateRole = async (roleId: string, newRole: Role) => {
+    if (newRole !== "sales") {
+      await supabase.from("user_roles").delete().eq("user_id", userId);
+
+      const { error } = await supabase.from("user_roles").insert({
+        user_id: userId,
+        role: newRole,
+        almacen_id: null,
       });
+
+      if (error) {
+        toast.error("Error actualizando rol", { description: error.message });
+        return;
+      }
+
+      toast.success("Rol actualizado correctamente");
+      onRoleUpdated?.();
     } else {
-      toast({
-        title: "Rol eliminado",
-        description: "El rol se eliminó correctamente",
-      });
-      onRoleDeleted();
+      toast.info("Selecciona sucursales para el rol 'sales'");
     }
-    setLoading(false);
   };
 
-  const roles = user.roles; // Array de objetos, no strings
+  const handleAssignSalesToStores = async () => {
+    if (selectedStores.length === 0) {
+      toast.warning("Debes seleccionar al menos una sucursal");
+      return;
+    }
+
+    await supabase.from("user_roles").delete().eq("user_id", userId);
+
+    const inserts = selectedStores.map((storeId) => ({
+      user_id: userId,
+      role: "sales",
+      almacen_id: storeId,
+    }));
+
+    const { error } = await supabase.from("user_roles").insert(inserts);
+
+    if (error) {
+      toast.error("Error asignando rol 'sales'", { description: error.message });
+      return;
+    }
+
+    toast.success("Rol 'sales' y sucursales asignadas");
+    onRoleUpdated?.();
+  };
 
   return (
-    <div className="space-y-2">
-      {roles.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Este usuario no tiene roles asignados.</p>
-      ) : (
-        roles.map((role) => (
-          <div key={role.id} className="flex items-center justify-between bg-muted px-3 py-2 rounded-md">
-            <div className="flex flex-col">
-              <span className="font-medium capitalize">{role.role}</span>
-              <span className="text-xs text-muted-foreground">
-                {role.almacen_nombre || (role.almacenes?.nombre) || "Global"}
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleDeleteRole(role.id)}
-              disabled={loading}
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Eliminar"}
-            </Button>
+    <div className="flex flex-col gap-2">
+      <Select
+        value={roles[0].role}
+        onValueChange={(value) => handleUpdateRole(roles[0].id, value as Role)}
+        disabled={isLoading}
+      >
+        <SelectTrigger className="w-[140px]">
+          <SelectValue placeholder="Seleccionar rol" />
+        </SelectTrigger>
+        <SelectContent>
+          {ROLES.map((r) => (
+            <SelectItem key={r} value={r}>
+              {r}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {roles[0].role === "sales" && (
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-muted-foreground">
+            Sucursales permitidas:
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {stores.map((store) => (
+              <label key={store.id} className="flex items-center gap-1 text-sm">
+                <Checkbox
+                  checked={selectedStores.includes(store.id)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedStores((prev) => [...prev, store.id]);
+                    } else {
+                      setSelectedStores((prev) =>
+                        prev.filter((id) => id !== store.id)
+                      );
+                    }
+                  }}
+                />
+                {store.nombre}
+              </label>
+            ))}
           </div>
-        ))
+          <Button
+            size="sm"
+            className="mt-2 w-fit"
+            onClick={handleAssignSalesToStores}
+            disabled={isLoading || selectedStores.length === 0}
+          >
+            Asignar sucursales
+          </Button>
+        </div>
       )}
     </div>
   );

@@ -1,51 +1,39 @@
-
-import { useAuth } from "@/contexts/auth";
+import { useSession } from "@supabase/auth-helpers-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Devuelve las sucursales (almacenes) asignadas al usuario autenticado.
+ * Devuelve los IDs de sucursales (almacenes) asignadas al usuario autenticado.
  */
 export function useCurrentStores() {
-  const { user, loading } = useAuth();
-  const userId = user?.id;
+  const session = useSession();
+  const userId = session?.user.id;
 
-  const { data: stores = [], isLoading, error } = useQuery({
+  const {
+    data: storeIds = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["currentUserStores", userId],
-    enabled: !!userId && !loading,
+    enabled: !!userId,
     queryFn: async () => {
-      // Primero obtenemos los IDs de almacenes del usuario
-      const { data: userRoles, error: rolesError } = await supabase
+      const { data, error } = await supabase
         .from("user_roles")
         .select("almacen_id")
         .eq("user_id", userId)
-        .not("almacen_id", "is", null); // solo roles con sucursal
+        .not("almacen_id", "is", null); // sólo roles con sucursal
 
-      if (rolesError) throw rolesError;
+      if (error) throw error;
 
-      // Extraer IDs únicos de almacenes
-      const storeIds = [...new Set(userRoles.map(r => r.almacen_id))];
-
-      if (storeIds.length === 0) {
-        return [];
-      }
-
-      // Obtener detalles de los almacenes
-      const { data: storesData, error: storesError } = await supabase
-        .from("almacenes")
-        .select("id, nombre")
-        .in("id", storeIds);
-
-      if (storesError) throw storesError;
-
-      return storesData || [];
-    }
+      // Devuelve una lista única de IDs
+      const ids = data.map((r) => r.almacen_id);
+      return [...new Set(ids)];
+    },
   });
 
   return {
-    stores,
+    storeIds,
     isLoading,
-    hasStores: stores.length > 0,
-    error
+    error,
   };
 }

@@ -1,116 +1,105 @@
-
-import React, { useState, useEffect } from "react";
-import { MainLayout } from "@/components/layout/MainLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RevenueOverTimeChart } from "@/components/analytics/RevenueOverTimeChart";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentStores } from "@/hooks/useCurrentStores";
 import { SalesByCategoryChart } from "@/components/analytics/SalesByCategoryChart";
 import { TopProductsChart } from "@/components/analytics/TopProductsChart";
-import { useCurrentStores } from "@/hooks/useCurrentStores";
-import { supabase } from "@/integrations/supabase/client";
-import { ChartProps } from "@/types/analytics";
+import { RevenueOverTimeChart } from "@/components/analytics/RevenueOverTimeChart";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const Analytics = () => {
-  const { stores, isLoading: loadingStores } = useCurrentStores();
-  const [storeIds, setStoreIds] = useState<string[]>([]);
-  
-  const [salesOverTime, setSalesOverTime] = useState<any[]>([]);
-  const [salesByCategory, setSalesByCategory] = useState<any[]>([]);
-  const [topProducts, setTopProducts] = useState<any[]>([]);
+export default function Analytics() {
+  const { storeIds, isLoading: isLoadingStores } = useCurrentStores();
+  const [salesByCategory, setSalesByCategory] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
+  const [revenueOverTime, setRevenueOverTime] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (stores && stores.length > 0) {
-      setStoreIds(stores.map(store => store.id));
-    }
-  }, [stores]);
-  
-  useEffect(() => {
-    if (storeIds.length === 0) return;
-    
+    if (isLoadingStores || storeIds.length === 0) return;
+
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch sales over time
-        const { data: timeData, error: timeError } = await supabase
-          .rpc('get_ventas_por_dia', { store_ids: storeIds });
-          
-        if (timeError) throw timeError;
-        setSalesOverTime(timeData || []);
-        
-        // Fetch sales by category
-        const { data: categoryData, error: categoryError } = await supabase
-          .rpc('get_ventas_por_categoria', { store_ids: storeIds });
-          
-        if (categoryError) throw categoryError;
-        setSalesByCategory(categoryData || []);
-        
-        // Fetch top products
-        const { data: productsData, error: productsError } = await supabase
-          .rpc('get_top_productos', { store_ids: storeIds });
-          
-        if (productsError) throw productsError;
-        setTopProducts(productsData || []);
-        
-      } catch (error) {
-        console.error("Error al cargar datos analíticos:", error);
+        // Ventas por categoría
+        const { data: catData, error: catError } = await supabase
+          .from("ventas_por_categoria")
+          .select("*")
+          .in("almacen_id", storeIds);
+
+        if (catError) throw catError;
+        setSalesByCategory(catData || []);
+
+        // Top productos vendidos
+        const { data: topData, error: topError } = await supabase
+          .from("ventas_top_productos")
+          .select("*")
+          .in("almacen_id", storeIds);
+
+        if (topError) throw topError;
+        setTopProducts(topData || []);
+
+        // Ventas por día
+        const { data: revData, error: revError } = await supabase
+          .from("ventas_por_dia")
+          .select("*")
+          .in("almacen_id", storeIds);
+
+        if (revError) throw revError;
+        setRevenueOverTime(revData || []);
+      } catch (err) {
+        console.error("Error cargando analíticas:", err);
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchData();
-  }, [storeIds]);
-  
+  }, [storeIds, isLoadingStores]);
+
   return (
-    <MainLayout>
-      <div className="space-y-6 animate-fade-in">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Analíticas</h2>
-          <p className="text-muted-foreground mt-2">
-            Analice las ventas y el rendimiento de su negocio.
-          </p>
-        </div>
-        
-        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-          <Card className="col-span-3 lg:col-span-3">
-            <CardHeader>
-              <CardTitle>Ingresos a lo largo del tiempo</CardTitle>
-              <CardDescription>
-                Visualización de ingresos diarios durante el último mes
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RevenueOverTimeChart data={salesOverTime} />
-            </CardContent>
-          </Card>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold tracking-tight">Analíticas</h1>
 
-          <Card className="col-span-3 lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Ventas por Categoría</CardTitle>
-              <CardDescription>
-                Distribución de ventas por categoría de producto
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Ventas por Categoría</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-[250px] w-full rounded-md" />
+            ) : (
               <SalesByCategoryChart data={salesByCategory} />
-            </CardContent>
-          </Card>
+            )}
+          </CardContent>
+        </Card>
 
-          <Card className="col-span-3 lg:col-span-1">
-            <CardHeader>
-              <CardTitle>Productos Más Vendidos</CardTitle>
-              <CardDescription>
-                Los 10 productos con mayor volumen de venta
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Productos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-[250px] w-full rounded-md" />
+            ) : (
               <TopProductsChart data={topProducts} />
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    </MainLayout>
-  );
-};
 
-export default Analytics;
+      <Card>
+        <CardHeader>
+          <CardTitle>Ingresos por Día</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <Skeleton className="h-[300px] w-full rounded-md" />
+          ) : (
+            <RevenueOverTimeChart data={revenueOverTime} />
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
