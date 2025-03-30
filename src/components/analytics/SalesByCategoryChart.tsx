@@ -1,32 +1,24 @@
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
-const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#00C49F"];
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default function SalesByCategoryChart() {
-  const [data, setData] = useState<any[]>([]);
-  const { toast } = useToast();
+const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#00C49F", "#0088FE", "#FFBB28"];
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const { data, error } = await supabase.from("ventas_por_categoria").select("*");
-      if (error) {
-        toast({
-          title: "Error al cargar ventas por categoría",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-      setData(data || []);
-    };
-    fetchData();
-  }, [toast]);
+interface SalesByCategoryChartProps {
+  data: any[];
+}
+
+export function SalesByCategoryChart({ data }: SalesByCategoryChartProps) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex h-[250px] w-full items-center justify-center text-muted-foreground">
+        No hay datos disponibles
+      </div>
+    );
+  }
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
+    <ResponsiveContainer width="100%" height={250}>
       <PieChart>
         <Pie
           data={data}
@@ -35,13 +27,14 @@ export default function SalesByCategoryChart() {
           cx="50%"
           cy="50%"
           outerRadius={100}
-          label
+          label={(entry) => entry.categoria}
         >
           {data.map((_, index) => (
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
           ))}
         </Pie>
-        <Tooltip />
+        <Tooltip formatter={(value) => `$${value}`} />
+        <Legend />
       </PieChart>
     </ResponsiveContainer>
   );
