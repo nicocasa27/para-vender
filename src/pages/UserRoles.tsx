@@ -22,14 +22,17 @@ const UserRoles = () => {
   // Cargar datos al montar el componente
   useEffect(() => {
     fetchUsers();
+    console.log("UserRoles component mounted, fetching users...");
   }, [fetchUsers]);
 
   // Handle refresh button click
   const handleRefresh = async () => {
     try {
+      console.log("Manual refresh triggered");
       await fetchUsers();
       toast.success("Roles actualizados correctamente");
     } catch (err) {
+      console.error("Error during refresh:", err);
       toast.error("Error al actualizar roles");
     }
   };
@@ -37,11 +40,13 @@ const UserRoles = () => {
   // Handle role deletion
   const handleDeleteRole = async (roleId: string) => {
     try {
+      console.log("Deleting role:", roleId);
       await deleteRole(roleId);
-      // Refrescar la lista después de eliminar
-      fetchUsers();
+      // No necesitamos llamar a fetchUsers aquí porque ya lo hace deleteRole internamente
+      toast.success("Rol eliminado correctamente");
     } catch (error) {
       console.error("Error al eliminar rol:", error);
+      toast.error("Error al eliminar rol");
     }
   };
 
@@ -70,6 +75,14 @@ const UserRoles = () => {
         <div className="bg-destructive/20 text-destructive p-4 rounded-md">
           <p className="font-medium">Error al cargar los usuarios</p>
           <p className="text-sm">{typeof error === 'object' ? (error as Error).message : String(error)}</p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh} 
+            className="mt-2"
+          >
+            Reintentar
+          </Button>
         </div>
       ) : (
         <UserRolesTable
@@ -79,6 +92,10 @@ const UserRoles = () => {
           onRefresh={handleRefresh}
         />
       )}
+
+      <div className="text-xs text-muted-foreground mt-2">
+        Total de usuarios cargados: {users.length}
+      </div>
     </div>
   );
 };
