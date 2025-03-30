@@ -14,6 +14,7 @@ import { RefreshCw, Users, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { UserRoleForm } from "./UserRoleForm";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface UserRolesTableProps {
   users?: UserWithRoles[];
@@ -132,12 +133,21 @@ export function UserRolesTable({
                 <div className="font-medium">
                   {user.full_name || "Usuario sin nombre"}
                   {!user.email && (
-                    <span title="Usuario sin email">
-                    <AlertTriangle 
-                      size={16} 
-                      className="inline ml-1 text-amber-500" 
-                    />
-                  </span>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>
+                            <AlertTriangle 
+                              size={16} 
+                              className="inline ml-1 text-amber-500" 
+                            />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Usuario sin email
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </div>
                 <div className="text-sm text-muted-foreground">{user.email}</div>
