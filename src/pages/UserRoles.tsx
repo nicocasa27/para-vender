@@ -51,11 +51,11 @@ const UserRoles = () => {
       {error ? (
         <div className="bg-destructive/20 text-destructive p-4 rounded-md">
           <p className="font-medium">Error al cargar los usuarios</p>
-          <p className="text-sm">{error.message}</p>
+          <p className="text-sm">{typeof error === 'object' ? (error as Error).message : String(error)}</p>
         </div>
       ) : (
         <UserRolesTable
-          users={users}
+          users={users} 
           loading={loading}
           onDeleteRole={handleDeleteRole}
           onRefresh={handleRefresh}

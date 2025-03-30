@@ -1,16 +1,28 @@
 
 import { useEffect, useState } from "react";
-import { UserRole } from "@/hooks/users/types/userManagementTypes";
+import { RoleWithStore } from "@/hooks/users/types/userManagementTypes";
 import { UserRolesTable } from "@/components/users/UserRolesTable";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useAuth } from "@/contexts/auth";
 
 export default function Profile() {
   const { user } = useAuth();
-  const [roles, setRoles] = useState<UserRole[]>([]);
+  const [roles, setRoles] = useState<RoleWithStore[]>([]);
   const [loading, setLoading] = useState(true);
   
-  const { roles: userRoles, loading: loadingRoles } = useUserRoles(user?.id);
+  // Remove the argument as useUserRoles doesn't accept any
+  const { roles: userRoles, loading: loadingRoles, fetchRoles } = useUserRoles();
+
+  useEffect(() => {
+    // Call fetchRoles to get user-specific roles if needed
+    const loadRoles = async () => {
+      if (user) {
+        await fetchRoles();
+      }
+    };
+    
+    loadRoles();
+  }, [user, fetchRoles]);
 
   useEffect(() => {
     setRoles(userRoles);
@@ -29,7 +41,7 @@ export default function Profile() {
         roles={roles} 
         onDeleteRole={handleDelete} 
         loading={loading}
-        onRefresh={() => {}} // Add empty function to satisfy the prop requirement
+        onRefresh={fetchRoles} // Use the fetchRoles function for refresh
       />
     </div>
   );

@@ -1,17 +1,78 @@
 
-import { useFetchUsers } from './users/useFetchUsers';
+import { useState, useEffect } from 'react';
+import { UserWithRoles } from '@/hooks/users/types/userManagementTypes';
 import { useRoleManagement } from './users/useRoleManagement';
 import { useUserDeletion } from './users/useUserDeletion';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export function useUsersAndRoles(isAdmin: boolean) {
-  // Obtener usuarios
-  const { users, loading, error, fetchUsers } = useFetchUsers(isAdmin);
+  const [users, setUsers] = useState<UserWithRoles[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | string | null>(null);
   
   // Gestión de roles
   const { deleteRole } = useRoleManagement();
   
   // Eliminación de usuarios
   const { deleteUser } = useUserDeletion();
+
+  // Function to fetch users
+  const fetchUsers = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      if (!isAdmin) {
+        setUsers([]);
+        return;
+      }
+      
+      // Get all profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*');
+        
+      if (profilesError) throw profilesError;
+      
+      // For each profile, fetch their roles
+      const usersWithRoles: UserWithRoles[] = await Promise.all(
+        profiles.map(async (profile) => {
+          const { data: roles, error: rolesError } = await supabase
+            .from('user_roles')
+            .select('*, almacenes(*)')
+            .eq('user_id', profile.id);
+            
+          if (rolesError) throw rolesError;
+          
+          return {
+            id: profile.id,
+            email: profile.email || "",
+            full_name: profile.full_name,
+            created_at: profile.created_at,
+            roles: roles ? roles.map(role => ({
+              ...role,
+              created_at: role.created_at || new Date().toISOString(),
+              almacen_nombre: role.almacenes?.nombre || null
+            })) : []
+          };
+        })
+      );
+      
+      setUsers(usersWithRoles);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      setError(err as Error);
+      toast.error("Error al cargar usuarios");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load users on mount or when isAdmin changes
+  useEffect(() => {
+    fetchUsers();
+  }, [isAdmin]);
 
   // Wrapper para asegurar que se actualiza la lista después de eliminar rol
   const handleDeleteRole = async (roleId: string) => {

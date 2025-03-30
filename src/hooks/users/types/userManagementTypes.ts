@@ -7,7 +7,7 @@ export interface RoleWithStore {
   user_id: string;
   role: UserRole;
   almacen_id: string | null;
-  created_at: string;
+  created_at: string; // Required field
   email?: string;
   full_name?: string | null;
   almacen_nombre?: string | null;

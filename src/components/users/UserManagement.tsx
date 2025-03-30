@@ -1,10 +1,11 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { RefreshCw, Users } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { UserSidePanel } from "@/components/users/UserSidePanel";
-import { UserWithRoles } from "@/types/auth";
+import { UserWithRoles } from "@/hooks/users/types/userManagementTypes";
 import { toast } from "sonner";
 import { useUserManagementQuery } from "@/hooks/useUserManagementQuery";
 import { supabase } from "@/integrations/supabase/client";

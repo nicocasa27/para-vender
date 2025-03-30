@@ -1,10 +1,10 @@
 
 import { useState } from "react";
-import { UserRole } from "@/hooks/users/types/userManagementTypes";
+import { RoleWithStore } from "@/hooks/users/types/userManagementTypes";
 import { supabase } from "@/integrations/supabase/client";
 
 export function useUserRoles() {
-  const [roles, setRoles] = useState<UserRole[]>([]);
+  const [roles, setRoles] = useState<RoleWithStore[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchRoles = async () => {
@@ -18,13 +18,13 @@ export function useUserRoles() {
         
       if (error) throw error;
       
-      // Convert to UserRole[] type
-      const formattedRoles: UserRole[] = data.map((role: any) => ({
+      // Convert to RoleWithStore[] type
+      const formattedRoles: RoleWithStore[] = data.map((role: any) => ({
         id: role.id,
         user_id: role.user_id,
         role: role.role,
         almacen_id: role.almacen_id,
-        created_at: role.created_at,
+        created_at: role.created_at || new Date().toISOString(), // Ensure created_at is not null
         full_name: role.profiles?.full_name || '',
         email: role.profiles?.email || '',
         almacen_nombre: role.almacenes?.nombre || null
