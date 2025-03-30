@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Dialog,
@@ -17,8 +16,8 @@ import { useRoleAssignment } from "@/hooks/useRoleAssignment";
 
 interface UserSidePanelProps {
   selectedUser?: UserWithRoles | null;
-  onSuccess?: () => Promise<void>;
-  onCancel?: () => void;
+  onSuccess: () => Promise<void>;
+  onCancel: () => void;
 }
 
 export function UserSidePanel({ 
