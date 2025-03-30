@@ -1,4 +1,3 @@
-
 import { UserWithRoles } from "@/types/auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
