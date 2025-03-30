@@ -1,7 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { UserRoleWithStore } from "../types/userManagementTypes";
+import { UserRole } from "../types/userManagementTypes";
 
 /**
  * Obtiene roles de usuario desde la base de datos
@@ -62,7 +62,7 @@ export const fetchFromUserRolesView = async () => {
 /**
  * Obtiene los roles de un usuario específico por su ID
  */
-export const getUserRolesByUserId = async (userId: string): Promise<UserRoleWithStore[]> => {
+export const getUserRolesByUserId = async (userId: string): Promise<UserRole[]> => {
   try {
     const { data, error } = await supabase
       .from('user_roles')

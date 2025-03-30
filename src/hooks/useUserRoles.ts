@@ -1,10 +1,10 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { UserRoleWithStore } from "@/hooks/users/types/userManagementTypes";
+import { UserRole } from "@/hooks/users/types/userManagementTypes";
 
 export function useUserRoles(userId?: string) {
-  const [roles, setRoles] = useState<UserRoleWithStore[]>([]);
+  const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

@@ -1,13 +1,13 @@
 
 import { useEffect, useState } from "react";
-import { UserRoleWithStore } from "@/hooks/users/types/userManagementTypes";
+import { UserRole } from "@/hooks/users/types/userManagementTypes";
 import UserRolesTable from "@/components/users/UserRolesTable";
 import { getUserRolesByUserId } from "@/hooks/users/api/userDataApi";
 import { useAuth } from "@/contexts/auth";
 
 export default function Profile() {
   const { user } = useAuth();
-  const [roles, setRoles] = useState<UserRoleWithStore[]>([]);
+  const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

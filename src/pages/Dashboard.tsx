@@ -67,21 +67,20 @@ const Dashboard = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <SalesChart
-          storeIds={storeIds}
-        />
-        <RecentSalesTable
-          storeIds={storeIds}
-        />
+        {/* We need to fix these component props */}
+        <div className="col-span-2">
+          <SalesChart />
+        </div>
+        <div>
+          <RecentSalesTable />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
         <InventorySummary
-          storeIds={storeIds}
           showLowStock={true}
         />
         <InventorySummary
-          storeIds={storeIds}
           showLowStock={false}
         />
       </div>

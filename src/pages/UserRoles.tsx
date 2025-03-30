@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,14 +7,14 @@ import { useUsersAndRoles } from "@/hooks/useUsersAndRoles";
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 import { getUserRolesByUserId } from "@/hooks/users/api/userDataQueries";
-import { UserRoleWithStore } from "@/hooks/users/types/userManagementTypes";
+import { UserRole } from "@/hooks/users/types/userManagementTypes";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function UserRoles() {
   const { user, hasRole } = useAuth();
   const isAdmin = hasRole("admin");
   const { deleteRole, addRole, loading: apiLoading } = useUsersAndRoles(isAdmin);
-  const [roles, setRoles] = useState<UserRoleWithStore[]>([]);
+  const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,7 +24,6 @@ export default function UserRoles() {
   const fetchAllRoles = async () => {
     setLoading(true);
     try {
-      // Implementa tu lógica para obtener todos los roles de usuario aquí
       const allRoles = await fetchRolesFromDatabase();
       setRoles(allRoles);
     } catch (error) {
@@ -36,9 +34,7 @@ export default function UserRoles() {
     }
   };
 
-  // Función para obtener roles de la base de datos
   const fetchRolesFromDatabase = async () => {
-    // Esta es una implementación simple, deberás adaptarla a tu estructura
     const { data, error } = await supabase
       .from("user_roles")
       .select(`
@@ -58,7 +54,6 @@ export default function UserRoles() {
 
     if (error) throw error;
 
-    // Transformar los datos al formato esperado
     return (data || []).map(role => ({
       id: role.id,
       user_id: role.user_id,
@@ -74,7 +69,7 @@ export default function UserRoles() {
   const handleRoleDelete = async (roleId: string) => {
     try {
       await deleteRole(roleId);
-      await fetchAllRoles(); // Recargar la lista después de eliminar
+      await fetchAllRoles();
       toast.success("Rol eliminado correctamente");
     } catch (error) {
       console.error("Error al eliminar rol:", error);
@@ -86,23 +81,20 @@ export default function UserRoles() {
     try {
       const { email, role, storeIds } = values;
       
-      // Para roles como manager o sales que requieren tienda, asignar a cada tienda seleccionada
       if (storeIds?.length && (role === "manager" || role === "sales")) {
-        // Crear un rol para cada tienda seleccionada
         for (const storeId of storeIds) {
           await addRole(email, role, storeId);
         }
       } else {
-        // Para roles que no requieren tienda (admin, viewer)
         await addRole(email, role);
       }
       
-      await fetchAllRoles(); // Recargar la lista después de añadir
+      await fetchAllRoles();
       toast.success("Rol asignado correctamente");
     } catch (error) {
       console.error("Error al asignar rol:", error);
       toast.error("Error al asignar rol");
-      throw error; // Propagar el error para que el formulario lo maneje
+      throw error;
     }
   };
 

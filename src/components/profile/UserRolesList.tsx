@@ -48,7 +48,7 @@ export function UserRolesList({ user, onRoleAdded, onRoleDeleted }: Props) {
             <div className="flex flex-col">
               <span className="font-medium capitalize">{role.role}</span>
               <span className="text-xs text-muted-foreground">
-                {role.almacen_nombre || (role.almacenes?.nombre) || "Global"}
+                {role.almacen_nombre || (role.almacenes ? role.almacenes.nombre : null) || "Global"}
               </span>
             </div>
             <Button

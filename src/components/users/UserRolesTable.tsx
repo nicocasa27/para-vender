@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash } from "lucide-react";
-import { UserRoleWithStore } from "@/hooks/users/types/userManagementTypes";
+import { UserRole } from "@/hooks/users/types/userManagementTypes";
 
 interface Props {
-  roles: UserRoleWithStore[];
+  roles: UserRole[];
   onDelete?: (roleId: string) => void;
-  onEdit?: (role: UserRoleWithStore) => void;
+  onEdit?: (role: UserRole) => void;
   isLoading?: boolean;
   loading?: boolean;
   onDeleteRole?: (roleId: string) => void;
