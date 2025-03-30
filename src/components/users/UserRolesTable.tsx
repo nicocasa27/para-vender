@@ -132,11 +132,12 @@ export function UserRolesTable({
                 <div className="font-medium">
                   {user.full_name || "Usuario sin nombre"}
                   {!user.email && (
+                    <span title="Usuario sin email">
                     <AlertTriangle 
                       size={16} 
                       className="inline ml-1 text-amber-500" 
-                      title="Usuario sin email"
                     />
+                  </span>
                   )}
                 </div>
                 <div className="text-sm text-muted-foreground">{user.email}</div>
