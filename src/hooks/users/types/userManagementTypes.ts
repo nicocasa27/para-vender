@@ -17,7 +17,7 @@ export interface UserRole {
   user_id: string;
   role: 'admin' | 'manager' | 'sales' | 'viewer';
   almacen_id: string | null;
-  created_at: string;
+  created_at?: string; // Made optional to match UserRoleWithStore
   almacen_nombre?: string | null;
   almacenes?: { nombre: string } | null;
 }

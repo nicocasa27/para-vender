@@ -1,10 +1,9 @@
 
 import React, { useState, useEffect } from "react";
-import { MainLayout } from "@/components/layout/MainLayout";
-import StatCard from "@/components/dashboard/StatCard";
-import SalesChart from "@/components/dashboard/SalesChart";
-import RecentSalesTable from "@/components/dashboard/RecentSalesTable";
-import InventorySummary from "@/components/dashboard/InventorySummary";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { SalesChart } from "@/components/dashboard/SalesChart";
+import { RecentSalesTable } from "@/components/dashboard/RecentSalesTable";
+import { InventorySummary } from "@/components/dashboard/InventorySummary";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
 import { DollarSign, ShoppingBag, Truck, Users } from "lucide-react";
 
@@ -47,48 +46,46 @@ const Dashboard = () => {
   ];
 
   return (
-    <MainLayout>
-      <div className="space-y-6 animate-fade-in">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-          <p className="text-muted-foreground mt-2">
-            Resumen de las métricas más importantes de su negocio.
-          </p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat, index) => (
-            <StatCard
-              key={index}
-              title={stat.title}
-              value={stat.value}
-              icon={stat.icon}
-              description={stat.description}
-            />
-          ))}
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <SalesChart
-            storeIds={storeIds}
-          />
-          <RecentSalesTable
-            storeIds={storeIds}
-          />
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
-          <InventorySummary
-            storeIds={storeIds}
-            showLowStock={true}
-          />
-          <InventorySummary
-            storeIds={storeIds}
-            showLowStock={false}
-          />
-        </div>
+    <div className="space-y-6 animate-fade-in">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+        <p className="text-muted-foreground mt-2">
+          Resumen de las métricas más importantes de su negocio.
+        </p>
       </div>
-    </MainLayout>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat, index) => (
+          <StatCard
+            key={index}
+            title={stat.title}
+            value={stat.value}
+            icon={stat.icon}
+            description={stat.description}
+          />
+        ))}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <SalesChart
+          storeIds={storeIds}
+        />
+        <RecentSalesTable
+          storeIds={storeIds}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
+        <InventorySummary
+          storeIds={storeIds}
+          showLowStock={true}
+        />
+        <InventorySummary
+          storeIds={storeIds}
+          showLowStock={false}
+        />
+      </div>
+    </div>
   );
 };
 
