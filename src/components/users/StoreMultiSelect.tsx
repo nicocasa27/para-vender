@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useStores } from "@/hooks/useStores";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
