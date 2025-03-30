@@ -21,25 +21,25 @@ const Dashboard = () => {
   const stats = [
     {
       title: "Ventas Hoy",
-      value: 1254, // Number instead of string
+      value: 1254,
       icon: <DollarSign className="h-5 w-5" />,
       description: "+12% respecto a ayer",
     },
     {
       title: "Nuevos Clientes",
-      value: 34, // Number instead of string
+      value: 34,
       icon: <Users className="h-5 w-5" />,
       description: "+2% respecto a ayer",
     },
     {
       title: "Productos Vendidos",
-      value: 324, // Number instead of string
+      value: 324,
       icon: <ShoppingBag className="h-5 w-5" />,
       description: "+8% respecto a ayer",
     },
     {
       title: "Transferencias",
-      value: 12, // Number instead of string
+      value: 12,
       icon: <Truck className="h-5 w-5" />,
       description: "+4% respecto a ayer",
     },

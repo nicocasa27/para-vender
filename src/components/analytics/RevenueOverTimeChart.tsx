@@ -9,18 +9,24 @@ import {
   Tooltip,
   ResponsiveContainer
 } from "recharts";
+import { SalesDataPoint } from "@/types/analytics";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Props {
-  data: Array<{
-    date: string;
-    value: number;
-  }>;
+  data: SalesDataPoint[];
+  loading?: boolean;
 }
 
-export function RevenueOverTimeChart({ data }: Props) {
-  const chartData = data.length > 0 ? data : [
-    { date: "Sin datos", value: 0 }
-  ];
+export function RevenueOverTimeChart({ data, loading }: Props) {
+  if (loading) {
+    return <Skeleton className="h-[300px] w-full rounded-md" />;
+  }
+  
+  // Preparar datos para el gráfico
+  const chartData = data.map(item => ({
+    name: item.fecha,
+    value: Number(item.total)
+  }));
 
   return (
     <ResponsiveContainer width="100%" height={300}>
@@ -29,12 +35,12 @@ export function RevenueOverTimeChart({ data }: Props) {
         margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
       >
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" />
+        <XAxis dataKey="name" />
         <YAxis 
           tickFormatter={(value) => `$${value}`}
         />
         <Tooltip 
-          formatter={(value) => [`$${value.toLocaleString()}`, 'Ingresos']}
+          formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Ingresos']}
         />
         <Line
           type="monotone"

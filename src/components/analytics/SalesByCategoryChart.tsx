@@ -1,18 +1,33 @@
 
 import React from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { 
+  PieChart, 
+  Pie, 
+  Cell, 
+  ResponsiveContainer, 
+  Tooltip, 
+  Legend 
+} from "recharts";
+import { CategoryDataPoint } from "@/types/analytics";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Props {
-  data: Array<{
-    category: string;
-    value: number;
-  }>;
+  data: CategoryDataPoint[];
+  loading?: boolean;
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
-export function SalesByCategoryChart({ data }: Props) {
-  const chartData = data.length > 0 ? data : [{ category: "Sin datos", value: 1 }];
+export function SalesByCategoryChart({ data, loading }: Props) {
+  if (loading) {
+    return <Skeleton className="h-[250px] w-full rounded-md" />;
+  }
+  
+  // Preparar datos para el gráfico
+  const chartData = data.map(item => ({
+    name: item.categoria,
+    value: Number(item.total)
+  }));
 
   return (
     <ResponsiveContainer width="100%" height={250}>
@@ -25,9 +40,9 @@ export function SalesByCategoryChart({ data }: Props) {
           outerRadius={80}
           fill="#8884d8"
           dataKey="value"
-          nameKey="category"
-          label={({ category, percent }) => 
-            `${category}: ${(percent * 100).toFixed(0)}%`
+          nameKey="name"
+          label={({ name, percent }) => 
+            `${name}: ${(percent * 100).toFixed(0)}%`
           }
         >
           {chartData.map((entry, index) => (
@@ -35,7 +50,7 @@ export function SalesByCategoryChart({ data }: Props) {
           ))}
         </Pie>
         <Tooltip
-          formatter={(value) => [`$${value.toLocaleString()}`, 'Ventas']}
+          formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Ventas']}
         />
         <Legend />
       </PieChart>
