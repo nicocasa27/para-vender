@@ -1,89 +1,73 @@
-
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { UserWithRoles } from "@/types/auth";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { UserRole } from "@/hooks/users/types/userManagementTypes";
+import { UserRolesList } from "@/components/profile/UserRolesList";
+import { RefreshCw, Users } from "lucide-react";
 
-interface UserRolesTableProps {
-  roles: UserRole[];
+interface Props {
+  users: UserWithRoles[];
   loading: boolean;
-  onDeleteRole?: (id: string) => void;
+  onDeleteUser: (userId: string) => void;
 }
 
-export default function UserRolesTable({ roles, loading, onDeleteRole }: UserRolesTableProps) {
-  // Function to render a readable role name
-  const getRoleName = (role: string) => {
-    const roleMap: Record<string, string> = {
-      "admin": "Administrador",
-      "manager": "Gerente",
-      "employee": "Empleado",
-      "visitante": "Visitante"
-    };
-    
-    return roleMap[role] || role;
-  };
-
+export function UserRolesTable({ users, loading, onDeleteUser }: Props) {
   if (loading) {
     return (
-      <div className="rounded-md border animate-pulse">
-        <div className="h-24 flex items-center justify-center">
-          <p className="text-muted-foreground">Cargando roles de usuario...</p>
-        </div>
+      <div className="flex justify-center py-8">
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  if (roles.length === 0) {
+  if (users.length === 0) {
     return (
-      <div className="rounded-md border">
-        <div className="h-24 flex items-center justify-center">
-          <p className="text-muted-foreground">No hay roles asignados</p>
-        </div>
+      <div className="text-center py-8 text-muted-foreground">
+        <Users className="h-10 w-10 mx-auto mb-2 opacity-50" />
+        <p>No hay usuarios con roles asignados</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Rol</TableHead>
-            <TableHead>Sucursal</TableHead>
-            <TableHead>Usuario</TableHead>
-            <TableHead className="text-right">Acciones</TableHead>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Usuario</TableHead>
+          <TableHead>Roles</TableHead>
+          <TableHead className="text-right w-[80px]">Acciones</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {users.map((user) => (
+          <TableRow key={user.id}>
+            <TableCell>
+              <div className="font-medium">{user.full_name || "Usuario sin nombre"}</div>
+              <div className="text-sm text-muted-foreground">{user.email}</div>
+            </TableCell>
+            <TableCell>
+              <UserRolesList roles={user.roles} isLoading={false} />
+            </TableCell>
+            <TableCell className="text-right">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onDeleteUser(user.id)}
+                className="text-destructive hover:bg-destructive/10"
+              >
+                🗑️
+                <span className="sr-only">Eliminar usuario</span>
+              </Button>
+            </TableCell>
           </TableRow>
-        </TableHeader>
-        <TableBody>
-          {roles.map((role) => (
-            <TableRow key={role.id}>
-              <TableCell>
-                <Badge variant="outline" className="capitalize font-medium">
-                  {getRoleName(role.role)}
-                </Badge>
-              </TableCell>
-              <TableCell>{role.almacen_nombre || (role.almacenes?.nombre) || "Global"}</TableCell>
-              <TableCell>
-                <div className="flex flex-col">
-                  <span className="font-medium">{role.full_name || "Sin nombre"}</span>
-                  <span className="text-xs text-muted-foreground">{role.email || "Sin email"}</span>
-                </div>
-              </TableCell>
-              <TableCell className="text-right">
-                {onDeleteRole && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDeleteRole(role.id)}
-                  >
-                    Eliminar
-                  </Button>
-                )}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+        ))}
+      </TableBody>
+    </Table>
   );
 }
