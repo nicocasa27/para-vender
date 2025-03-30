@@ -3,30 +3,29 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserRole } from "@/hooks/users/types/userManagementTypes";
-import { UserRolesTable } from "@/components/users/UserRolesTable";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { UserCreateForm } from "@/components/users/UserCreateForm";
-import { UserRoleForm } from "@/components/users/UserRoleForm";
 import { Skeleton } from "@/components/ui/skeleton";
+import UserRolesTable from "@/components/users/UserRolesTable";
+import UserRoleForm from "@/components/users/UserRoleForm";
+import { UserCreateForm } from "@/components/users/UserCreateForm";
 
 const UserRoles: React.FC = () => {
-  const { roles, loading } = useUserRoles();
+  const { roles, loading, deleteRole, refreshRoles } = useUserRoles();
   
-  // Si no tenemos acceso a estas propiedades en useUserRoles, definimos defaults
   const isLoadingRoles = loading;
   const isLoadingStores = loading;
-  
-  // Funciones mock si no están disponibles
-  const deleteRole = (roleId: string) => {
-    console.log("Deleting role", roleId);
-    // Implementación real debería venir de useUserRoles
+
+  // Mock function for UserCreateForm since it's required
+  const handleCreateUser = async (userData: any) => {
+    console.log("Creating user:", userData);
+    // Implementación real debería venir de un hook
   };
   
-  const refreshRoles = () => {
-    console.log("Refreshing roles");
-    // Implementación real debería venir de useUserRoles
+  // Mock cancel function
+  const handleCancel = () => {
+    console.log("Cancelled user creation");
+    // Implementation would typically reset form state
   };
 
   return (
@@ -81,7 +80,13 @@ const UserRoles: React.FC = () => {
               <CardTitle>Asignar Rol a Usuario</CardTitle>
             </CardHeader>
             <CardContent>
-              <UserRoleForm />
+              <UserRoleForm 
+                onSubmit={async (values) => {
+                  console.log("Assigning role:", values);
+                  // Implementación real debería venir de useUserRoles
+                }}
+                isLoading={false}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -92,7 +97,11 @@ const UserRoles: React.FC = () => {
               <CardTitle>Crear Nuevo Usuario</CardTitle>
             </CardHeader>
             <CardContent>
-              <UserCreateForm />
+              <UserCreateForm 
+                onCreateUser={handleCreateUser}
+                onCancel={handleCancel}
+                isCreating={false}
+              />
             </CardContent>
           </Card>
         </TabsContent>

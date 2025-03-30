@@ -16,7 +16,7 @@ export interface UserRoleWithStore {
   user_id: string;
   role: string;
   almacen_id: string | null;
-  created_at: string; // Asegúrate de que esto no sea opcional
+  created_at: string; // Making sure this is required
   email?: string;
   full_name?: string | null;
   almacen_nombre?: string | null;
@@ -27,7 +27,7 @@ export interface UserWithRoles {
   id: string;
   email: string;
   full_name: string | null;
-  roles: UserRole[];
+  roles: UserRole[]; // Using UserRole[] instead of UserRoleWithStore[]
   profiles?: {
     id?: string;
     email?: string;
