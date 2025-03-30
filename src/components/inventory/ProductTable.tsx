@@ -1,41 +1,71 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useCurrentStores } from "@/hooks/useCurrentStores"; // ✅ nuevo hook
+import { ProductCard } from "./ProductCard";
+import { Skeleton } from "@/components/ui/skeleton";
 
-interface UserRole {
+interface Product {
   id: string;
-  user_id: string;
-  role: "admin" | "manager" | "sales" | "viewer";
+  nombre: string;
+  precio_venta: number;
+  stock_total: number;
   almacen_id: string;
 }
 
-export function UserRolesList() {
-  const [roles, setRoles] = useState<UserRole[]>([]);
+export function ProductTable() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const { storeIds, isLoading: isStoresLoading } = useCurrentStores();
 
   useEffect(() => {
-    const fetchRoles = async () => {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("id, user_id, role, almacen_id");
+    if (isStoresLoading || storeIds.length === 0) return;
 
-      if (error) {
-        console.error("Error cargando roles:", error);
-        return;
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("productos")
+          .select("id, nombre, precio_venta, stock_total, almacen_id")
+          .in("almacen_id", storeIds);
+
+        if (error) throw error;
+        setProducts(data || []);
+      } catch (err) {
+        console.error("Error al cargar productos:", err);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los productos",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
-
-      setRoles(data as UserRole[]);
     };
 
-    fetchRoles();
-  }, []);
+    fetchProducts();
+  }, [storeIds, isStoresLoading]);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="h-[120px] w-full rounded-md" />
+        ))}
+      </div>
+    );
+  }
+
+  if (products.length === 0) {
+    return <p className="text-muted-foreground">No hay productos disponibles.</p>;
+  }
 
   return (
-    <div className="space-y-4">
-      {roles.map((role) => (
-        <div key={role.id} className="border rounded p-4">
-          <p><strong>User ID:</strong> {role.user_id}</p>
-          <p><strong>Rol:</strong> {role.role}</p>
-          <p><strong>Almacén:</strong> {role.almacen_id}</p>
-        </div>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {products.map((product) => (
+        <ProductCard key={product.id} product={product} />
       ))}
     </div>
   );
