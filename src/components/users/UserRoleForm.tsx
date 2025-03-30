@@ -1,4 +1,3 @@
-================
 import { useStores } from "@/hooks/useStores";
 import { RoleSelector } from "./RoleSelector";
 import { StoreMultiSelect } from "@/components/users/StoreMultiSelect"; // ✅ Import corregido
