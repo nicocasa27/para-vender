@@ -1,36 +1,34 @@
 
 import { useEffect } from "react";
-import { ControllerRenderProps } from "react-hook-form";
-import { useCurrentStores } from "@/hooks/useCurrentStores";
+import { useStores } from "@/hooks/useStores";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface StoreMultiSelectProps {
-  field: ControllerRenderProps<any, any>;
-  label?: string;
+  selected: string[]; 
+  onChange: (selected: string[]) => void;
 }
 
-export default function StoreMultiSelect({ field, label }: StoreMultiSelectProps) {
-  const { stores, isLoading, hasStores, error } = useCurrentStores();
+export default function StoreMultiSelect({ selected, onChange }: StoreMultiSelectProps) {
+  const { stores, isLoading, hasStores, error } = useStores();
 
   useEffect(() => {
-    if (!field.value && stores.length > 0) {
-      field.onChange(stores[0].id); // Selecciona automáticamente la primera opción si no hay valor
+    if (!selected.length && stores.length > 0) {
+      onChange([stores[0].id]); // Selecciona automáticamente la primera opción si no hay valor
     }
-  }, [stores, field]);
+  }, [stores, selected, onChange]);
+
+  const handleChange = (value: string) => {
+    // Para multi-selección podríamos añadir más lógica, pero por ahora solo usamos una tienda
+    onChange([value]);
+  };
 
   return (
     <div className="space-y-1">
-      {label && (
-        <label className="text-sm font-medium text-foreground">
-          {label}
-        </label>
-      )}
-
       {isLoading ? (
         <Skeleton className="h-10 w-full rounded-md" />
       ) : (
-        <Select onValueChange={field.onChange} value={field.value}>
+        <Select onValueChange={handleChange} value={selected[0] || ""}>
           <SelectTrigger>
             <SelectValue placeholder="Selecciona una sucursal" />
           </SelectTrigger>

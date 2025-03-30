@@ -1,6 +1,7 @@
+
 import { useStores } from "@/hooks/useStores";
-import { RoleSelector } from "./RoleSelector";
-import { StoreMultiSelect } from "@/components/users/StoreMultiSelect"; // ✅ Import corregido
+import RoleSelector from "./RoleSelector";
+import StoreMultiSelect from "@/components/users/StoreMultiSelect";
 import { useRoleAssignmentV2 } from "@/hooks/useRoleAssignmentV2";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";

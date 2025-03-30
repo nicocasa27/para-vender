@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { UserRoleWithStore, UserWithRoles } from "@/types/auth";
+import { UserWithRoles } from "@/hooks/users/types/userManagementTypes";
 
 export function useUserRoles(isAdmin: boolean) {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
@@ -73,6 +73,7 @@ export function useUserRoles(isAdmin: boolean) {
           role: item.role,
           almacen_id: item.almacen_id,
           almacen_nombre: item.almacen_nombre || item.almacenes?.nombre || null,
+          created_at: item.created_at
         });
       });
 

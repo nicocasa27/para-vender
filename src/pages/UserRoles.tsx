@@ -9,7 +9,7 @@ import { useUserSearch } from "@/hooks/useUserSearch";
 import { useRoleAssignment } from "@/hooks/useRoleAssignment";
 import { useRoleManagement } from "@/hooks/useRoleManagement";
 import { UserSearchForm } from "@/components/users/UserSearchForm";
-import { UserRolesTable } from "@/components/users/UserRolesTable";
+import UserRolesTable from "@/components/users/UserRolesTable";
 
 export default function UserRoles() {
   const { hasRole } = useAuth();
@@ -75,11 +75,23 @@ export default function UserRoles() {
           <CardTitle>Usuarios y sus roles</CardTitle>
         </CardHeader>
         <CardContent>
-          <UserRolesTable 
-            users={users} 
-            loading={loading} 
-            onDeleteRole={(roleId) => deleteRole(roleId, loadUsers)} 
-          />
+          {/* Modificar UserRolesTable para manejar la estructura de usuarios */}
+          <div className="space-y-4">
+            {users.map(user => (
+              <div key={user.id} className="border rounded-lg p-4">
+                <h3 className="text-lg font-medium mb-2">{user.full_name || user.email || "Usuario sin nombre"}</h3>
+                {user.roles.length > 0 ? (
+                  <UserRolesTable 
+                    roles={user.roles} 
+                    onDeleteRole={(roleId) => deleteRole(roleId, loadUsers)} 
+                    loading={loading}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">Este usuario no tiene roles asignados</p>
+                )}
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>

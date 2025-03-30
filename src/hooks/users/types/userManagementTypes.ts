@@ -1,19 +1,32 @@
 
-import { UserWithRoles } from "@/types/auth";
+import { UserRole } from "@/types/auth";
 
-// Define la interface para la estructura de datos de user_roles_with_name
-export interface UserRoleWithName {
-  id?: string;
+// Define the interface for the structure of data from user_roles table with store
+export interface UserRoleWithStore {
+  id: string;
   user_id: string;
-  role: "admin" | "manager" | "sales" | "viewer";
+  role: UserRole;
   almacen_id: string | null;
-  created_at: string;
-  full_name: string | null;
-  email: string | null;
   almacen_nombre?: string | null;
+  created_at?: string;
+  almacenes?: { nombre: string } | null;
 }
 
-// Resultado de una consulta a la vista o tablas
+// Define user with their roles
+export interface UserWithRoles {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  created_at?: string;
+  roles: UserRoleWithStore[];
+  profiles?: {
+    id: string;
+    email: string | null;
+    full_name: string | null;
+  };
+}
+
+// Result of a query to the view or tables
 export interface UserDataQueryResult {
   success: boolean;
   data?: UserWithRoles[];

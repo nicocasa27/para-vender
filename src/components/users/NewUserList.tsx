@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { UserWithRoles } from "@/hooks/users/types/userManagementTypes";
 import UserSidePanel from "./UserSidePanel";
@@ -19,8 +20,8 @@ export default function NewUserList({ users, onRolesUpdated }: NewUserListProps)
             className="cursor-pointer hover:bg-muted px-3 py-2 rounded-md"
             onClick={() => setSelectedUser(user)}
           >
-            <div className="font-medium">{user.profiles?.full_name}</div>
-            <div className="text-sm text-muted-foreground">{user.profiles?.email}</div>
+            <div className="font-medium">{user.full_name}</div>
+            <div className="text-sm text-muted-foreground">{user.email}</div>
           </li>
         ))}
       </ul>
@@ -30,7 +31,7 @@ export default function NewUserList({ users, onRolesUpdated }: NewUserListProps)
           selectedUser={selectedUser}
           onSuccess={async () => {
             setSelectedUser(null);
-            await onRolesUpdated();
+            onRolesUpdated();
           }}
           onCancel={() => setSelectedUser(null)}
         />

@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { UserRoleWithStore } from "../types/userManagementTypes";
 
 /**
  * Obtiene roles de usuario desde la base de datos
@@ -55,5 +56,34 @@ export const fetchFromUserRolesView = async () => {
   } catch (error) {
     console.error("Error al intentar usar la vista:", error);
     return { success: false, error };
+  }
+};
+
+/**
+ * Obtiene los roles de un usuario específico por su ID
+ */
+export const getUserRolesByUserId = async (userId: string): Promise<UserRoleWithStore[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select(`
+        id, 
+        user_id, 
+        role, 
+        almacen_id,
+        created_at,
+        almacenes:almacen_id (nombre)
+      `)
+      .eq('user_id', userId);
+      
+    if (error) throw error;
+    
+    return (data || []).map(role => ({
+      ...role,
+      almacen_nombre: role.almacenes?.nombre || null
+    }));
+  } catch (error) {
+    console.error("Error al obtener roles del usuario:", error);
+    return [];
   }
 };

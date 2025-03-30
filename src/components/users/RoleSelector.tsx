@@ -1,3 +1,4 @@
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Role } from "@/types/auth";
 
@@ -8,7 +9,7 @@ interface RoleSelectorProps {
 
 export default function RoleSelector({ value, onChange }: RoleSelectorProps) {
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value} onValueChange={onChange as any}>
       <SelectTrigger>
         <SelectValue placeholder="Selecciona un rol" />
       </SelectTrigger>

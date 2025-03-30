@@ -1,3 +1,4 @@
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -46,7 +47,9 @@ export function UserRolesList({ user, onRoleAdded, onRoleDeleted }: Props) {
           <div key={role.id} className="flex items-center justify-between bg-muted px-3 py-2 rounded-md">
             <div className="flex flex-col">
               <span className="font-medium capitalize">{role.role}</span>
-              <span className="text-xs text-muted-foreground">{role.almacen_id}</span>
+              <span className="text-xs text-muted-foreground">
+                {role.almacen_nombre || role.almacenes?.nombre || "Global"}
+              </span>
             </div>
             <Button
               variant="ghost"

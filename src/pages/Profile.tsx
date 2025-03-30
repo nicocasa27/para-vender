@@ -1,23 +1,27 @@
+
 import { useEffect, useState } from "react";
 import { UserRoleWithStore } from "@/hooks/users/types/userManagementTypes";
 import UserRolesTable from "@/components/users/UserRolesTable";
 import { getUserRolesByUserId } from "@/hooks/users/api/userDataApi";
+import { useAuth } from "@/contexts/auth";
 
 export default function Profile() {
+  const { user } = useAuth();
   const [roles, setRoles] = useState<UserRoleWithStore[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadRoles = async () => {
       setLoading(true);
-      const userId = "some-id"; // Reemplaza por el user actual
-      const fetchedRoles = await getUserRolesByUserId(userId);
-      setRoles(fetchedRoles);
+      if (user?.id) {
+        const fetchedRoles = await getUserRolesByUserId(user.id);
+        setRoles(fetchedRoles);
+      }
       setLoading(false);
     };
 
     loadRoles();
-  }, []);
+  }, [user]);
 
   const handleDelete = async (roleId: string) => {
     // lógica para eliminar
