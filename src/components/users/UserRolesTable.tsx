@@ -1,3 +1,4 @@
+================
 import { UserWithRoles } from "@/types/auth";
 import {
   Table,
@@ -11,13 +12,19 @@ import { Button } from "@/components/ui/button";
 import { UserRolesList } from "@/components/profile/UserRolesList";
 import { RefreshCw, Users } from "lucide-react";
 
-interface Props {
+interface UserRolesTableProps {
   users: UserWithRoles[];
   loading: boolean;
-  onDeleteUser: (userId: string) => void;
+  onDeleteRole: (roleId: string) => void;
+  onRefresh: () => void; // ✅ ya integrado acá
 }
 
-export function UserRolesTable({ users, loading, onDeleteUser }: Props) {
+export function UserRolesTable({
+  users,
+  loading,
+  onDeleteRole,
+  onRefresh, // ✅ usado más abajo
+}: UserRolesTableProps) {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -41,7 +48,7 @@ export function UserRolesTable({ users, loading, onDeleteUser }: Props) {
         <TableRow>
           <TableHead>Usuario</TableHead>
           <TableHead>Roles</TableHead>
-          <TableHead className="text-right w-[80px]">Acciones</TableHead>
+          <TableHead className="w-[100px]">Acciones</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -52,18 +59,32 @@ export function UserRolesTable({ users, loading, onDeleteUser }: Props) {
               <div className="text-sm text-muted-foreground">{user.email}</div>
             </TableCell>
             <TableCell>
-              <UserRolesList roles={user.roles} isLoading={false} />
+              {user.roles.length > 0 ? (
+                <UserRolesList
+                  roles={user.roles}
+                  isLoading={loading}
+                  onRoleUpdated={onRefresh} // ✅ Aquí está la magia
+                />
+              ) : (
+                <span className="text-sm text-muted-foreground italic">
+                  Sin roles
+                </span>
+              )}
             </TableCell>
-            <TableCell className="text-right">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onDeleteUser(user.id)}
-                className="text-destructive hover:bg-destructive/10"
-              >
-                🗑️
-                <span className="sr-only">Eliminar usuario</span>
-              </Button>
+            <TableCell>
+              <div className="flex gap-1">
+                {user.roles.map((role) => (
+                  <Button
+                    key={role.id}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDeleteRole(role.id)}
+                    title="Eliminar rol"
+                  >
+                    ×
+                  </Button>
+                ))}
+              </div>
             </TableCell>
           </TableRow>
         ))}
