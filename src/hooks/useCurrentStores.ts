@@ -1,39 +1,51 @@
-import { useSession } from "@supabase/auth-helpers-react";
+
+import { useAuth } from "@/contexts/auth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Devuelve los IDs de sucursales (almacenes) asignadas al usuario autenticado.
+ * Devuelve las sucursales (almacenes) asignadas al usuario autenticado.
  */
 export function useCurrentStores() {
-  const session = useSession();
-  const userId = session?.user.id;
+  const { user, loading } = useAuth();
+  const userId = user?.id;
 
-  const {
-    data: storeIds = [],
-    isLoading,
-    error,
-  } = useQuery({
+  const { data: stores = [], isLoading, error } = useQuery({
     queryKey: ["currentUserStores", userId],
-    enabled: !!userId,
+    enabled: !!userId && !loading,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Primero obtenemos los IDs de almacenes del usuario
+      const { data: userRoles, error: rolesError } = await supabase
         .from("user_roles")
         .select("almacen_id")
         .eq("user_id", userId)
-        .not("almacen_id", "is", null); // sólo roles con sucursal
+        .not("almacen_id", "is", null); // solo roles con sucursal
 
-      if (error) throw error;
+      if (rolesError) throw rolesError;
 
-      // Devuelve una lista única de IDs
-      const ids = data.map((r) => r.almacen_id);
-      return [...new Set(ids)];
-    },
+      // Extraer IDs únicos de almacenes
+      const storeIds = [...new Set(userRoles.map(r => r.almacen_id))];
+
+      if (storeIds.length === 0) {
+        return [];
+      }
+
+      // Obtener detalles de los almacenes
+      const { data: storesData, error: storesError } = await supabase
+        .from("almacenes")
+        .select("id, nombre")
+        .in("id", storeIds);
+
+      if (storesError) throw storesError;
+
+      return storesData || [];
+    }
   });
 
   return {
-    storeIds,
+    stores,
     isLoading,
-    error,
+    hasStores: stores.length > 0,
+    error
   };
 }

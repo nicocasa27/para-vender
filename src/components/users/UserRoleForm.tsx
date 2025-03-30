@@ -1,74 +1,124 @@
-import { useStores } from "@/hooks/useStores";
-import { RoleSelector } from "./RoleSelector";
-import { StoreMultiSelect } from "@/components/users/StoreMultiSelect"; // ✅ Import corregido
-import { useRoleAssignmentV2 } from "@/hooks/useRoleAssignmentV2";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Role } from "@/types/auth";
+
+import { useState } from "react";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import RoleSelector from "./RoleSelector";
+import StoreMultiSelect from "@/components/users/StoreMultiSelect";
+
+const formSchema = z.object({
+  email: z.string().email({ message: "Email inválido" }),
+  role: z.string().min(1, { message: "Rol requerido" }),
+  storeIds: z.array(z.string()).optional(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface Props {
-  userId: string;
-  fullName: string;
-  email: string;
-  currentRoles: Role[];
-  onSuccess: () => void;
+  onSubmit: (values: FormValues) => Promise<void>;
+  isLoading?: boolean;
 }
 
-export function UserRoleForm({
-  userId,
-  fullName,
-  email,
-  currentRoles,
-  onSuccess,
-}: Props) {
-  const [role, setRole] = useState<Role | "">("");
-  const [storeIds, setStoreIds] = useState<string[]>([]);
-  const { assignRole, loading } = useRoleAssignmentV2();
+const UserRoleForm = ({ onSubmit, isLoading = false }: Props) => {
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+      role: "",
+      storeIds: [],
+    },
+  });
+  
+  const selectedRole = form.watch("role");
+  const requiresStore = selectedRole === "manager" || selectedRole === "sales";
 
-  useEffect(() => {
-    if (role !== "sales") {
-      setStoreIds([]); // Resetear sucursales si el rol no es sales
-    }
-  }, [role]);
-
-  const handleSubmit = async () => {
-    if (!role) {
-      toast.error("Selecciona un rol");
-      return;
-    }
-
-    const success = await assignRole({ userId, role, almacenIds: storeIds });
-
-    if (success) {
+  const handleSubmit = async (values: FormValues) => {
+    try {
+      await onSubmit(values);
+      form.reset();
       toast.success("Rol asignado correctamente");
-      onSuccess();
+    } catch (error) {
+      console.error("Error en asignación de rol:", error);
+      // Error handling is delegated to the onSubmit function
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold">{fullName}</h3>
-        <p className="text-sm text-muted-foreground">{email}</p>
-        <Separator className="my-2" />
-      </div>
-
-      <RoleSelector value={role} onChange={setRole} />
-
-      {role === "sales" && (
-        <div className="space-y-1">
-          <p className="text-sm font-medium">Asignar sucursales</p>
-          <StoreMultiSelect selected={storeIds} onChange={setStoreIds} />
-        </div>
-      )}
-
-      <div className="flex justify-end">
-        <Button onClick={handleSubmit} disabled={loading}>
-          Asignar Rol
-        </Button>
-      </div>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Asignar Rol</CardTitle>
+      </CardHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)}>
+          <CardContent className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email del Usuario</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="usuario@ejemplo.com" disabled={isLoading} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Rol a Asignar</FormLabel>
+                  <FormControl>
+                    <RoleSelector 
+                      value={field.value} 
+                      onChange={field.onChange} 
+                      disabled={isLoading} 
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            {requiresStore && (
+              <FormField
+                control={form.control}
+                name="storeIds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tiendas Asignadas</FormLabel>
+                    <FormControl>
+                      <StoreMultiSelect
+                        value={field.value || []} 
+                        onChange={field.onChange}
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+          </CardContent>
+          
+          <CardFooter>
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isLoading}
+            >
+              {isLoading ? "Asignando..." : "Asignar Rol"}
+            </Button>
+          </CardFooter>
+        </form>
+      </Form>
+    </Card>
   );
-}
+};
+
+export default UserRoleForm;

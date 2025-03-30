@@ -1,20 +1,21 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface ProductCardProps {
-  name: string;
-  price: number;
-  stock: number;
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Product } from "@/types/inventory";
+
+interface Props {
+  product: Product;
+  onClick?: () => void;
 }
 
-export function ProductCard({ name, price, stock }: ProductCardProps) {
+export function ProductCard({ product, onClick }: Props) {
   return (
-    <Card className="w-full shadow-sm transition-transform hover:scale-[1.02]">
+    <Card onClick={onClick} className="cursor-pointer hover:shadow-lg transition">
       <CardHeader>
-        <CardTitle className="text-base">{name}</CardTitle>
+        <CardTitle className="text-base">{product.nombre}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-1 text-sm text-muted-foreground">
-        <div>Precio: ${price.toFixed(2)}</div>
-        <div>Stock: {stock} unidades</div>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">${product.precio_venta}</p>
+        <p className="text-xs text-muted-foreground">Stock: {product.stock_total}</p>
       </CardContent>
     </Card>
   );

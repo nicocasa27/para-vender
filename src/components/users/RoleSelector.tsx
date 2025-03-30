@@ -1,40 +1,41 @@
 
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Control } from "react-hook-form";
-import { RoleAssignmentValues } from "./validation/roleSchemas";
+import { useState } from 'react';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-interface RoleSelectorProps {
-  control: Control<RoleAssignmentValues>;
+interface Props {
+  value?: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
 }
 
-export function RoleSelector({ control }: RoleSelectorProps) {
+const RoleSelector = ({ value, onChange, disabled = false }: Props) => {
+  const roles = [
+    { value: "admin", label: "Administrador" },
+    { value: "manager", label: "Gerente" },
+    { value: "sales", label: "Ventas" },
+    { value: "viewer", label: "Visitante" }
+  ];
+
   return (
-    <FormField
-      control={control}
-      name="role"
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>Rol</FormLabel>
-          <Select
-            onValueChange={field.onChange}
-            defaultValue={field.value}
-          >
-            <FormControl>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccione un rol" />
-              </SelectTrigger>
-            </FormControl>
-            <SelectContent>
-              <SelectItem value="admin">Administrador</SelectItem>
-              <SelectItem value="manager">Gerente</SelectItem>
-              <SelectItem value="sales">Vendedor</SelectItem>
-              <SelectItem value="viewer">Visualizador</SelectItem>
-            </SelectContent>
-          </Select>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
+    <Select
+      value={value}
+      onValueChange={onChange}
+      disabled={disabled}
+    >
+      <SelectTrigger className="w-full">
+        <SelectValue placeholder="Seleccionar rol" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          {roles.map(role => (
+            <SelectItem key={role.value} value={role.value}>
+              {role.label}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
   );
-}
+};
+
+export default RoleSelector;
