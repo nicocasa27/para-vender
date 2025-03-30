@@ -1,100 +1,227 @@
-
-import { useState } from "react";
-import { UserWithRoles } from "@/hooks/users/types/userManagementTypes";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React from "react";
+import { UserWithRoles } from "@/types/auth";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { NewUserList } from "@/components/users/NewUserList";
+import { RefreshCw, UserPlus, X } from "lucide-react";
+import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
+import { UserRoleForm } from "@/components/users/UserRoleForm";
+import { UserCreateForm } from "@/components/users/UserCreateForm";
+import { useState, useCallback } from "react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
-interface Props {
-  selectedUser?: UserWithRoles;
-  user?: UserWithRoles;
-  onSuccess: () => Promise<void>;
-  onCancel: () => void;
-}
-
-const UserSidePanel = ({ selectedUser, user, onSuccess, onCancel }: Props) => {
-  const [activeTab, setActiveTab] = useState("roles");
-  
-  // Use whichever user prop is provided
-  const activeUser = selectedUser || user;
-
-  return (
-    <Sheet open={!!activeUser} onOpenChange={() => onCancel()}>
-      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Gestionar Usuario</SheetTitle>
-        </SheetHeader>
-
-        <div className="mt-6">
-          <div className="mb-6 space-y-1">
-            <h3 className="font-medium">{activeUser?.full_name || "Usuario"}</h3>
-            <p className="text-sm text-muted-foreground">{activeUser?.email}</p>
-          </div>
-
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full">
-              <TabsTrigger value="roles" className="flex-1">Roles</TabsTrigger>
-              <TabsTrigger value="permissions" className="flex-1">Permisos</TabsTrigger>
-              <TabsTrigger value="info" className="flex-1">Información</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="roles" className="mt-4">
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium">Roles Actuales</h4>
-                
-                {activeUser?.roles && activeUser.roles.length > 0 ? (
-                  <div className="space-y-2">
-                    {activeUser.roles.map(role => (
-                      <div key={role.id} className="flex items-center justify-between p-2 border rounded-md">
-                        <div>
-                          <p className="font-medium capitalize">{role.role}</p>
-                          {role.almacen_nombre && (
-                            <p className="text-xs text-muted-foreground">{role.almacen_nombre}</p>
-                          )}
-                        </div>
-                        <Button size="sm" variant="outline">
-                          Revocar
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Este usuario no tiene roles asignados.</p>
-                )}
-                
-                <Button className="w-full mt-4">Añadir Rol</Button>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="permissions" className="mt-4">
-              <p className="text-sm text-muted-foreground">
-                La gestión de permisos estará disponible próximamente.
-              </p>
-            </TabsContent>
-            
-            <TabsContent value="info" className="mt-4">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-medium">ID</h4>
-                  <p className="text-sm mt-1">{activeUser?.id}</p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium">Email</h4>
-                  <p className="text-sm mt-1">{activeUser?.email}</p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium">Nombre</h4>
-                  <p className="text-sm mt-1">{activeUser?.full_name || "No especificado"}</p>
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
+// Función helper para validar UUID
+const isValidUUID = (uuid: string | null | undefined) => {
+  if (!uuid || uuid === "null" || uuid === "undefined") return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
 };
 
-export default UserSidePanel;
+interface UserSidePanelProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  users: UserWithRoles[];
+  loading: boolean;
+  onRefresh: () => void;
+  onDeleteRole: (roleId: string) => Promise<void>;
+  onAddRole: (user: UserWithRoles) => void;
+  selectedUser: UserWithRoles | null;
+  setSelectedUser: (user: UserWithRoles | null) => void;
+}
+
+export function UserSidePanel({
+  open,
+  onOpenChange,
+  users,
+  loading,
+  onRefresh,
+  onDeleteRole,
+  onAddRole,
+  selectedUser,
+  setSelectedUser
+}: UserSidePanelProps) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+
+  const handleRoleAssigned = async () => {
+    setDialogOpen(false);
+    setSelectedUser(null);
+    await onRefresh();
+  };
+
+  const handleRefresh = async () => {
+    toast.info("Actualizando lista de usuarios...");
+    await onRefresh();
+  };
+
+  // Validar que el usuario seleccionado tenga un ID válido antes de mostrar el modal
+  const isSelectedUserValid = useCallback(() => {
+    return selectedUser && isValidUUID(selectedUser.id);
+  }, [selectedUser]);
+
+  // Log para depuración cuando cambia el usuario seleccionado
+  React.useEffect(() => {
+    if (selectedUser) {
+      console.log("UserSidePanel - Usuario seleccionado:", {
+        id: selectedUser.id,
+        tipo: typeof selectedUser.id,
+        esValido: isValidUUID(selectedUser.id),
+      });
+    }
+  }, [selectedUser]);
+
+  const handleCreateUser = async (userData: { email: string; password: string; fullName: string }) => {
+    try {
+      setIsCreatingUser(true);
+      
+      // Registrar el usuario con Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            full_name: userData.fullName,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      // Asegurarnos de crear el perfil explícitamente en caso de que el trigger falle
+      if (data.user) {
+        try {
+          // Esperar un momento para dar tiempo a que el trigger de Supabase cree el perfil
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Intentar crear perfil por si el trigger falló
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              full_name: userData.fullName,
+              email: userData.email
+            })
+            .select();
+            
+          if (profileError && profileError.code !== '23505') { // Ignora error de duplicado
+            console.log("Error al crear perfil:", profileError);
+          }
+        } catch (profileErr) {
+          console.error("Error al crear perfil:", profileErr);
+          // Continuar de todos modos, esto es solo para garantizar que exista
+        }
+      }
+
+      toast.success("Usuario creado correctamente", {
+        description: "El usuario ha sido registrado exitosamente"
+      });
+
+      // Cerrar el diálogo y refrescar la lista
+      setCreateUserDialogOpen(false);
+      await onRefresh();
+      
+    } catch (error: any) {
+      console.error("Error al crear usuario:", error);
+      toast.error("Error al crear usuario", {
+        description: error.message || "No se pudo crear el usuario"
+      });
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-md overflow-hidden" side="right">
+        <SheetHeader className="pb-4">
+          <SheetTitle className="text-2xl">Gestión de Usuarios</SheetTitle>
+          <SheetDescription>
+            Administra usuarios y sus roles en el sistema
+          </SheetDescription>
+        </SheetHeader>
+        
+        <div className="flex justify-between items-center mb-4">
+          <Button variant="outline" onClick={handleRefresh} disabled={loading} size="sm">
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Actualizar
+          </Button>
+          <Dialog open={createUserDialogOpen} onOpenChange={setCreateUserDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Nuevo Usuario
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <UserCreateForm 
+                onCreateUser={handleCreateUser} 
+                onCancel={() => setCreateUserDialogOpen(false)}
+                isCreating={isCreatingUser}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
+        
+        <ScrollArea className="flex-1 h-[calc(100vh-11rem)]">
+          <NewUserList 
+            users={users} 
+            isLoading={loading} 
+            onDeleteRole={onDeleteRole} 
+            onAddRole={(user) => {
+              // Verificar explícitamente que el ID sea un UUID válido
+              if (!isValidUUID(user.id)) {
+                toast.error("No se puede asignar rol: ID de usuario inválido");
+                console.error("ID de usuario inválido:", user.id);
+                return;
+              }
+              
+              // Crear una copia limpia del usuario con solo los campos necesarios
+              const cleanUser: UserWithRoles = {
+                id: user.id,
+                email: user.email || user.profiles?.email || "",
+                full_name: user.full_name || user.profiles?.full_name || "",
+                roles: user.roles || [],
+                profiles: user.profiles
+              };
+              
+              console.log("UserSidePanel - Usuario limpio para asignación:", cleanUser);
+              setSelectedUser(cleanUser);
+              setDialogOpen(true);
+            }}
+            onSuccess={handleRefresh}
+          />
+        </ScrollArea>
+        
+        <SheetFooter className="mt-4">
+          <SheetClose asChild>
+            <Button variant="outline" className="w-full">
+              <X className="h-4 w-4 mr-2" />
+              Cerrar
+            </Button>
+          </SheetClose>
+        </SheetFooter>
+      </SheetContent>
+
+      <Dialog open={dialogOpen && isSelectedUserValid()} onOpenChange={(open) => {
+        setDialogOpen(open);
+        if (!open) setSelectedUser(null);
+      }}>
+        {selectedUser && isSelectedUserValid() && (
+          <DialogContent>
+            <UserRoleForm 
+              selectedUser={selectedUser} 
+              onSuccess={handleRoleAssigned} 
+              onCancel={() => {
+                setDialogOpen(false);
+                setSelectedUser(null);
+              }}
+            />
+          </DialogContent>
+        )}
+      </Dialog>
+    </Sheet>
+  );
+}
