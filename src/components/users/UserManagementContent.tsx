@@ -1,4 +1,3 @@
-
 import { UserWithRoles } from "@/types/auth";
 import { Button } from "@/components/ui/button";
 import { Trash, User } from "lucide-react";
