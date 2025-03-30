@@ -39,6 +39,7 @@ interface UserWithEmail {
 interface UserWithRoles extends UserWithEmail {
   roles: {
     id: string;
+    user_id: string; // Añadido para compatibilidad con UserRoleWithStore
     role: Role;
     almacen_id: string | null;
     almacen_nombre: string | null;
@@ -98,9 +99,10 @@ export default function UserRoles() {
           if (userEntry) {
             userEntry.roles.push({
               id: item.id,
+              user_id: userId, // Añadimos explícitamente el user_id que es requerido
               role: item.role,
               almacen_id: item.almacen_id,
-              almacen_nombre: null  // Lo actualizamos más adelante si es necesario
+              almacen_nombre: item.almacen_nombre || null
             });
           }
         });
@@ -147,6 +149,7 @@ export default function UserRoles() {
         if (userEntry) {
           userEntry.roles.push({
             id: item.id,
+            user_id: userId, // Añadimos explícitamente el user_id que es requerido
             role: item.role,
             almacen_id: item.almacen_id,
             almacen_nombre: item.almacenes?.nombre || null
