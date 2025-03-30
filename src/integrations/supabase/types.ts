@@ -401,33 +401,6 @@ export type Database = {
         }
         Returns: number
       }
-      get_top_productos: {
-        Args: {
-          store_ids: string[]
-        }
-        Returns: {
-          producto: string
-          total: number
-        }[]
-      }
-      get_ventas_por_categoria: {
-        Args: {
-          store_ids: string[]
-        }
-        Returns: {
-          categoria: string
-          total: number
-        }[]
-      }
-      get_ventas_por_dia: {
-        Args: {
-          store_ids: string[]
-        }
-        Returns: {
-          fecha: string
-          total: number
-        }[]
-      }
       has_role: {
         Args: {
           requested_role: Database["public"]["Enums"]["user_role"]

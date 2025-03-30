@@ -1,147 +1,105 @@
-
-import { useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { RevenueOverTimeChart } from "@/components/analytics/RevenueOverTimeChart";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentStores } from "@/hooks/useCurrentStores";
 import { SalesByCategoryChart } from "@/components/analytics/SalesByCategoryChart";
 import { TopProductsChart } from "@/components/analytics/TopProductsChart";
-import { supabase } from "@/integrations/supabase/client";
-import { SalesDataPoint, CategoryDataPoint, ProductDataPoint } from "@/types/analytics";
+import { RevenueOverTimeChart } from "@/components/analytics/RevenueOverTimeChart";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Analytics() {
-  const [dateRange, setDateRange] = useState("week");
-  const [loading, setLoading] = useState(false);
-  const [salesData, setSalesData] = useState<SalesDataPoint[]>([]);
-  const [categoryData, setCategoryData] = useState<CategoryDataPoint[]>([]);
-  const [productData, setProductData] = useState<ProductDataPoint[]>([]);
-  
-  const fetchAnalytics = async (period = "week") => {
-    setLoading(true);
-    try {
-      // Fetch sales over time
-      const { data: salesTimeData, error: salesTimeError } = await supabase.rpc(
-        "get_sales_over_time",
-        { period_param: period }
-      );
-      
-      if (salesTimeError) throw salesTimeError;
-      setSalesData(salesTimeData || []);
-      
-      // Fetch sales by category
-      const { data: salesCategoryData, error: salesCategoryError } = await supabase.rpc(
-        "get_sales_by_category",
-        { period_param: period }
-      );
-      
-      if (salesCategoryError) throw salesCategoryError;
-      setCategoryData(salesCategoryData || []);
-      
-      // Fetch top products
-      const { data: topProductsData, error: topProductsError } = await supabase.rpc(
-        "get_top_products",
-        { period_param: period, limit_param: 5 }
-      );
-      
-      if (topProductsError) throw topProductsError;
-      setProductData(topProductsData || []);
-      
-    } catch (error) {
-      console.error("Error fetching analytics:", error);
-      // You could use toast here
-    } finally {
-      setLoading(false);
-    }
-  };
-  
+  const { storeIds, isLoading: isLoadingStores } = useCurrentStores();
+  const [salesByCategory, setSalesByCategory] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
+  const [revenueOverTime, setRevenueOverTime] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (isLoadingStores || storeIds.length === 0) return;
+
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Ventas por categoría
+        const { data: catData, error: catError } = await supabase
+          .from("ventas_por_categoria")
+          .select("*")
+          .in("almacen_id", storeIds);
+
+        if (catError) throw catError;
+        setSalesByCategory(catData || []);
+
+        // Top productos vendidos
+        const { data: topData, error: topError } = await supabase
+          .from("ventas_top_productos")
+          .select("*")
+          .in("almacen_id", storeIds);
+
+        if (topError) throw topError;
+        setTopProducts(topData || []);
+
+        // Ventas por día
+        const { data: revData, error: revError } = await supabase
+          .from("ventas_por_dia")
+          .select("*")
+          .in("almacen_id", storeIds);
+
+        if (revError) throw revError;
+        setRevenueOverTime(revData || []);
+      } catch (err) {
+        console.error("Error cargando analíticas:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [storeIds, isLoadingStores]);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Analíticas</h2>
-        <p className="text-muted-foreground mt-2">
-          Visualiza el rendimiento de ventas e inventario
-        </p>
+      <h1 className="text-2xl font-bold tracking-tight">Analíticas</h1>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Ventas por Categoría</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-[250px] w-full rounded-md" />
+            ) : (
+              <SalesByCategoryChart data={salesByCategory} />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Productos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-[250px] w-full rounded-md" />
+            ) : (
+              <TopProductsChart data={topProducts} />
+            )}
+          </CardContent>
+        </Card>
       </div>
-      
-      <Tabs defaultValue="overview" className="space-y-4">
-        <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="overview">Visión General</TabsTrigger>
-            <TabsTrigger value="sales">Ventas</TabsTrigger>
-            <TabsTrigger value="inventory">Inventario</TabsTrigger>
-          </TabsList>
-          
-          <div className="flex items-center gap-2">
-            <Button
-              variant={dateRange === "week" ? "default" : "outline"}
-              onClick={() => {
-                setDateRange("week");
-                fetchAnalytics("week");
-              }}
-              size="sm"
-            >
-              Semana
-            </Button>
-            <Button
-              variant={dateRange === "month" ? "default" : "outline"}
-              onClick={() => {
-                setDateRange("month");
-                fetchAnalytics("month");
-              }}
-              size="sm"
-            >
-              Mes
-            </Button>
-            <Button
-              variant={dateRange === "year" ? "default" : "outline"}
-              onClick={() => {
-                setDateRange("year");
-                fetchAnalytics("year");
-              }}
-              size="sm"
-            >
-              Año
-            </Button>
-          </div>
-        </div>
-        
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Ingresos por Periodo
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RevenueOverTimeChart data={salesData} loading={loading} />
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Ventas por Categoría
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <SalesByCategoryChart data={categoryData} loading={loading} />
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Productos Más Vendidos
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TopProductsChart data={productData} loading={loading} />
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Ingresos por Día</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <Skeleton className="h-[300px] w-full rounded-md" />
+          ) : (
+            <RevenueOverTimeChart data={revenueOverTime} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
