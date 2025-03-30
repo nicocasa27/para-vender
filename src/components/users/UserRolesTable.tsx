@@ -27,6 +27,12 @@ export function UserRolesTable({
   onDeleteRole,
   onRefresh,
 }: UserRolesTableProps) {
+  // Handler para eliminar rol y luego refrescar
+  const handleDeleteRole = async (roleId: string) => {
+    await onDeleteRole(roleId);
+    // No necesitamos llamar a onRefresh aquí porque ya lo hace el onDeleteRole
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -55,7 +61,7 @@ export function UserRolesTable({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onDeleteRole(role.id)}
+                  onClick={() => handleDeleteRole(role.id)}
                   title="Eliminar rol"
                 >
                   ×
@@ -74,6 +80,14 @@ export function UserRolesTable({
       <div className="text-center py-8 text-muted-foreground">
         <Users className="h-10 w-10 mx-auto mb-2 opacity-50" />
         <p>No hay usuarios con roles asignados</p>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={onRefresh}
+          className="mt-4"
+        >
+          Intentar cargar usuarios
+        </Button>
       </div>
     );
   }
@@ -114,7 +128,7 @@ export function UserRolesTable({
                     key={role.id}
                     variant="ghost"
                     size="sm"
-                    onClick={() => onDeleteRole(role.id)}
+                    onClick={() => handleDeleteRole(role.id)}
                     title="Eliminar rol"
                   >
                     ×
@@ -128,5 +142,3 @@ export function UserRolesTable({
     </Table>
   );
 }
-
-export default UserRolesTable;

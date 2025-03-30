@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { UserWithRoles } from '@/hooks/users/types/userManagementTypes';
 import { useRoleManagement } from './users/useRoleManagement';
 import { useUserDeletion } from './users/useUserDeletion';
@@ -17,16 +17,19 @@ export function useUsersAndRoles(isAdmin: boolean) {
   // Eliminación de usuarios
   const { deleteUser } = useUserDeletion();
 
-  // Function to fetch users
-  const fetchUsers = async () => {
+  // Function to fetch users - usando useCallback para evitar recrear la función
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     try {
       if (!isAdmin) {
         setUsers([]);
+        setLoading(false);
         return;
       }
+      
+      console.log("Fetching users with roles...");
       
       // Get all profiles
       const { data: profiles, error: profilesError } = await supabase
@@ -59,6 +62,7 @@ export function useUsersAndRoles(isAdmin: boolean) {
         })
       );
       
+      console.log(`Fetched ${usersWithRoles.length} users with roles`);
       setUsers(usersWithRoles);
     } catch (err) {
       console.error("Error fetching users:", err);
@@ -67,12 +71,7 @@ export function useUsersAndRoles(isAdmin: boolean) {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Load users on mount or when isAdmin changes
-  useEffect(() => {
-    fetchUsers();
-  }, [isAdmin]);
+  }, [isAdmin]); // Solo depende de isAdmin
 
   // Wrapper para asegurar que se actualiza la lista después de eliminar rol
   const handleDeleteRole = async (roleId: string) => {

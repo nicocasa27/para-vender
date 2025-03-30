@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -30,8 +31,11 @@ export function useRoleManagement() {
       
       toast.success("Rol eliminado correctamente");
       
-      // Callback de éxito opcional
-      if (onSuccess) onSuccess();
+      // Callback de éxito opcional - SIEMPRE ejecutar si existe
+      if (onSuccess) {
+        console.log("Ejecutando callback después de eliminar rol");
+        onSuccess();
+      }
     } catch (error: any) {
       console.error("Error al eliminar rol:", error);
       toast.error("Error al eliminar rol", {
@@ -121,7 +125,10 @@ export function useRoleManagement() {
       toast.success("Rol asignado correctamente");
       
       // Callback de éxito opcional
-      if (onSuccess) onSuccess();
+      if (onSuccess) {
+        console.log("Ejecutando callback después de añadir rol");
+        onSuccess();
+      }
     } catch (error: any) {
       console.error("Error al añadir rol:", error);
       toast.error("Error al asignar rol", {

@@ -4,6 +4,8 @@ import { useUsersAndRoles } from "@/hooks/useUsersAndRoles";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 const UserRoles = () => {
   const { hasRole } = useAuth();
@@ -17,14 +19,30 @@ const UserRoles = () => {
     deleteRole 
   } = useUsersAndRoles(isAdmin);
 
-  // Handle refresh button click
-  const handleRefresh = () => {
+  // Cargar datos al montar el componente
+  useEffect(() => {
     fetchUsers();
+  }, [fetchUsers]);
+
+  // Handle refresh button click
+  const handleRefresh = async () => {
+    try {
+      await fetchUsers();
+      toast.success("Roles actualizados correctamente");
+    } catch (err) {
+      toast.error("Error al actualizar roles");
+    }
   };
 
   // Handle role deletion
-  const handleDeleteRole = (roleId: string) => {
-    deleteRole(roleId);
+  const handleDeleteRole = async (roleId: string) => {
+    try {
+      await deleteRole(roleId);
+      // Refrescar la lista después de eliminar
+      fetchUsers();
+    } catch (error) {
+      console.error("Error al eliminar rol:", error);
+    }
   };
 
   return (
