@@ -1,39 +1,74 @@
 import { useStores } from "@/hooks/useStores";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { RoleSelector } from "./RoleSelector";
+import { StoreMultiSelect } from "@/components/users/StoreMultiSelect";
+import { useRoleAssignmentV2 } from "@/hooks/useRoleAssignmentV2";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Role } from "@/types/auth";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 interface Props {
-  selected: string[];
-  onChange: (ids: string[]) => void;
+  userId: string;
+  fullName: string;
+  email: string;
+  currentRoles: Role[];
+  onSuccess: () => void;
 }
 
-export function StoreMultiSelect({ selected, onChange }: Props) {
-  const { stores, isLoading } = useStores();
+export function UserRoleForm({
+  userId,
+  fullName,
+  email,
+  currentRoles,
+  onSuccess,
+}: Props) {
+  const [role, setRole] = useState<Role | "">("");
+  const [storeIds, setStoreIds] = useState<string[]>([]);
+  const { assignRole, loading } = useRoleAssignmentV2();
 
-  const toggleStore = (id: string) => {
-    if (selected.includes(id)) {
-      onChange(selected.filter((s) => s !== id));
-    } else {
-      onChange([...selected, id]);
+  useEffect(() => {
+    if (role !== "sales") {
+      setStoreIds([]); // Resetear sucursales si el rol no es sales
+    }
+  }, [role]);
+
+  const handleSubmit = async () => {
+    if (!role) {
+      toast.error("Selecciona un rol");
+      return;
+    }
+
+    const success = await assignRole({ userId, role, almacenIds: storeIds });
+
+    if (success) {
+      toast.success("Rol asignado correctamente");
+      onSuccess();
     }
   };
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Cargando sucursales...</p>;
-
-  if (!stores.length) return <p className="text-sm text-muted-foreground">No hay sucursales disponibles</p>;
-
   return (
-    <div className="space-y-2">
-      {stores.map((store) => (
-        <div key={store.id} className="flex items-center gap-2">
-          <Checkbox
-            id={`store-${store.id}`}
-            checked={selected.includes(store.id)}
-            onCheckedChange={() => toggleStore(store.id)}
-          />
-          <Label htmlFor={`store-${store.id}`}>{store.nombre}</Label>
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold">{fullName}</h3>
+        <p className="text-sm text-muted-foreground">{email}</p>
+        <Separator className="my-2" />
+      </div>
+
+      <RoleSelector value={role} onChange={setRole} />
+
+      {role === "sales" && (
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Asignar sucursales</p>
+          <StoreMultiSelect selected={storeIds} onChange={setStoreIds} />
         </div>
-      ))}
+      )}
+
+      <div className="flex justify-end">
+        <Button onClick={handleSubmit} disabled={loading}>
+          Asignar Rol
+        </Button>
+      </div>
     </div>
   );
 }
