@@ -1,30 +1,76 @@
 import { Role, UserRole } from "@/types/auth";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useStores } from "@/hooks/useStores";
+import { useState } from "react";
 
 interface Props {
   roles: UserRole[];
   isLoading: boolean;
-  onRoleUpdated?: () => void; // Opcional callback para refrescar usuarios
+  onRoleUpdated?: () => void;
 }
 
 const ROLES: Role[] = ["admin", "manager", "sales", "viewer"];
 
 export function UserRolesList({ roles, isLoading, onRoleUpdated }: Props) {
-  const handleUpdateRole = async (roleId: string, newRole: Role) => {
-    const { error } = await supabase
-      .from("user_roles")
-      .update({ role: newRole })
-      .eq("id", roleId);
+  const { stores } = useStores();
+  const [selectedStores, setSelectedStores] = useState<string[]>([]);
+  const userId = roles[0]?.user_id;
 
-    if (error) {
-      toast.error("Error al actualizar rol", { description: error.message });
+  const handleUpdateRole = async (roleId: string, newRole: Role) => {
+    if (newRole !== "sales") {
+      await supabase.from("user_roles").delete().eq("user_id", userId);
+
+      const { error } = await supabase.from("user_roles").insert({
+        user_id: userId,
+        role: newRole,
+        almacen_id: null,
+      });
+
+      if (error) {
+        toast.error("Error actualizando rol", { description: error.message });
+        return;
+      }
+
+      toast.success("Rol actualizado correctamente");
+      onRoleUpdated?.();
+    } else {
+      toast.info("Selecciona sucursales para el rol 'sales'");
+    }
+  };
+
+  const handleAssignSalesToStores = async () => {
+    if (selectedStores.length === 0) {
+      toast.warning("Debes seleccionar al menos una sucursal");
       return;
     }
 
-    toast.success("Rol actualizado correctamente");
-    onRoleUpdated?.(); // Si existe, refresca usuarios
+    await supabase.from("user_roles").delete().eq("user_id", userId);
+
+    const inserts = selectedStores.map((storeId) => ({
+      user_id: userId,
+      role: "sales",
+      almacen_id: storeId,
+    }));
+
+    const { error } = await supabase.from("user_roles").insert(inserts);
+
+    if (error) {
+      toast.error("Error asignando rol 'sales'", { description: error.message });
+      return;
+    }
+
+    toast.success("Rol 'sales' y sucursales asignadas");
+    onRoleUpdated?.();
   };
 
   return (
@@ -54,6 +100,38 @@ export function UserRolesList({ roles, isLoading, onRoleUpdated }: Props) {
           )}
         </div>
       ))}
+
+      {/* Mostrar selección de sucursales si se asigna rol sales */}
+      {stores.length > 0 && (
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          {stores.map((store) => (
+            <label
+              key={store.id}
+              className="flex items-center gap-2 text-sm"
+            >
+              <Checkbox
+                checked={selectedStores.includes(store.id)}
+                onCheckedChange={() =>
+                  setSelectedStores((prev) =>
+                    prev.includes(store.id)
+                      ? prev.filter((id) => id !== store.id)
+                      : [...prev, store.id]
+                  )
+                }
+              />
+              {store.nombre}
+            </label>
+          ))}
+          <Button
+            onClick={handleAssignSalesToStores}
+            size="sm"
+            className="col-span-2"
+            disabled={selectedStores.length === 0}
+          >
+            Asignar rol y sucursales
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
