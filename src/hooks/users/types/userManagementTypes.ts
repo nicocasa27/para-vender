@@ -22,15 +22,9 @@ export interface UserRole {
   almacenes?: { nombre: string } | null;
 }
 
-export interface UserRoleWithStore {
-  id: string;
-  user_id: string;
-  role: 'admin' | 'manager' | 'sales' | 'viewer';
-  almacen_id: string | null;
-  created_at: string;
-  email: string;
-  full_name: string | null;
-  almacen_nombre?: string | null;
+export interface UserRoleWithStore extends UserRole {
+  email?: string;
+  full_name?: string | null;
 }
 
 export interface UserManagementState {

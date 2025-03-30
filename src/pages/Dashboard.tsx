@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import StatCard from "@/components/dashboard/StatCard";
-import SalesChart from "@/components/dashboard/SalesChart";
-import RecentSalesTable from "@/components/dashboard/RecentSalesTable";
-import InventorySummary from "@/components/dashboard/InventorySummary";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { SalesChart } from "@/components/dashboard/SalesChart";
+import { RecentSalesTable } from "@/components/dashboard/RecentSalesTable";
+import { InventorySummary } from "@/components/dashboard/InventorySummary";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
 import { DollarSign, ShoppingBag, Truck, Users } from "lucide-react";
 
@@ -18,29 +18,29 @@ const Dashboard = () => {
     }
   }, [stores]);
   
-  // Convert string values to numbers for proper typing
+  // Convertir valores a números para el tipo correcto
   const stats = [
     {
       title: "Ventas Hoy",
-      value: 1254, // Number instead of string
+      value: 1254, // Número en lugar de string
       icon: <DollarSign className="h-5 w-5" />,
       description: "+12% respecto a ayer",
     },
     {
       title: "Nuevos Clientes",
-      value: 34, // Number instead of string
+      value: 34, // Número en lugar de string
       icon: <Users className="h-5 w-5" />,
       description: "+2% respecto a ayer",
     },
     {
       title: "Productos Vendidos",
-      value: 324, // Number instead of string
+      value: 324, // Número en lugar de string
       icon: <ShoppingBag className="h-5 w-5" />,
       description: "+8% respecto a ayer",
     },
     {
       title: "Transferencias",
-      value: 12, // Number instead of string
+      value: 12, // Número en lugar de string
       icon: <Truck className="h-5 w-5" />,
       description: "+4% respecto a ayer",
     },
@@ -69,23 +69,13 @@ const Dashboard = () => {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <SalesChart
-            storeIds={storeIds}
-          />
-          <RecentSalesTable
-            storeIds={storeIds}
-          />
+          <SalesChart />
+          <RecentSalesTable />
         </div>
 
         <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
-          <InventorySummary
-            storeIds={storeIds}
-            showLowStock={true}
-          />
-          <InventorySummary
-            storeIds={storeIds}
-            showLowStock={false}
-          />
+          <InventorySummary />
+          <InventorySummary />
         </div>
       </div>
     </MainLayout>

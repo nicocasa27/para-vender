@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import RevenueOverTimeChart from "@/components/analytics/RevenueOverTimeChart";
-import SalesByCategoryChart from "@/components/analytics/SalesByCategoryChart";
-import TopProductsChart from "@/components/analytics/TopProductsChart";
+import { RevenueOverTimeChart } from "@/components/analytics/RevenueOverTimeChart";
+import { SalesByCategoryChart } from "@/components/analytics/SalesByCategoryChart";
+import { TopProductsChart } from "@/components/analytics/TopProductsChart";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
 import { supabase } from "@/integrations/supabase/client";
 import { ChartProps } from "@/types/analytics";
