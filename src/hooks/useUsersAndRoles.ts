@@ -12,7 +12,7 @@ export function useUsersAndRoles(isAdmin: boolean) {
   const [error, setError] = useState<Error | string | null>(null);
   
   // Gestión de roles
-  const { deleteRole } = useRoleManagement();
+  const { deleteRole, addRole: assignRole } = useRoleManagement();
   
   // Eliminación de usuarios
   const { deleteUser } = useUserDeletion();
@@ -29,7 +29,58 @@ export function useUsersAndRoles(isAdmin: boolean) {
         return;
       }
       
-      console.log("Iniciando carga de usuarios desde la tabla profiles...");
+      console.log("Iniciando carga de usuarios desde la vista user_roles_with_name...");
+      
+      // Primero intentamos usar la vista optimizada
+      const { data: viewData, error: viewError } = await supabase
+        .from('user_roles_with_name')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (viewError) {
+        console.error("Error fetching from view:", viewError);
+        throw viewError;
+      }
+      
+      // Si la vista tiene datos, los procesamos
+      if (viewData && viewData.length > 0) {
+        console.log(`Encontrados ${viewData.length} registros desde la vista`);
+        
+        // Agrupar por usuario
+        const userMap = new Map();
+        
+        viewData.forEach(row => {
+          if (!userMap.has(row.user_id)) {
+            userMap.set(row.user_id, {
+              id: row.user_id,
+              email: row.email || "",
+              full_name: row.full_name || "Usuario sin nombre",
+              created_at: row.created_at,
+              roles: []
+            });
+          }
+          
+          // Añadir el rol al usuario
+          const user = userMap.get(row.user_id);
+          user.roles.push({
+            id: row.id,
+            user_id: row.user_id,
+            role: row.role,
+            almacen_id: row.almacen_id,
+            created_at: row.created_at,
+            almacen_nombre: row.almacen_nombre || null
+          });
+        });
+        
+        // Convertir el Map a array
+        const processedUsers = Array.from(userMap.values());
+        console.log(`Procesados ${processedUsers.length} usuarios desde la vista`);
+        setUsers(processedUsers);
+        return;
+      }
+      
+      // Fallback: Si la vista está vacía, usamos el método original
+      console.log("La vista no devolvió datos, usando método alternativo");
       
       // 1. Obtenemos todos los perfiles primero
       const { data: allProfiles, error: profilesError } = await supabase
@@ -85,12 +136,6 @@ export function useUsersAndRoles(isAdmin: boolean) {
       });
       
       console.log(`Procesados ${usersWithRoles.length} usuarios con sus roles`);
-      console.log("Usuarios con sus roles (muestra):", usersWithRoles.slice(0, 3).map(u => ({
-        id: u.id, 
-        email: u.email,
-        roles_count: u.roles.length
-      })));
-      
       setUsers(usersWithRoles);
     } catch (err) {
       console.error("Error fetching users:", err);
@@ -117,8 +162,9 @@ export function useUsersAndRoles(isAdmin: boolean) {
 
   // Wrapper para asegurar que se actualiza la lista después de añadir rol
   const handleAddRole = async (userId: string, roleName: "admin" | "manager" | "sales" | "viewer", almacenId?: string) => {
-    // Implementation would go here
+    await assignRole(userId, roleName, almacenId);
     await fetchUsers();
+    toast.success("Rol agregado y lista actualizada");
   };
 
   // Wrapper para asegurar que se actualiza la lista después de eliminar usuario

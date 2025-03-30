@@ -16,7 +16,8 @@ const UserRoles = () => {
     loading, 
     error, 
     fetchUsers, 
-    deleteRole 
+    deleteRole,
+    addRole
   } = useUsersAndRoles(isAdmin);
 
   // Cargar datos al montar el componente
@@ -43,7 +44,7 @@ const UserRoles = () => {
       console.log("Deleting role:", roleId);
       await deleteRole(roleId);
       // No necesitamos llamar a fetchUsers aquí porque ya lo hace deleteRole internamente
-      toast.success("Rol eliminado correctamente");
+      // toast success también se maneja dentro de deleteRole
     } catch (error) {
       console.error("Error al eliminar rol:", error);
       toast.error("Error al eliminar rol");
@@ -89,6 +90,7 @@ const UserRoles = () => {
           users={users} 
           loading={loading}
           onDeleteRole={handleDeleteRole}
+          onAddRole={addRole}
           onRefresh={handleRefresh}
         />
       )}
