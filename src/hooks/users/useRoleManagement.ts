@@ -20,7 +20,7 @@ export function useRoleManagement() {
         return;
       }
       
-      console.log(`useRoleManagement: Eliminando rol con ID: ${roleId}`);
+      console.log(`Eliminando rol con ID: ${roleId}`);
       
       const { error } = await supabase
         .from('user_roles')
@@ -29,11 +29,11 @@ export function useRoleManagement() {
         
       if (error) throw error;
       
-      console.log("useRoleManagement: Rol eliminado correctamente");
+      toast.success("Rol eliminado correctamente");
       
       // Callback de éxito opcional - SIEMPRE ejecutar si existe
       if (onSuccess) {
-        console.log("useRoleManagement: Ejecutando callback después de eliminar rol");
+        console.log("Ejecutando callback después de eliminar rol");
         onSuccess();
       }
     } catch (error: any) {
@@ -59,7 +59,7 @@ export function useRoleManagement() {
         return;
       }
 
-      console.log(`useRoleManagement: Añadiendo rol ${roleName} al usuario ${userId}${almacenId ? ` para almacén ${almacenId}` : ''}`);
+      console.log(`Añadiendo rol ${roleName} al usuario ${userId}${almacenId ? ` para almacén ${almacenId}` : ''}`);
       
       // Verificar si el perfil existe, si no, crearlo
       const { data: existingProfile, error: profileCheckError } = await supabase
@@ -75,7 +75,7 @@ export function useRoleManagement() {
       
       // Si no existe el perfil, crearlo
       if (!existingProfile) {
-        console.log(`useRoleManagement: No se encontró perfil para el usuario ${userId}, creando uno...`);
+        console.log(`No se encontró perfil para el usuario ${userId}, creando uno...`);
         const { error: createProfileError } = await supabase
           .from('profiles')
           .insert({
@@ -89,7 +89,7 @@ export function useRoleManagement() {
           throw createProfileError;
         }
         
-        console.log(`useRoleManagement: Perfil creado exitosamente para el usuario ${userId}`);
+        console.log(`Perfil creado exitosamente para el usuario ${userId}`);
       }
       
       // Verificar si ya existe el mismo rol para el usuario
@@ -122,12 +122,11 @@ export function useRoleManagement() {
         
       if (error) throw error;
       
-      console.log("useRoleManagement: Rol asignado correctamente");
       toast.success("Rol asignado correctamente");
       
       // Callback de éxito opcional
       if (onSuccess) {
-        console.log("useRoleManagement: Ejecutando callback después de añadir rol");
+        console.log("Ejecutando callback después de añadir rol");
         onSuccess();
       }
     } catch (error: any) {

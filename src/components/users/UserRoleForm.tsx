@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { Role, UserWithRoles } from "@/hooks/users/types/userManagementTypes";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useRoleManagement } from "@/hooks/users/useRoleManagement";
 
 interface Props {
   selectedUser: UserWithRoles;
@@ -23,9 +22,8 @@ export function UserRoleForm({
 }: Props) {
   const [role, setRole] = useState<Role | "">("");
   const [storeIds, setStoreIds] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const { addRole } = useRoleManagement();
-  
+  const { assignRole, loading } = useRoleAssignmentV2();
+
   useEffect(() => {
     if (role !== "sales") {
       setStoreIds([]); // Resetear sucursales si el rol no es sales
@@ -38,47 +36,22 @@ export function UserRoleForm({
       return;
     }
 
-    setLoading(true);
-    
-    try {
-      console.log("UserRoleForm: Asignando rol", role, "al usuario", selectedUser.id);
-      
-      if (role === "sales") {
-        if (!storeIds || storeIds.length === 0) {
-          toast.warning("Debes seleccionar al menos una sucursal para el rol 'sales'");
-          setLoading(false);
-          return;
-        }
-        
-        // Para rol 'sales', asignar cada almacén seleccionado
-        console.log("UserRoleForm: Asignando rol sales a múltiples almacenes:", storeIds);
-        
-        const promises = storeIds.map(storeId => 
-          addRole(selectedUser.id, role, storeId)
-        );
-        
-        await Promise.all(promises);
-        
-      } else {
-        // Para otros roles, asignar sin almacén
-        await addRole(selectedUser.id, role, undefined, onSuccess);
-      }
-      
-      console.log("UserRoleForm: Rol asignado correctamente");
+    const success = await assignRole({ 
+      userId: selectedUser.id, 
+      role, 
+      almacenIds: storeIds 
+    });
+
+    if (success) {
       toast.success("Rol asignado correctamente");
       onSuccess();
-    } catch (error) {
-      console.error("Error al asignar rol:", error);
-      toast.error("Error al asignar rol");
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold">{selectedUser.full_name || selectedUser.email || "Usuario"}</h3>
+        <h3 className="text-lg font-semibold">{selectedUser.full_name || "Usuario"}</h3>
         <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
         <Separator className="my-2" />
       </div>
@@ -92,14 +65,13 @@ export function UserRoleForm({
         </div>
       )}
 
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel} disabled={loading}>
-          Cancelar
-        </Button>
-        <Button onClick={handleSubmit} disabled={loading || !role} className="min-w-24">
-          {loading ? "Asignando..." : "Asignar Rol"}
+      <div className="flex justify-end">
+        <Button onClick={handleSubmit} disabled={loading}>
+          Asignar Rol
         </Button>
       </div>
     </div>
   );
 }
+
+export default UserRoleForm;

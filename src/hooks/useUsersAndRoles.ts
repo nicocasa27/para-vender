@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { UserWithRoles } from '@/hooks/users/types/userManagementTypes';
 import { useRoleManagement } from './users/useRoleManagement';
 import { useUserDeletion } from './users/useUserDeletion';
@@ -29,7 +29,7 @@ export function useUsersAndRoles(isAdmin: boolean) {
         return;
       }
       
-      console.log("useUsersAndRoles: Fetching users with roles...");
+      console.log("Fetching users with roles...");
       
       // Get all profiles
       const { data: profiles, error: profilesError } = await supabase
@@ -38,30 +38,15 @@ export function useUsersAndRoles(isAdmin: boolean) {
         
       if (profilesError) throw profilesError;
       
-      if (!profiles || profiles.length === 0) {
-        console.log("useUsersAndRoles: No profiles found");
-        setUsers([]);
-        setLoading(false);
-        return;
-      }
-      
-      console.log(`useUsersAndRoles: Found ${profiles.length} profiles`);
-      
       // For each profile, fetch their roles
       const usersWithRoles: UserWithRoles[] = await Promise.all(
         profiles.map(async (profile) => {
-          console.log(`useUsersAndRoles: Fetching roles for user ${profile.id} (${profile.email})`);
           const { data: roles, error: rolesError } = await supabase
             .from('user_roles')
             .select('*, almacenes(*)')
             .eq('user_id', profile.id);
             
-          if (rolesError) {
-            console.error(`Error fetching roles for user ${profile.id}:`, rolesError);
-            throw rolesError;
-          }
-          
-          console.log(`useUsersAndRoles: Found ${roles?.length || 0} roles for user ${profile.id}`);
+          if (rolesError) throw rolesError;
           
           return {
             id: profile.id,
@@ -77,23 +62,8 @@ export function useUsersAndRoles(isAdmin: boolean) {
         })
       );
       
-      console.log(`useUsersAndRoles: Successfully processed ${usersWithRoles.length} users with their roles`);
-      
-      // Ordenar usuarios: primero los que tienen roles, luego el resto
-      const sortedUsers = [...usersWithRoles].sort((a, b) => {
-        // Primero por si tienen roles (los que tienen roles primero)
-        if (b.roles.length !== a.roles.length) {
-          return b.roles.length - a.roles.length;
-        }
-        // Luego por nombre completo si existe
-        if (a.full_name && b.full_name) {
-          return a.full_name.localeCompare(b.full_name);
-        }
-        // Finalmente por email
-        return a.email.localeCompare(b.email);
-      });
-      
-      setUsers(sortedUsers);
+      console.log(`Fetched ${usersWithRoles.length} users with roles`);
+      setUsers(usersWithRoles);
     } catch (err) {
       console.error("Error fetching users:", err);
       setError(err as Error);
