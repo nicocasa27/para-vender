@@ -1,8 +1,6 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
 
 export interface Store {
   id: string;
@@ -10,44 +8,31 @@ export interface Store {
 }
 
 export function useStores() {
-  const { handleError } = useSupabaseQuery();
-  
-  const { 
-    data: stores = [], 
-    isLoading,
-    error 
-  } = useQuery({
+  const { data: stores = [], isLoading, error } = useQuery({
     queryKey: ['stores'],
     queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from("almacenes")
-          .select("id, nombre")
-          .order("nombre");
+      const { data, error } = await supabase
+        .from("almacenes")
+        .select("id, nombre")
+        .order("nombre");
 
-        if (error) {
-          handleError(error, "No se pudieron cargar las sucursales");
-          return [];
-        }
-        
-        // Return an empty array if no data to avoid null checks
-        return data || [];
-      } catch (error: any) {
-        console.error("Error fetching stores:", error);
+      if (error) {
         toast.error("Error al cargar sucursales", {
-          description: error.message || "No se pudieron cargar las sucursales"
+          description: error.message,
         });
         return [];
       }
+
+      return data || [];
     },
-    staleTime: 60000, // 1 minute cache
+    staleTime: 60000,
     refetchOnWindowFocus: false,
   });
 
-  return { 
-    stores, 
-    isLoading, 
+  return {
+    stores,
+    isLoading,
+    hasStores: stores.length > 0,
     error,
-    hasStores: stores.length > 0 
   };
 }
