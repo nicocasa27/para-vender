@@ -1,39 +1,43 @@
-import { UserWithRoles as AuthUserWithRoles, UserRoleWithStore } from "@/types/auth";
 
-// Extendemos el tipo RoleWithStore para que sea compatible con UserRoleWithStore
-export interface RoleWithStore extends UserRoleWithStore {
-  created_at: string;  // Hacer que created_at sea requerido
+// Adding types needed for UserDataQueryResult to resolve build errors
+
+export interface UserDataQueryResult {
+  data: any;
+  message: string;
 }
 
-// Redefinimos UserWithRoles para que use RoleWithStore en lugar de UserRoleWithStore
-export interface UserWithRoles extends Omit<AuthUserWithRoles, 'roles'> {
-  roles: RoleWithStore[];
-}
-
-// Definir UserRole para compatibilidad con useUserRoles
 export interface UserRole {
   id: string;
   user_id: string;
-  role: "admin" | "manager" | "sales" | "viewer";
-  almacen_id: string;
-  created_at: string;
-  email?: string;
+  role: string;
+  almacen_id: string | null;
+  created_at?: string;
   full_name?: string;
-  almacen_nombre?: string;
+  email?: string;
+  almacen_nombre?: string | null;
+}
+
+export interface RoleWithStore {
+  id: string;
+  user_id: string;
+  role: string;
+  almacen_id: string | null;
+  created_at: string;
   profiles?: {
-    full_name: string;
+    id: string;
     email: string;
+    full_name: string;
   };
   almacenes?: {
     id: string;
     nombre: string;
-  };
+  } | null;
+  almacen_nombre?: string | null;
 }
 
-// Definir el tipo de resultado para userDataQueries
-export interface UserDataQueryResult {
-  success: boolean;
-  data?: any;
-  message?: string;
-  error?: any;
+export interface UserWithRoles {
+  id: string;
+  email: string;
+  full_name: string;
+  roles: RoleWithStore[];
 }

@@ -1,72 +1,87 @@
 
-import { useCallback } from 'react';
-import { UserRole, UserWithRoles } from '@/hooks/users/types/userManagementTypes';
-import { fetchAllUsers } from '../contexts/auth/auth-utils';
-import { toast as sonnerToast } from "sonner";
-import { Session } from '@supabase/supabase-js';
+import { useState, useEffect } from "react";
+import { UserWithRoles } from "@/hooks/users/types/userManagementTypes";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-export function useUserManagement(
-  session: Session | null,
-  hasRole: (role: UserRole, storeId?: string) => boolean
-) {
-  const getAllUsers = async (): Promise<UserWithRoles[]> => {
+export const useUserManagement = () => {
+  const [users, setUsers] = useState<UserWithRoles[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchUsers = async () => {
     try {
-      console.log("Auth: Fetching all users");
+      setLoading(true);
       
-      if (!hasRole('admin')) {
-        throw new Error("No tienes permisos para ver usuarios");
-      }
+      // Fetch all profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*');
+        
+      if (profilesError) throw profilesError;
       
-      return await fetchAllUsers();
-    } catch (error) {
-      console.error("Auth: Error fetching users:", error);
-      throw error;
+      // For each profile, fetch their roles
+      const usersWithRoles: UserWithRoles[] = await Promise.all(
+        profiles.map(async (profile) => {
+          const { data: roles, error: rolesError } = await supabase
+            .from('user_roles')
+            .select('*, profiles(*), almacenes(*)')
+            .eq('user_id', profile.id);
+            
+          if (rolesError) throw rolesError;
+          
+          // Convert roles to the expected format
+          return {
+            ...profile,
+            id: profile.id,
+            email: profile.email,
+            full_name: profile.full_name,
+            roles: roles || []
+          } as UserWithRoles;
+        })
+      );
+      
+      setUsers(usersWithRoles);
+    } catch (error: any) {
+      console.error("Error fetching users:", error.message);
+      toast.error("Error al cargar usuarios", {
+        description: error.message
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const deleteUser = useCallback(async (userId: string): Promise<boolean> => {
+  const deleteRole = async (roleId: string) => {
     try {
-      console.log("Auth: Deleting user", userId);
+      const { error } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('id', roleId);
+        
+      if (error) throw error;
       
-      if (!hasRole('admin')) {
-        throw new Error("No tienes permisos para eliminar usuarios");
-      }
+      // Update users list after deletion
+      await fetchUsers();
       
-      if (!session?.access_token) {
-        throw new Error("No hay sesión de usuario");
-      }
-      
-      const response = await fetch(`https://dyvjtczkihdncxvsjdrz.supabase.co/functions/v1/delete-user`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ userId }),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || "Error al eliminar usuario");
-      }
-      
-      sonnerToast.success("Usuario eliminado", {
-        description: "El usuario ha sido eliminado correctamente"
-      });
-      
-      return true;
+      toast.success("Rol eliminado correctamente");
     } catch (error: any) {
-      console.error("Error deleting user:", error);
-      sonnerToast.error("Error al eliminar usuario", {
-        description: error.message || "Hubo un problema al eliminar el usuario"
+      console.error("Error deleting role:", error.message);
+      toast.error("Error al eliminar rol", {
+        description: error.message
       });
-      return false;
     }
-  }, [hasRole, session]);
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   return {
-    getAllUsers,
-    deleteUser
+    users,
+    loading,
+    fetchUsers,
+    deleteRole
   };
-}
+};
+
+export default useUserManagement;

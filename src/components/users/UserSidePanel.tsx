@@ -1,4 +1,3 @@
-
 import React from "react";
 import { UserWithRoles } from "@/hooks/users/types/userManagementTypes";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose, SheetFooter } from "@/components/ui/sheet";
@@ -58,12 +57,10 @@ export function UserSidePanel({
     await onRefresh();
   };
 
-  // Validar que el usuario seleccionado tenga un ID válido antes de mostrar el modal
   const isSelectedUserValid = useCallback(() => {
     return selectedUser && isValidUUID(selectedUser.id);
   }, [selectedUser]);
 
-  // Log para depuración cuando cambia el usuario seleccionado
   React.useEffect(() => {
     if (selectedUser) {
       console.log("UserSidePanel - Usuario seleccionado:", {
@@ -78,7 +75,6 @@ export function UserSidePanel({
     try {
       setIsCreatingUser(true);
       
-      // Registrar el usuario con Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
@@ -91,13 +87,10 @@ export function UserSidePanel({
 
       if (error) throw error;
 
-      // Asegurarnos de crear el perfil explícitamente en caso de que el trigger falle
       if (data.user) {
         try {
-          // Esperar un momento para dar tiempo a que el trigger de Supabase cree el perfil
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          // Intentar crear perfil por si el trigger falló
           const { error: profileError } = await supabase
             .from('profiles')
             .insert({
@@ -107,12 +100,11 @@ export function UserSidePanel({
             })
             .select();
             
-          if (profileError && profileError.code !== '23505') { // Ignora error de duplicado
+          if (profileError && profileError.code !== '23505') {
             console.log("Error al crear perfil:", profileError);
           }
         } catch (profileErr) {
           console.error("Error al crear perfil:", profileErr);
-          // Continuar de todos modos, esto es solo para garantizar que exista
         }
       }
 
@@ -120,7 +112,6 @@ export function UserSidePanel({
         description: "El usuario ha sido registrado exitosamente"
       });
 
-      // Cerrar el diálogo y refrescar la lista
       setCreateUserDialogOpen(false);
       await onRefresh();
       

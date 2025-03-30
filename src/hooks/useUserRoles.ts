@@ -1,53 +1,50 @@
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 import { UserRole } from "@/hooks/users/types/userManagementTypes";
+import { supabase } from "@/integrations/supabase/client";
 
-export function useUserRoles(userId?: string) {
+export function useUserRoles() {
   const [roles, setRoles] = useState<UserRole[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!userId) return;
-
-    const fetchRoles = async () => {
+  const fetchRoles = async () => {
+    try {
       setLoading(true);
+      
+      // Fetch roles from Supabase
       const { data, error } = await supabase
-        .from("user_roles")
-        .select(`
-          id,
-          user_id,
-          role,
-          almacen_id,
-          created_at,
-          profiles (
-            full_name,
-            email
-          ),
-          almacenes (
-            nombre
-          )
-        `)
-        .eq("user_id", userId);
-
-      if (error) {
-        console.error("Error al cargar roles del usuario:", error.message);
-      } else {
-        setRoles(
-          (data ?? []).map((item) => ({
-            ...item,
-            email: item.profiles?.email || "",
-            full_name: item.profiles?.full_name || null,
-            almacen_nombre: item.almacenes?.nombre || null
-          }))
-        );
-      }
-
+        .from('user_roles')
+        .select('*, profiles(*), almacenes(*)');
+        
+      if (error) throw error;
+      
+      // Convert to UserRole[] type
+      const formattedRoles: UserRole[] = data.map((role: any) => ({
+        id: role.id,
+        user_id: role.user_id,
+        role: role.role,
+        almacen_id: role.almacen_id,
+        created_at: role.created_at,
+        full_name: role.profiles?.full_name || '',
+        email: role.profiles?.email || '',
+        almacen_nombre: role.almacenes?.nombre || null
+      }));
+      
+      setRoles(formattedRoles);
+      return formattedRoles;
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+      return [];
+    } finally {
       setLoading(false);
-    };
+    }
+  };
 
-    fetchRoles();
-  }, [userId]);
-
-  return { roles, loading };
+  return {
+    roles,
+    loading,
+    fetchRoles,
+  };
 }
+
+export default useUserRoles;
