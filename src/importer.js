@@ -1,9 +1,11 @@
-// En lugar de esto:
-import Default from './module';
 
-// Si no hay un export default, usa la importación nombrada:
-import { SpecificExport } from './module';
+// Use proper import syntax
+import DefaultExport, { SpecificExport } from './module';
 
-// O si realmente necesitas usar un default:
-import * as Module from './module';
-const Default = Module.default || Module;
+// You can also use this syntax for named imports
+// import * as Module from './module';
+// const Default = Module.default;
+
+// Usage example
+console.log(DefaultExport);
+console.log(SpecificExport);

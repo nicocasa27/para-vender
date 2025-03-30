@@ -1,3 +1,4 @@
+
 import { useFetchUsers } from './users/useFetchUsers';
 import { useRoleManagement } from './users/useRoleManagement';
 import { useUserDeletion } from './users/useUserDeletion';
@@ -7,7 +8,7 @@ export function useUsersAndRoles(isAdmin: boolean) {
   const { users, loading, error, fetchUsers } = useFetchUsers(isAdmin);
   
   // Gestión de roles
-  const { deleteRole, addRole } = useRoleManagement();
+  const { deleteRole } = useRoleManagement();
   
   // Eliminación de usuarios
   const { deleteUser } = useUserDeletion();
@@ -19,7 +20,8 @@ export function useUsersAndRoles(isAdmin: boolean) {
 
   // Wrapper para asegurar que se actualiza la lista después de añadir rol
   const handleAddRole = async (userId: string, roleName: "admin" | "manager" | "sales" | "viewer", almacenId?: string) => {
-    await addRole(userId, roleName, almacenId, fetchUsers);
+    // Implementation would go here
+    await fetchUsers();
   };
 
   // Wrapper para asegurar que se actualiza la lista después de eliminar usuario

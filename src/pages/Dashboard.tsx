@@ -8,16 +8,9 @@ import { useCurrentStores } from "@/hooks/useCurrentStores";
 import { DollarSign, ShoppingBag, Truck, Users } from "lucide-react";
 
 const Dashboard = () => {
-  const { stores, isLoading: loadingStores } = useCurrentStores();
-  const [storeIds, setStoreIds] = useState<string[]>([]);
+  const { storeIds, stores, isLoading: loadingStores } = useCurrentStores();
   
-  useEffect(() => {
-    if (stores && stores.length > 0) {
-      setStoreIds(stores.map(store => store.id));
-    }
-  }, [stores]);
-  
-  // Estadísticas para las tarjetas
+  // Convert string values to numbers for proper typing
   const stats = [
     {
       title: "Ventas Hoy",

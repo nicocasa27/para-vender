@@ -1,3 +1,4 @@
+
 import { UserWithRoles } from "@/types/auth";
 import {
   Table,
@@ -15,14 +16,14 @@ interface UserRolesTableProps {
   users: UserWithRoles[];
   loading: boolean;
   onDeleteRole: (roleId: string) => void;
-  onRefresh: () => void; // ✅ ya integrado acá
+  onRefresh: () => void;
 }
 
 export function UserRolesTable({
   users,
   loading,
   onDeleteRole,
-  onRefresh, // ✅ usado más abajo
+  onRefresh,
 }: UserRolesTableProps) {
   if (loading) {
     return (
@@ -62,7 +63,7 @@ export function UserRolesTable({
                 <UserRolesList
                   roles={user.roles}
                   isLoading={loading}
-                  onRoleUpdated={onRefresh} // ✅ Aquí está la magia
+                  onRoleUpdated={onRefresh}
                 />
               ) : (
                 <span className="text-sm text-muted-foreground italic">

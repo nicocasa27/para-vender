@@ -1,6 +1,8 @@
-// En lugar de esto:
-export * from './otherModule';
 
-// Cambia a algo como esto:
-export * from './otherModule';
-export { default } from './otherModule';
+// In this file, we properly define both named exports and a default export
+export const someNamedExport = "example";
+export const anotherNamedExport = "another example";
+
+// Define a proper default export
+const defaultExport = "default export value";
+export default defaultExport;

@@ -1,36 +1,21 @@
 
-export interface UserRole {
-  id: string;
-  role: string;
-  created_at: string;
-  almacen_id?: string | null;
-  almacen_nombre?: string | null;
-  almacenes?: { nombre: string } | null;
-  user_id?: string;
-  full_name?: string | null;
-  email?: string;
-}
+export type UserRole = 'admin' | 'manager' | 'sales' | 'viewer';
 
-export interface UserRoleWithStore {
+export interface RoleWithStore {
   id: string;
   user_id: string;
-  role: string;
+  role: UserRole;
   almacen_id: string | null;
-  created_at: string; // Making sure this is required
+  created_at: string;
   email?: string;
   full_name?: string | null;
   almacen_nombre?: string | null;
-  almacenes?: { nombre: string } | null;
 }
 
 export interface UserWithRoles {
   id: string;
   email: string;
   full_name: string | null;
-  roles: UserRole[]; // Using UserRole[] instead of UserRoleWithStore[]
-  profiles?: {
-    id?: string;
-    email?: string;
-    full_name?: string | null;
-  } | null;
+  created_at?: string;
+  roles: RoleWithStore[];
 }
