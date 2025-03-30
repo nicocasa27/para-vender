@@ -3,6 +3,7 @@ import { Database } from "@/integrations/supabase/types";
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type UserRole = Database["public"]["Enums"]["user_role"];
+export type Role = "admin" | "manager" | "sales" | "viewer";
 
 export interface UserRoleWithStore {
   id: string;

@@ -78,6 +78,7 @@ export const fetchUserRoles = async (userId: string): Promise<UserRoleWithStore[
               role: 'admin' as UserRole,
               almacen_id: null,
               created_at: new Date().toISOString(),
+              almacen_nombre: null
             }];
           }
         }

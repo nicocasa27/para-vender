@@ -1,23 +1,8 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-type Role = "admin" | "manager" | "sales" | "viewer";
-
-type UserRoleItem = {
-  id: string;
-  user_id: string;
-  role: Role;
-  almacen_id: string | null;
-  almacen_nombre: string | null;
-};
-
-type UserWithRoles = {
-  id: string;
-  email: string;
-  full_name: string;
-  roles: UserRoleItem[];
-};
+import { UserRoleWithStore, UserWithRoles } from "@/types/auth";
 
 export function useUserRoles(isAdmin: boolean) {
   const [users, setUsers] = useState<UserWithRoles[]>([]);

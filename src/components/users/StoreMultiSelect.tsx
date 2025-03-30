@@ -1,74 +1,57 @@
-import { useStores } from "@/hooks/useStores";
-import { RoleSelector } from "./RoleSelector";
-import { StoreMultiSelect } from "@/components/users/StoreMultiSelect";
-import { useRoleAssignmentV2 } from "@/hooks/useRoleAssignmentV2";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Role } from "@/types/auth";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
-interface Props {
-  userId: string;
-  fullName: string;
-  email: string;
-  currentRoles: Role[];
-  onSuccess: () => void;
+import { useStores } from "@/hooks/useStores";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface StoreMultiSelectProps {
+  selected: string[];
+  onChange: (selectedIds: string[]) => void;
 }
 
-export function UserRoleForm({
-  userId,
-  fullName,
-  email,
-  currentRoles,
-  onSuccess,
-}: Props) {
-  const [role, setRole] = useState<Role | "">("");
-  const [storeIds, setStoreIds] = useState<string[]>([]);
-  const { assignRole, loading } = useRoleAssignmentV2();
+export function StoreMultiSelect({ selected, onChange }: StoreMultiSelectProps) {
+  const { stores, loading } = useStores();
 
-  useEffect(() => {
-    if (role !== "sales") {
-      setStoreIds([]); // Resetear sucursales si el rol no es sales
-    }
-  }, [role]);
-
-  const handleSubmit = async () => {
-    if (!role) {
-      toast.error("Selecciona un rol");
-      return;
-    }
-
-    const success = await assignRole({ userId, role, almacenIds: storeIds });
-
-    if (success) {
-      toast.success("Rol asignado correctamente");
-      onSuccess();
+  const handleToggle = (storeId: string, checked: boolean) => {
+    if (checked) {
+      onChange([...selected, storeId]);
+    } else {
+      onChange(selected.filter(id => id !== storeId));
     }
   };
 
+  if (loading) {
+    return <div className="text-sm text-muted-foreground">Cargando sucursales...</div>;
+  }
+
+  if (stores.length === 0) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        No hay sucursales disponibles
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold">{fullName}</h3>
-        <p className="text-sm text-muted-foreground">{email}</p>
-        <Separator className="my-2" />
+    <ScrollArea className="h-[200px] border rounded-md p-2">
+      <div className="space-y-2">
+        {stores.map((store) => (
+          <div key={store.id} className="flex items-center space-x-2">
+            <Checkbox
+              id={`store-${store.id}`}
+              checked={selected.includes(store.id)}
+              onCheckedChange={(checked) => 
+                handleToggle(store.id, checked === true)
+              }
+            />
+            <label
+              htmlFor={`store-${store.id}`}
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              {store.nombre}
+            </label>
+          </div>
+        ))}
       </div>
-
-      <RoleSelector value={role} onChange={setRole} />
-
-      {role === "sales" && (
-        <div className="space-y-1">
-          <p className="text-sm font-medium">Asignar sucursales</p>
-          <StoreMultiSelect selected={storeIds} onChange={setStoreIds} />
-        </div>
-      )}
-
-      <div className="flex justify-end">
-        <Button onClick={handleSubmit} disabled={loading}>
-          Asignar Rol
-        </Button>
-      </div>
-    </div>
+    </ScrollArea>
   );
 }
