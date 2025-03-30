@@ -48,6 +48,7 @@ export function useUserRoles(isAdmin: boolean) {
           
           const userEntry = usersMap.get(userId);
           if (userEntry) {
+            // Aquí asignamos almacen_nombre directamente
             userEntry.roles.push({
               id: item.id,
               user_id: userId,
