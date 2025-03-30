@@ -1,48 +1,58 @@
+import { Role, UserRole } from "@/types/auth";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
-import { UserRoleWithStore } from "@/types/auth";
-import { Badge } from "@/components/ui/badge";
-import { Key } from "lucide-react";
-
-interface UserRolesListProps {
-  roles: UserRoleWithStore[];
+interface Props {
+  roles: UserRole[];
   isLoading: boolean;
+  onRoleUpdated?: () => void; // Opcional callback para refrescar usuarios
 }
 
-export function UserRolesList({ roles, isLoading }: UserRolesListProps) {
-  if (isLoading) {
-    return (
-      <div className="text-center py-4">
-        <div className="h-5 w-5 animate-spin mx-auto mb-2 rounded-full border-2 border-primary border-t-transparent" />
-        <p className="text-muted-foreground">Cargando roles...</p>
-      </div>
-    );
-  }
+const ROLES: Role[] = ["admin", "manager", "sales", "viewer"];
 
-  if (roles.length === 0) {
-    return (
-      <div className="text-center py-4">
-        <p className="text-muted-foreground font-medium">
-          No tienes roles asignados
-        </p>
-        <p className="text-sm text-muted-foreground mt-1">
-          Contacta a un administrador para obtener permisos de acceso
-        </p>
-      </div>
-    );
-  }
+export function UserRolesList({ roles, isLoading, onRoleUpdated }: Props) {
+  const handleUpdateRole = async (roleId: string, newRole: Role) => {
+    const { error } = await supabase
+      .from("user_roles")
+      .update({ role: newRole })
+      .eq("id", roleId);
+
+    if (error) {
+      toast.error("Error al actualizar rol", { description: error.message });
+      return;
+    }
+
+    toast.success("Rol actualizado correctamente");
+    onRoleUpdated?.(); // Si existe, refresca usuarios
+  };
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {roles.map((role, idx) => (
-        <Badge key={idx} variant={role.role === 'admin' ? 'default' : 'outline'} className="flex items-center">
-          <Key className="h-3 w-3 mr-1" />
-          {role.role}
-          {role.almacen_id && (
-            <span className="ml-1 text-xs opacity-80">
-              ({role.almacen_nombre || role.almacen_id})
+    <div className="flex flex-col gap-2">
+      {roles.map((role) => (
+        <div key={role.id} className="flex items-center gap-2">
+          <Select
+            value={role.role}
+            onValueChange={(value) => handleUpdateRole(role.id, value as Role)}
+            disabled={isLoading}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Seleccionar rol" />
+            </SelectTrigger>
+            <SelectContent>
+              {ROLES.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {r}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {role.almacen_nombre && (
+            <span className="text-xs text-muted-foreground">
+              ({role.almacen_nombre})
             </span>
           )}
-        </Badge>
+        </div>
       ))}
     </div>
   );
