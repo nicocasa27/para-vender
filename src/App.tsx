@@ -1,3 +1,4 @@
+
 import React from 'react'
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -12,7 +13,6 @@ import Dashboard from "./pages/Dashboard";
 import Inventory from "./pages/Inventory";
 import PointOfSale from "./pages/PointOfSale";
 import Analytics from "./pages/Analytics";
-import Configuration from "./pages/Configuration";
 import UserRoles from "./pages/UserRoles";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
@@ -53,8 +53,7 @@ const App = () => {
                   <Route path="/pos" element={<PointOfSale />} />
                   <Route path="/analytics" element={<Analytics />} />
                   
-                  {/* Config route */}
-                  <Route path="/config" element={<Configuration />} />
+                  {/* User roles route */}
                   <Route path="/user-roles" element={<UserRoles />} />
                   
                   {/* All authenticated users */}
@@ -74,4 +73,3 @@ const App = () => {
 };
 
 export default App;
-//hola

@@ -8,7 +8,6 @@ import {
   Package,
   ShoppingCart,
   BarChart4,
-  Settings,
   ChevronLeft,
   ChevronRight,
   Store,
@@ -43,11 +42,6 @@ export const SideNav: React.FC<SideNavProps> = ({ open, setOpen }) => {
       title: "Analytics",
       href: "/analytics",
       icon: BarChart4,
-    },
-    {
-      title: "Configuration",
-      href: "/config",
-      icon: Settings,
     },
     {
       title: "User Roles",
