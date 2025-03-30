@@ -1,4 +1,3 @@
-
 import { UserWithRoles } from "@/types/auth";
 import { 
   Table, 
@@ -16,9 +15,10 @@ interface UserRolesTableProps {
   users: UserWithRoles[];
   loading: boolean;
   onDeleteRole: (roleId: string) => void;
+  onRefresh: () => void; // ✅ nuevo: para pasar loadUsers()
 }
 
-export function UserRolesTable({ users, loading, onDeleteRole }: UserRolesTableProps) {
+export function UserRolesTable({ users, loading, onDeleteRole, onRefresh }: UserRolesTableProps) {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -26,7 +26,7 @@ export function UserRolesTable({ users, loading, onDeleteRole }: UserRolesTableP
       </div>
     );
   }
-  
+
   if (users.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -35,7 +35,7 @@ export function UserRolesTable({ users, loading, onDeleteRole }: UserRolesTableP
       </div>
     );
   }
-  
+
   return (
     <Table>
       <TableHeader>
@@ -56,17 +56,21 @@ export function UserRolesTable({ users, loading, onDeleteRole }: UserRolesTableP
             </TableCell>
             <TableCell>
               {user.roles.length > 0 ? (
-                <UserRolesList roles={user.roles} isLoading={false} />
+                <UserRolesList
+                  roles={user.roles}
+                  isLoading={loading}
+                  onRoleUpdated={onRefresh} // ✅ refresca después del cambio
+                />
               ) : (
                 <span className="text-sm text-muted-foreground italic">Sin roles</span>
               )}
             </TableCell>
             <TableCell>
               <div className="flex gap-1">
-                {user.roles.map(role => (
-                  <Button 
-                    key={role.id} 
-                    variant="ghost" 
+                {user.roles.map((role) => (
+                  <Button
+                    key={role.id}
+                    variant="ghost"
                     size="sm"
                     onClick={() => onDeleteRole(role.id)}
                     title="Eliminar rol"
