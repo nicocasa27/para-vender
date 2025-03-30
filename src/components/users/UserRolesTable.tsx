@@ -1,11 +1,11 @@
 import { UserWithRoles } from "@/types/auth";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { UserRolesList } from "@/components/profile/UserRolesList";
@@ -15,10 +15,15 @@ interface UserRolesTableProps {
   users: UserWithRoles[];
   loading: boolean;
   onDeleteRole: (roleId: string) => void;
-  onRefresh: () => void; // ✅ nuevo: para pasar loadUsers()
+  onRefresh: () => void; // ✅ ya integrado acá
 }
 
-export function UserRolesTable({ users, loading, onDeleteRole, onRefresh }: UserRolesTableProps) {
+export function UserRolesTable({
+  users,
+  loading,
+  onDeleteRole,
+  onRefresh, // ✅ usado más abajo
+}: UserRolesTableProps) {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -50,19 +55,19 @@ export function UserRolesTable({ users, loading, onDeleteRole, onRefresh }: User
           <TableRow key={user.id}>
             <TableCell>
               <div className="font-medium">{user.full_name || "Usuario sin nombre"}</div>
-              <div className="text-sm text-muted-foreground">
-                {user.email}
-              </div>
+              <div className="text-sm text-muted-foreground">{user.email}</div>
             </TableCell>
             <TableCell>
               {user.roles.length > 0 ? (
                 <UserRolesList
                   roles={user.roles}
                   isLoading={loading}
-                  onRoleUpdated={onRefresh} // ✅ refresca después del cambio
+                  onRoleUpdated={onRefresh} // ✅ Aquí está la magia
                 />
               ) : (
-                <span className="text-sm text-muted-foreground italic">Sin roles</span>
+                <span className="text-sm text-muted-foreground italic">
+                  Sin roles
+                </span>
               )}
             </TableCell>
             <TableCell>
