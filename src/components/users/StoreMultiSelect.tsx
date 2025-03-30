@@ -1,57 +1,47 @@
-
-import { useStores } from "@/hooks/useStores";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useEffect } from "react";
+import { ControllerRenderProps } from "react-hook-form";
+import { useCurrentStores } from "@/hooks/useCurrentStores";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface StoreMultiSelectProps {
-  selected: string[];
-  onChange: (selectedIds: string[]) => void;
+  field: ControllerRenderProps<any, any>;
+  label?: string;
 }
 
-export function StoreMultiSelect({ selected, onChange }: StoreMultiSelectProps) {
-  const { stores, loading } = useStores();
+export default function StoreMultiSelect({ field, label }: StoreMultiSelectProps) {
+  const { stores, isLoading, hasStores, error } = useCurrentStores();
 
-  const handleToggle = (storeId: string, checked: boolean) => {
-    if (checked) {
-      onChange([...selected, storeId]);
-    } else {
-      onChange(selected.filter(id => id !== storeId));
+  useEffect(() => {
+    if (!field.value && stores.length > 0) {
+      field.onChange(stores[0].id); // Selecciona automáticamente la primera opción si no hay valor
     }
-  };
-
-  if (loading) {
-    return <div className="text-sm text-muted-foreground">Cargando sucursales...</div>;
-  }
-
-  if (stores.length === 0) {
-    return (
-      <div className="text-sm text-muted-foreground">
-        No hay sucursales disponibles
-      </div>
-    );
-  }
+  }, [stores, field]);
 
   return (
-    <ScrollArea className="h-[200px] border rounded-md p-2">
-      <div className="space-y-2">
-        {stores.map((store) => (
-          <div key={store.id} className="flex items-center space-x-2">
-            <Checkbox
-              id={`store-${store.id}`}
-              checked={selected.includes(store.id)}
-              onCheckedChange={(checked) => 
-                handleToggle(store.id, checked === true)
-              }
-            />
-            <label
-              htmlFor={`store-${store.id}`}
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              {store.nombre}
-            </label>
-          </div>
-        ))}
-      </div>
-    </ScrollArea>
+    <div className="space-y-1">
+      {label && (
+        <label className="text-sm font-medium text-foreground">
+          {label}
+        </label>
+      )}
+
+      {isLoading ? (
+        <Skeleton className="h-10 w-full rounded-md" />
+      ) : (
+        <Select onValueChange={field.onChange} value={field.value}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecciona una sucursal" />
+          </SelectTrigger>
+          <SelectContent>
+            {stores.map((store) => (
+              <SelectItem key={store.id} value={store.id}>
+                {store.nombre}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </div>
   );
 }
