@@ -1,67 +1,59 @@
-
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { Role, UserRole } from "@/types/auth";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { UserWithRoles, UserRole } from "@/hooks/users/types/userManagementTypes";
-import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
 
 interface Props {
-  user: UserWithRoles;
-  onRoleAdded: () => void;
-  onRoleDeleted: () => void;
+  roles: UserRole[];
+  isLoading: boolean;
+  onRoleUpdated?: () => void; // Opcional callback para refrescar usuarios
 }
 
-export function UserRolesList({ user, onRoleAdded, onRoleDeleted }: Props) {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+const ROLES: Role[] = ["admin", "manager", "sales", "viewer"];
 
-  const handleDeleteRole = async (roleId: string) => {
-    setLoading(true);
-    const { error } = await supabase.from("user_roles").delete().eq("id", roleId);
+export function UserRolesList({ roles, isLoading, onRoleUpdated }: Props) {
+  const handleUpdateRole = async (roleId: string, newRole: Role) => {
+    const { error } = await supabase
+      .from("user_roles")
+      .update({ role: newRole })
+      .eq("id", roleId);
+
     if (error) {
-      toast({
-        title: "Error al eliminar rol",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Rol eliminado",
-        description: "El rol se eliminó correctamente",
-      });
-      onRoleDeleted();
+      toast.error("Error al actualizar rol", { description: error.message });
+      return;
     }
-    setLoading(false);
+
+    toast.success("Rol actualizado correctamente");
+    onRoleUpdated?.(); // Si existe, refresca usuarios
   };
 
-  const roles = user.roles; // Array de objetos, no strings
-
   return (
-    <div className="space-y-2">
-      {roles.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Este usuario no tiene roles asignados.</p>
-      ) : (
-        roles.map((role) => (
-          <div key={role.id} className="flex items-center justify-between bg-muted px-3 py-2 rounded-md">
-            <div className="flex flex-col">
-              <span className="font-medium capitalize">{role.role}</span>
-              <span className="text-xs text-muted-foreground">
-                {role.almacen_nombre || (role.almacenes ? role.almacenes.nombre : null) || "Global"}
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleDeleteRole(role.id)}
-              disabled={loading}
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Eliminar"}
-            </Button>
-          </div>
-        ))
-      )}
+    <div className="flex flex-col gap-2">
+      {roles.map((role) => (
+        <div key={role.id} className="flex items-center gap-2">
+          <Select
+            value={role.role}
+            onValueChange={(value) => handleUpdateRole(role.id, value as Role)}
+            disabled={isLoading}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Seleccionar rol" />
+            </SelectTrigger>
+            <SelectContent>
+              {ROLES.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {r}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {role.almacen_nombre && (
+            <span className="text-xs text-muted-foreground">
+              ({role.almacen_nombre})
+            </span>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
