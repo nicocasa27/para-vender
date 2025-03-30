@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { UserRolesList } from "@/components/profile/UserRolesList";
 
 // Tipo de rol
 type Role = 'admin' | 'manager' | 'sales' | 'viewer';
@@ -64,7 +65,54 @@ export default function UserRoles() {
     
     setLoading(true);
     try {
-      // Primero obtenemos los usuarios con sus roles de manera eficiente
+      // Primero intentamos usar la vista optimizada para obtener los datos
+      const { data: viewData, error: viewError } = await supabase
+        .from('user_roles_with_name')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (viewError) {
+        console.error("Error al cargar vista user_roles_with_name:", viewError);
+        throw viewError;
+      }
+      
+      if (viewData && viewData.length > 0) {
+        console.log("Datos obtenidos de vista:", viewData);
+        
+        // Agrupar roles por usuario
+        const usersMap = new Map<string, UserWithRoles>();
+        
+        viewData.forEach(item => {
+          const userId = item.user_id;
+          
+          if (!usersMap.has(userId)) {
+            usersMap.set(userId, {
+              id: userId,
+              email: item.email || "Sin email",
+              full_name: item.full_name || "Usuario sin perfil",
+              roles: []
+            });
+          }
+          
+          const userEntry = usersMap.get(userId);
+          if (userEntry) {
+            userEntry.roles.push({
+              id: item.id,
+              role: item.role,
+              almacen_id: item.almacen_id,
+              almacen_nombre: null  // Lo actualizamos más adelante si es necesario
+            });
+          }
+        });
+        
+        // Convertir el mapa a array
+        setUsers(Array.from(usersMap.values()));
+        toast.success("Lista de usuarios actualizada");
+        setLoading(false);
+        return;
+      }
+      
+      // Si no hay datos en la vista, intentamos el método anterior
       const { data, error } = await supabase
         .from('user_roles')
         .select(`
@@ -84,13 +132,13 @@ export default function UserRoles() {
       
       data?.forEach(item => {
         const userId = item.user_id;
-        const profile = item.profiles || { id: userId, email: "Unknown", full_name: null };
+        const profile = item.profiles || { id: userId, email: "Sin email", full_name: "Usuario sin perfil" };
         
         if (!usersMap.has(userId)) {
           usersMap.set(userId, {
             id: userId,
-            email: profile.email || "Unknown",
-            full_name: profile.full_name,
+            email: profile.email || "Sin email",
+            full_name: profile.full_name || "Usuario sin perfil",
             roles: []
           });
         }
@@ -391,23 +439,17 @@ export default function UserRoles() {
                 {users.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>
-                      <div className="font-medium">{user.email}</div>
+                      <div className="font-medium">{user.full_name || "Usuario sin nombre"}</div>
                       <div className="text-sm text-muted-foreground">
-                        {user.full_name || "Sin nombre"}
+                        {user.email}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {user.roles.map(role => (
-                          <div 
-                            key={role.id} 
-                            className="px-2 py-1 text-xs rounded-md bg-primary/10"
-                          >
-                            {role.role}
-                            {role.almacen_nombre && ` (${role.almacen_nombre})`}
-                          </div>
-                        ))}
-                      </div>
+                      {user.roles.length > 0 ? (
+                        <UserRolesList roles={user.roles} isLoading={false} />
+                      ) : (
+                        <span className="text-sm text-muted-foreground italic">Sin roles</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
