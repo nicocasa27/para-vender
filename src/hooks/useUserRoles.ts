@@ -32,22 +32,22 @@ export function useUserRoles(isAdmin: boolean) {
     setLoading(true);
 
     try {
-      // Intentar obtener datos desde la vista optimizada
+      // Primero intentamos con la vista user_roles_with_name
       const { data: viewData, error: viewError } = await supabase
         .from("user_roles_with_name")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (viewError) {
-        console.warn("Vista no disponible, fallback a método directo");
+      const data = viewData?.length ? viewData : null;
+
+      if (viewError && !data) {
+        console.warn("Error al cargar vista, usando fallback:", viewError.message);
       }
 
-      const sourceData = viewData?.length ? viewData : null;
+      let fallbackData = data;
 
-      // Si no hay datos en vista, usar fallback
-      let data = sourceData;
-
-      if (!sourceData) {
+      // Si no hay datos en la vista, usar fallback con joins
+      if (!fallbackData) {
         const { data: rawData, error } = await supabase
           .from("user_roles")
           .select(`
@@ -62,13 +62,13 @@ export function useUserRoles(isAdmin: boolean) {
           .order("created_at", { ascending: false });
 
         if (error) throw error;
-        data = rawData;
+
+        fallbackData = rawData;
       }
 
-      // Armar mapa por usuario
       const usersMap = new Map<string, UserWithRoles>();
 
-      data?.forEach((item: any) => {
+      fallbackData?.forEach((item: any) => {
         const userId = item.user_id;
         const full_name = item.full_name || item.profiles?.full_name || "Usuario sin perfil";
         const email = item.email || item.profiles?.email || "Sin email";
@@ -84,7 +84,7 @@ export function useUserRoles(isAdmin: boolean) {
 
         usersMap.get(userId)?.roles.push({
           id: item.id,
-          user_id,
+          user_id: item.user_id,
           role: item.role,
           almacen_id: item.almacen_id,
           almacen_nombre: item.almacen_nombre || item.almacenes?.nombre || null,
@@ -95,7 +95,9 @@ export function useUserRoles(isAdmin: boolean) {
       toast.success("Lista de usuarios actualizada");
     } catch (error: any) {
       console.error("Error al cargar usuarios:", error);
-      toast.error("Error al cargar usuarios", { description: error.message });
+      toast.error("Error al cargar usuarios", {
+        description: error.message,
+      });
     } finally {
       setLoading(false);
     }
