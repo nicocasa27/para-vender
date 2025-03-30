@@ -8,7 +8,14 @@ import { useCurrentStores } from "@/hooks/useCurrentStores";
 import { DollarSign, ShoppingBag, Truck, Users } from "lucide-react";
 
 const Dashboard = () => {
-  const { storeIds, stores, isLoading: loadingStores } = useCurrentStores();
+  const { stores, isLoading: loadingStores } = useCurrentStores();
+  const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
+  
+  useEffect(() => {
+    if (stores && stores.length > 0) {
+      setSelectedStoreIds(stores.map(store => store.id));
+    }
+  }, [stores]);
   
   // Convert string values to numbers for proper typing
   const stats = [
@@ -61,21 +68,19 @@ const Dashboard = () => {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <div className="col-span-2">
-          <SalesChart storeIds={storeIds} />
+          <SalesChart />
         </div>
         <div>
-          <RecentSalesTable storeIds={storeIds} />
+          <RecentSalesTable />
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
         <InventorySummary
           showLowStock={true}
-          storeIds={storeIds}
         />
         <InventorySummary
           showLowStock={false}
-          storeIds={storeIds}
         />
       </div>
     </div>

@@ -1,5 +1,5 @@
 
-import { UserWithRoles } from "@/types/auth";
+import { UserWithRoles, RoleWithStore } from "@/hooks/users/types/userManagementTypes";
 import {
   Table,
   TableBody,
@@ -13,14 +13,16 @@ import { UserRolesList } from "@/components/profile/UserRolesList";
 import { RefreshCw, Users } from "lucide-react";
 
 interface UserRolesTableProps {
-  users: UserWithRoles[];
+  users?: UserWithRoles[];
+  roles?: RoleWithStore[];
   loading: boolean;
   onDeleteRole: (roleId: string) => void;
   onRefresh: () => void;
 }
 
 export function UserRolesTable({
-  users,
+  users = [],
+  roles = [],
   loading,
   onDeleteRole,
   onRefresh,
@@ -33,6 +35,40 @@ export function UserRolesTable({
     );
   }
 
+  // For profile page showing just roles
+  if (roles.length > 0) {
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Rol</TableHead>
+            <TableHead>Almacén</TableHead>
+            <TableHead className="w-[100px]">Acciones</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {roles.map((role) => (
+            <TableRow key={role.id}>
+              <TableCell>{role.role}</TableCell>
+              <TableCell>{role.almacen_nombre || "Global"}</TableCell>
+              <TableCell>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDeleteRole(role.id)}
+                  title="Eliminar rol"
+                >
+                  ×
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  }
+
+  // For user management page showing users with their roles
   if (users.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -92,3 +128,5 @@ export function UserRolesTable({
     </Table>
   );
 }
+
+export default UserRolesTable;

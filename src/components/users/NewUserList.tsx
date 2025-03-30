@@ -1,14 +1,14 @@
 
 import { useState } from "react";
 import { UserWithRoles } from "@/hooks/users/types/userManagementTypes";
-import UserSidePanel from "./UserSidePanel";
+import { UserSidePanel } from "./UserSidePanel";
 
 interface NewUserListProps {
   users: UserWithRoles[];
   onRolesUpdated: () => void;
 }
 
-export default function NewUserList({ users, onRolesUpdated }: NewUserListProps) {
+export function NewUserList({ users, onRolesUpdated }: NewUserListProps) {
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
 
   return (
@@ -20,7 +20,7 @@ export default function NewUserList({ users, onRolesUpdated }: NewUserListProps)
             className="cursor-pointer hover:bg-muted px-3 py-2 rounded-md"
             onClick={() => setSelectedUser(user)}
           >
-            <div className="font-medium">{user.full_name}</div>
+            <div className="font-medium">{user.full_name || "Usuario sin nombre"}</div>
             <div className="text-sm text-muted-foreground">{user.email}</div>
           </li>
         ))}
@@ -39,3 +39,6 @@ export default function NewUserList({ users, onRolesUpdated }: NewUserListProps)
     </div>
   );
 }
+
+// Also export as default
+export default NewUserList;

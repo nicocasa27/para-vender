@@ -1,9 +1,10 @@
+
 import React from "react";
-import { UserWithRoles } from "@/types/auth";
+import { UserWithRoles } from "@/hooks/users/types/userManagementTypes";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { NewUserList } from "@/components/users/NewUserList";
+import NewUserList from "@/components/users/NewUserList";
 import { RefreshCw, UserPlus, X } from "lucide-react";
 import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
 import { UserRoleForm } from "@/components/users/UserRoleForm";
@@ -168,30 +169,7 @@ export function UserSidePanel({
         <ScrollArea className="flex-1 h-[calc(100vh-11rem)]">
           <NewUserList 
             users={users} 
-            isLoading={loading} 
-            onDeleteRole={onDeleteRole} 
-            onAddRole={(user) => {
-              // Verificar explícitamente que el ID sea un UUID válido
-              if (!isValidUUID(user.id)) {
-                toast.error("No se puede asignar rol: ID de usuario inválido");
-                console.error("ID de usuario inválido:", user.id);
-                return;
-              }
-              
-              // Crear una copia limpia del usuario con solo los campos necesarios
-              const cleanUser: UserWithRoles = {
-                id: user.id,
-                email: user.email || user.profiles?.email || "",
-                full_name: user.full_name || user.profiles?.full_name || "",
-                roles: user.roles || [],
-                profiles: user.profiles
-              };
-              
-              console.log("UserSidePanel - Usuario limpio para asignación:", cleanUser);
-              setSelectedUser(cleanUser);
-              setDialogOpen(true);
-            }}
-            onSuccess={handleRefresh}
+            onRolesUpdated={onRefresh} 
           />
         </ScrollArea>
         
@@ -225,3 +203,5 @@ export function UserSidePanel({
     </Sheet>
   );
 }
+
+export default UserSidePanel;

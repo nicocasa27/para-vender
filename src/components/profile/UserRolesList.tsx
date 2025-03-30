@@ -1,4 +1,5 @@
-import { Role, UserRole } from "@/types/auth";
+
+import { Role, RoleWithStore } from "@/hooks/users/types/userManagementTypes";
 import {
   Select,
   SelectTrigger,
@@ -14,7 +15,7 @@ import { useStores } from "@/hooks/useStores";
 import { useState } from "react";
 
 interface Props {
-  roles: UserRole[];
+  roles: RoleWithStore[];
   isLoading: boolean;
   onRoleUpdated?: () => void;
 }
@@ -24,7 +25,7 @@ const ROLES: Role[] = ["admin", "manager", "sales", "viewer"];
 export function UserRolesList({ roles, isLoading, onRoleUpdated }: Props) {
   const { stores } = useStores();
   const [selectedStores, setSelectedStores] = useState<string[]>([]);
-  const userId = roles[0]?.user_id;
+  const userId = roles.length > 0 ? roles[0].user_id : '';
 
   const handleUpdateRole = async (roleId: string, newRole: Role) => {
     if (newRole !== "sales") {
@@ -42,7 +43,7 @@ export function UserRolesList({ roles, isLoading, onRoleUpdated }: Props) {
       }
 
       toast.success("Rol actualizado correctamente");
-      onRoleUpdated?.();
+      if (onRoleUpdated) onRoleUpdated();
     } else {
       toast.info("Selecciona sucursales para el rol 'sales'");
     }
@@ -58,7 +59,7 @@ export function UserRolesList({ roles, isLoading, onRoleUpdated }: Props) {
 
     const inserts = selectedStores.map((storeId) => ({
       user_id: userId,
-      role: "sales",
+      role: "sales" as Role,
       almacen_id: storeId,
     }));
 
@@ -70,7 +71,7 @@ export function UserRolesList({ roles, isLoading, onRoleUpdated }: Props) {
     }
 
     toast.success("Rol 'sales' y sucursales asignadas");
-    onRoleUpdated?.();
+    if (onRoleUpdated) onRoleUpdated();
   };
 
   return (

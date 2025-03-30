@@ -21,7 +21,7 @@ interface UserSidePanelProps {
   onCancel?: () => void;
 }
 
-export default function UserSidePanel({ 
+export function UserSidePanel({ 
   selectedUser, 
   onSuccess, 
   onCancel 
@@ -117,3 +117,6 @@ export default function UserSidePanel({
     </Dialog>
   );
 }
+
+// Also export as default
+export default UserSidePanel;
