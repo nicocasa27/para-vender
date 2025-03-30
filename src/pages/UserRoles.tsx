@@ -30,10 +30,10 @@ const UserRoles = () => {
     try {
       console.log("Manual refresh triggered");
       await fetchUsers();
-      toast.success("Roles actualizados correctamente");
+      toast.success("Datos de usuarios actualizados correctamente");
     } catch (err) {
       console.error("Error during refresh:", err);
-      toast.error("Error al actualizar roles");
+      toast.error("Error al actualizar datos de usuarios");
     }
   };
 

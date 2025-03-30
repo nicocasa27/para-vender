@@ -29,22 +29,22 @@ export function useUsersAndRoles(isAdmin: boolean) {
         return;
       }
       
-      console.log("Fetching all profiles first...");
+      console.log("Iniciando carga de usuarios desde la tabla profiles...");
       
       // 1. Obtenemos todos los perfiles primero
       const { data: allProfiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
         
       if (profilesError) {
         console.error("Error fetching profiles:", profilesError);
         throw profilesError;
       }
       
-      console.log(`Found ${allProfiles.length} profiles in total`);
-      console.log("Profile IDs:", allProfiles.map(p => p.id));
+      console.log(`Encontrados ${allProfiles.length} perfiles de usuario en total`);
       
-      // 2. Luego obtenemos todos los roles
+      // 2. Luego obtenemos todos los roles con información de almacenes
       const { data: allRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('*, almacenes(*)');
@@ -54,13 +54,12 @@ export function useUsersAndRoles(isAdmin: boolean) {
         throw rolesError;
       }
       
-      console.log(`Found ${allRoles.length} roles in total`);
-      console.log("Role user_ids:", allRoles.map(r => r.user_id));
+      console.log(`Encontrados ${allRoles.length} roles en total`);
       
       // 3. Mapeamos los perfiles y les asignamos sus roles correspondientes
       const usersWithRoles: UserWithRoles[] = allProfiles.map(profile => {
         // Filtramos los roles que pertenecen a este usuario
-        const userRoles = allRoles.filter(role => role.user_id === profile.id);
+        const userRoles = allRoles.filter(role => role.user_id === profile.id) || [];
         
         return {
           id: profile.id,
@@ -75,8 +74,8 @@ export function useUsersAndRoles(isAdmin: boolean) {
         };
       });
       
-      console.log(`Processed ${usersWithRoles.length} users with their roles`);
-      console.log("Users with roles:", usersWithRoles.map(u => ({
+      console.log(`Procesados ${usersWithRoles.length} usuarios con sus roles`);
+      console.log("Usuarios con sus roles (muestra):", usersWithRoles.slice(0, 3).map(u => ({
         id: u.id, 
         email: u.email,
         roles_count: u.roles.length

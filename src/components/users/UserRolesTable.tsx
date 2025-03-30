@@ -103,7 +103,7 @@ export function UserRolesTable({
     return (
       <div className="text-center py-8 text-muted-foreground">
         <Users className="h-10 w-10 mx-auto mb-2 opacity-50" />
-        <p>No hay usuarios con roles asignados</p>
+        <p>No hay usuarios registrados en el sistema</p>
         <Button 
           variant="outline" 
           size="sm"
