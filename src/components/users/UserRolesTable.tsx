@@ -15,6 +15,7 @@ import { useState } from "react";
 import { UserRoleForm } from "./UserRoleForm";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 interface UserRolesTableProps {
   users?: UserWithRoles[];
@@ -57,6 +58,11 @@ export function UserRolesTable({
     handleDialogClose();
   };
 
+  // Determina si un rol es predeterminado (generado dinámicamente)
+  const isDefaultRole = (roleId: string) => {
+    return roleId.startsWith('default-viewer-');
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -87,6 +93,7 @@ export function UserRolesTable({
                   size="sm"
                   onClick={() => handleDeleteRole(role.id)}
                   title="Eliminar rol"
+                  disabled={isDefaultRole(role.id)}
                 >
                   ×
                 </Button>
@@ -153,17 +160,28 @@ export function UserRolesTable({
                 <div className="text-sm text-muted-foreground">{user.email}</div>
               </TableCell>
               <TableCell>
-                {user.roles && user.roles.length > 0 ? (
-                  <UserRolesList
-                    roles={user.roles}
-                    isLoading={loading}
-                    onRoleUpdated={onRefresh}
-                  />
-                ) : (
-                  <span className="text-sm text-muted-foreground italic">
-                    Sin roles
-                  </span>
-                )}
+                <div className="flex flex-wrap gap-2">
+                  {user.roles.map(role => (
+                    <Badge 
+                      key={role.id}
+                      variant={role.role === 'admin' ? 'destructive' : isDefaultRole(role.id) ? 'outline' : 'default'}
+                      className="flex items-center gap-1"
+                    >
+                      {role.role}
+                      {role.almacen_nombre && ` (${role.almacen_nombre})`}
+                      {!isDefaultRole(role.id) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-4 w-4 p-0 hover:bg-transparent"
+                          onClick={() => handleDeleteRole(role.id)}
+                        >
+                          <AlertTriangle className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </Badge>
+                  ))}
+                </div>
               </TableCell>
               <TableCell>
                 <div className="flex gap-2">
@@ -174,21 +192,6 @@ export function UserRolesTable({
                   >
                     Asignar rol
                   </Button>
-                  {user.roles && user.roles.length > 0 && (
-                    <div className="flex gap-1">
-                      {user.roles.map((role) => (
-                        <Button
-                          key={role.id}
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteRole(role.id)}
-                          title="Eliminar rol"
-                        >
-                          ×
-                        </Button>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </TableCell>
             </TableRow>

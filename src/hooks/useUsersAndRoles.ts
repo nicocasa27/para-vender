@@ -61,12 +61,22 @@ export function useUsersAndRoles(isAdmin: boolean) {
         // Filtramos los roles que pertenecen a este usuario
         const userRoles = allRoles.filter(role => role.user_id === profile.id) || [];
         
+        // Si el usuario no tiene roles asignados explícitamente, le asignamos el rol predeterminado 'viewer'
+        const roles = userRoles.length > 0 ? userRoles : [{
+          id: `default-viewer-${profile.id}`,
+          user_id: profile.id,
+          role: 'viewer',
+          almacen_id: null,
+          created_at: profile.created_at || new Date().toISOString(),
+          almacen_nombre: null
+        }];
+        
         return {
           id: profile.id,
           email: profile.email || "",
           full_name: profile.full_name,
           created_at: profile.created_at,
-          roles: userRoles.map(role => ({
+          roles: roles.map(role => ({
             ...role,
             created_at: role.created_at || new Date().toISOString(),
             almacen_nombre: role.almacenes?.nombre || null
@@ -93,6 +103,12 @@ export function useUsersAndRoles(isAdmin: boolean) {
 
   // Wrapper para asegurar que se actualiza la lista después de eliminar rol
   const handleDeleteRole = async (roleId: string) => {
+    // Verificar si es un rol predeterminado (generado dinámicamente)
+    if (roleId.startsWith('default-viewer-')) {
+      toast.info("No es posible eliminar el rol predeterminado de 'viewer'");
+      return;
+    }
+    
     await deleteRole(roleId);
     // Refrescar la lista después de eliminar
     await fetchUsers();
