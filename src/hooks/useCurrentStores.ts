@@ -3,6 +3,11 @@ import { useAuth } from "@/contexts/auth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export interface Store {
+  id: string;
+  nombre: string;
+}
+
 /**
  * Devuelve las sucursales (almacenes) asignadas al usuario autenticado.
  */

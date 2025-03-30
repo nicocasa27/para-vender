@@ -34,7 +34,11 @@ type SaleItem = {
   store: string;
 };
 
-export const RecentSalesTable = () => {
+interface RecentSalesTableProps {
+  storeIds?: string[];
+}
+
+export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
   const [recentSales, setRecentSales] = useState<SaleItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -46,7 +50,7 @@ export const RecentSalesTable = () => {
       setIsLoading(true);
       try {
         // Fetch ventas from Supabase
-        const { data: ventas, error: ventasError } = await supabase
+        let query = supabase
           .from('ventas')
           .select(`
             id, 
@@ -54,10 +58,18 @@ export const RecentSalesTable = () => {
             estado, 
             created_at,
             cliente,
-            almacenes(nombre)
+            almacenes(nombre),
+            almacen_id
           `)
           .order('created_at', { ascending: false })
           .limit(10);
+        
+        // Apply store filter if storeIds are provided
+        if (storeIds.length > 0) {
+          query = query.in('almacen_id', storeIds);
+        }
+          
+        const { data: ventas, error: ventasError } = await query;
 
         if (ventasError) {
           handleError(ventasError, "Error al cargar ventas recientes");
@@ -119,7 +131,7 @@ export const RecentSalesTable = () => {
     };
 
     fetchRecentSales();
-  }, [handleError]);
+  }, [handleError, storeIds]);
 
   const totalPages = Math.ceil(recentSales.length / itemsPerPage);
   const currentPageItems = recentSales.slice(

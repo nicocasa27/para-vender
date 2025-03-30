@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -17,9 +18,10 @@ type InventorySummaryItem = {
 
 interface InventorySummaryProps {
   showLowStock?: boolean;
+  storeIds?: string[];
 }
 
-export const InventorySummary = ({ showLowStock = true }: InventorySummaryProps) => {
+export const InventorySummary = ({ showLowStock = true, storeIds = [] }: InventorySummaryProps) => {
   const [inventorySummary, setInventorySummary] = useState<InventorySummaryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -42,8 +44,13 @@ export const InventorySummary = ({ showLowStock = true }: InventorySummaryProps)
           return;
         }
 
+        // Filter stores if storeIds are provided
+        const filteredStores = storeIds.length > 0 
+          ? almacenes.filter(store => storeIds.includes(store.id))
+          : almacenes;
+
         // Prepare promises for each store to fetch inventory data in parallel
-        const storePromises = almacenes.map(async (almacen) => {
+        const storePromises = filteredStores.map(async (almacen) => {
           try {
             // Fetch inventory for this store
             const { data: inventario, error: inventarioError } = await supabase
@@ -122,7 +129,7 @@ export const InventorySummary = ({ showLowStock = true }: InventorySummaryProps)
       // Cleanup is important to prevent state updates after unmounting
       setIsLoading(false);
     };
-  }, [toast]);
+  }, [toast, storeIds]);
 
   if (isLoading) {
     return (

@@ -8,7 +8,7 @@ import { useCurrentStores } from "@/hooks/useCurrentStores";
 import { DollarSign, ShoppingBag, Truck, Users } from "lucide-react";
 
 const Dashboard = () => {
-  const { storeIds, isLoading: loadingStores } = useCurrentStores();
+  const { stores, isLoading: loadingStores } = useCurrentStores();
   const [storeIds, setStoreIds] = useState<string[]>([]);
   
   useEffect(() => {
@@ -17,7 +17,7 @@ const Dashboard = () => {
     }
   }, [stores]);
   
-  // Convert string values to numbers for proper typing
+  // Estadísticas para las tarjetas
   const stats = [
     {
       title: "Ventas Hoy",
@@ -68,19 +68,21 @@ const Dashboard = () => {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <div className="col-span-2">
-          <SalesChart />
+          <SalesChart storeIds={storeIds} />
         </div>
         <div>
-          <RecentSalesTable />
+          <RecentSalesTable storeIds={storeIds} />
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
         <InventorySummary
           showLowStock={true}
+          storeIds={storeIds}
         />
         <InventorySummary
           showLowStock={false}
+          storeIds={storeIds}
         />
       </div>
     </div>

@@ -23,12 +23,15 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { fetchTopSellingProducts, TopSellingProduct } from "@/services/analytics";
 import { useToast } from "@/hooks/use-toast";
-import { ChartContainer, ChartTooltipContent, ChartTooltip } from "@/components/ui/chart";
 
 type TimeRange = "daily" | "weekly" | "monthly";
 type ChartType = "bar" | "pie" | "line" | "area";
 
-export const SalesChart = () => {
+interface SalesChartProps {
+  storeIds?: string[];
+}
+
+export const SalesChart = ({ storeIds = [] }: SalesChartProps) => {
   const [timeRange, setTimeRange] = useState<TimeRange>("monthly");
   const [selectedStore, setSelectedStore] = useState<string | null>(null);
   const [chartData, setChartData] = useState<TopSellingProduct[]>([]);
@@ -40,9 +43,14 @@ export const SalesChart = () => {
   // Fetch stores
   useEffect(() => {
     const fetchStores = async () => {
-      const { data, error } = await supabase
-        .from('almacenes')
-        .select('id, nombre');
+      let query = supabase.from('almacenes').select('id, nombre');
+      
+      // If storeIds are provided, filter by them
+      if (storeIds.length > 0) {
+        query = query.in('id', storeIds);
+      }
+      
+      const { data, error } = await query;
       
       if (error) {
         console.error('Error fetching stores:', error);
@@ -60,14 +68,16 @@ export const SalesChart = () => {
     };
     
     fetchStores();
-  }, [toast]);
+  }, [toast, storeIds]);
 
   // Fetch top selling products based on timeRange and selectedStore
   const fetchProductSalesData = useCallback(async () => {
     setIsLoading(true);
     try {
       console.log(`Fetching data with timeRange: ${timeRange}, store: ${selectedStore || 'all'}`);
-      const data = await fetchTopSellingProducts(timeRange, selectedStore);
+      // If user has selected a specific store, use that, otherwise use the props storeIds if provided
+      const storeIdsToUse = selectedStore ? [selectedStore] : storeIds;
+      const data = await fetchTopSellingProducts(timeRange, selectedStore || (storeIdsToUse.length > 0 ? storeIdsToUse : null));
       console.log('Fetched data:', data);
       setChartData(data);
     } catch (error) {
@@ -80,7 +90,7 @@ export const SalesChart = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [timeRange, selectedStore, toast]);
+  }, [timeRange, selectedStore, storeIds, toast]);
 
   // Refetch data when timeRange or selectedStore changes
   useEffect(() => {
