@@ -1,153 +1,147 @@
 
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
+import { RevenueOverTimeChart } from "@/components/analytics/RevenueOverTimeChart";
 import { SalesByCategoryChart } from "@/components/analytics/SalesByCategoryChart";
 import { TopProductsChart } from "@/components/analytics/TopProductsChart";
-import { RevenueOverTimeChart } from "@/components/analytics/RevenueOverTimeChart";
 
 export default function Analytics() {
-  const { stores, isLoading: isLoadingStores } = useCurrentStores();
+  const { stores, hasStores } = useCurrentStores();
+  const [selectedStoreId, setSelectedStoreId] = useState<string>("");
+  const [dateRange, setDateRange] = useState<"7days" | "30days" | "90days">("30days");
   const [salesByCategory, setSalesByCategory] = useState<any[]>([]);
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [revenueOverTime, setRevenueOverTime] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  const storeIds = stores.map(store => store.id);
-
+  // Set initial selected store
   useEffect(() => {
-    if (isLoadingStores || storeIds.length === 0) return;
+    if (stores.length > 0 && !selectedStoreId) {
+      setSelectedStoreId(stores[0].id);
+    }
+  }, [stores, selectedStoreId]);
 
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Ventas por categoría - using direct table query instead of RPC
-        const { data: catData, error: catError } = await supabase
-          .from("categorias")
-          .select(`
-            id,
-            nombre,
-            ventas:productos!inner(
-              id,
-              categoria_id,
-              ventas:detalles_venta!inner(
-                subtotal
-              )
-            )
-          `);
-        
-        if (catError) throw catError;
-        
-        // Process the data into the format needed for the chart
-        const processedCatData = catData?.map(cat => ({
-          category: cat.nombre,
-          value: cat.ventas.reduce((sum: number, prod: any) => 
-            sum + prod.ventas.reduce((s: number, v: any) => s + v.subtotal, 0), 0)
-        })) || [];
-        
-        setSalesByCategory(processedCatData);
+  // Load data when store or date range changes
+  useEffect(() => {
+    if (selectedStoreId) {
+      loadAnalyticsData();
+    }
+  }, [selectedStoreId, dateRange]);
 
-        // Top productos (most sold)
-        const { data: topData, error: topError } = await supabase
-          .from("productos")
-          .select(`
-            id,
-            nombre,
-            ventas:detalles_venta(
-              cantidad,
-              subtotal
-            )
-          `)
-          .order("nombre");
+  const loadAnalyticsData = async () => {
+    setLoading(true);
+    try {
+      // Create an array with the selected store ID
+      const storeIds = [selectedStoreId];
+      
+      // Load sales by category data
+      const { data: categoryData, error: categoryError } = await supabase
+        .rpc('get_ventas_por_categoria', { store_ids: storeIds });
         
-        if (topError) throw topError;
+      if (categoryError) throw categoryError;
+      setSalesByCategory(categoryData || []);
+      
+      // Load top products data
+      const { data: productsData, error: productsError } = await supabase
+        .rpc('get_top_productos', { store_ids: storeIds });
         
-        // Process for top products
-        const processedTopData = topData?.map(prod => ({
-          name: prod.nombre,
-          value: prod.ventas.reduce((sum: number, v: any) => sum + v.cantidad, 0)
-        }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 5) || [];
+      if (productsError) throw productsError;
+      setTopProducts(productsData || []);
+      
+      // Load sales over time data
+      const { data: timeData, error: timeError } = await supabase
+        .rpc('get_ventas_por_dia', { store_ids: storeIds });
         
-        setTopProducts(processedTopData);
-
-        // Revenue over time
-        const { data: revData, error: revError } = await supabase
-          .from("ventas")
-          .select("created_at, total")
-          .order("created_at");
-        
-        if (revError) throw revError;
-        
-        // Group by date and sum totals
-        const dateMap: Record<string, number> = {};
-        revData?.forEach((sale: any) => {
-          const date = new Date(sale.created_at).toLocaleDateString();
-          dateMap[date] = (dateMap[date] || 0) + Number(sale.total);
-        });
-        
-        const processedRevData = Object.entries(dateMap).map(([date, value]) => ({
-          date,
-          value
-        }));
-        
-        setRevenueOverTime(processedRevData);
-      } catch (err) {
-        console.error("Error cargando analíticas:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [storeIds, isLoadingStores]);
-
+      if (timeError) throw timeError;
+      setRevenueOverTime(timeData || []);
+      
+    } catch (error) {
+      console.error("Error loading analytics data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   return (
-    <MainLayout>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in p-4">
-        <Card className="col-span-1 md:col-span-2">
-          <CardHeader>
-            <CardTitle>Ingresos por Día</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-[300px] w-full rounded-md" />
-            ) : (
-              <RevenueOverTimeChart data={revenueOverTime} />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Ventas por Categoría</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-[250px] w-full rounded-md" />
-            ) : (
-              <SalesByCategoryChart data={salesByCategory} />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Productos Más Vendidos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-[250px] w-full rounded-md" />
-            ) : (
-              <TopProductsChart data={topProducts} />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </MainLayout>
+    <div>
+      <MainLayout>
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Análisis de Ventas</h2>
+            <p className="text-muted-foreground">
+              Analiza el rendimiento de ventas, productos populares y tendencias.
+            </p>
+          </div>
+          
+          <div className="flex flex-wrap gap-4">
+            <div className="w-full md:w-64">
+              <Select
+                value={selectedStoreId}
+                onValueChange={setSelectedStoreId}
+                disabled={!hasStores}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar tienda" />
+                </SelectTrigger>
+                <SelectContent>
+                  {stores.map(store => (
+                    <SelectItem key={store.id} value={store.id}>{store.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="w-full md:w-64">
+              <Select
+                value={dateRange}
+                onValueChange={(value: any) => setDateRange(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7days">Últimos 7 días</SelectItem>
+                  <SelectItem value="30days">Últimos 30 días</SelectItem>
+                  <SelectItem value="90days">Últimos 90 días</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <CardTitle>Ventas por Categoría</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SalesByCategoryChart data={salesByCategory} loading={loading} />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Productos Más Vendidos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TopProductsChart data={topProducts} loading={loading} />
+              </CardContent>
+            </Card>
+            
+            <Card className="md:col-span-2 lg:col-span-1">
+              <CardHeader>
+                <CardTitle>Ingresos en el Tiempo</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RevenueOverTimeChart data={revenueOverTime} loading={loading} />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </MainLayout>
+    </div>
   );
 }

@@ -78,8 +78,23 @@ export const getUserRolesByUserId = async (userId: string): Promise<UserRoleWith
       
     if (error) throw error;
     
+    // Fetch user data to get email and full_name
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', userId)
+      .single();
+      
+    if (userError) throw userError;
+    
     return (data || []).map(role => ({
-      ...role,
+      id: role.id,
+      user_id: role.user_id,
+      role: role.role,
+      almacen_id: role.almacen_id,
+      created_at: role.created_at,
+      email: userData?.email || "",
+      full_name: userData?.full_name || null,
       almacen_nombre: role.almacenes?.nombre || null
     }));
   } catch (error) {

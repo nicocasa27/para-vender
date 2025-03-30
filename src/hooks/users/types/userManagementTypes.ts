@@ -3,7 +3,13 @@ export interface UserWithRoles {
   id: string;
   email: string;
   full_name: string | null;
+  created_at?: string;
   roles: UserRole[];
+  profiles?: {
+    id: string;
+    email: string;
+    full_name: string | null;
+  };
 }
 
 export interface UserRole {
@@ -13,13 +19,14 @@ export interface UserRole {
   almacen_id: string | null;
   created_at: string;
   almacen_nombre?: string | null;
+  almacenes?: { nombre: string } | null;
 }
 
 export interface UserRoleWithStore {
   id: string;
   user_id: string;
   role: 'admin' | 'manager' | 'sales' | 'viewer';
-  almacen_id: string;
+  almacen_id: string | null;
   created_at: string;
   email: string;
   full_name: string | null;

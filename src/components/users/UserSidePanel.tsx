@@ -6,16 +6,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 
 interface Props {
-  user: UserWithRoles;
+  selectedUser?: UserWithRoles;
+  user?: UserWithRoles;
   onSuccess: () => Promise<void>;
   onCancel: () => void;
 }
 
-const UserSidePanel = ({ user, onSuccess, onCancel }: Props) => {
+const UserSidePanel = ({ selectedUser, user, onSuccess, onCancel }: Props) => {
   const [activeTab, setActiveTab] = useState("roles");
+  
+  // Use whichever user prop is provided
+  const activeUser = selectedUser || user;
 
   return (
-    <Sheet open={!!user} onOpenChange={() => onCancel()}>
+    <Sheet open={!!activeUser} onOpenChange={() => onCancel()}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Gestionar Usuario</SheetTitle>
@@ -23,8 +27,8 @@ const UserSidePanel = ({ user, onSuccess, onCancel }: Props) => {
 
         <div className="mt-6">
           <div className="mb-6 space-y-1">
-            <h3 className="font-medium">{user?.full_name || "Usuario"}</h3>
-            <p className="text-sm text-muted-foreground">{user?.email}</p>
+            <h3 className="font-medium">{activeUser?.full_name || "Usuario"}</h3>
+            <p className="text-sm text-muted-foreground">{activeUser?.email}</p>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -38,9 +42,9 @@ const UserSidePanel = ({ user, onSuccess, onCancel }: Props) => {
               <div className="space-y-4">
                 <h4 className="text-sm font-medium">Roles Actuales</h4>
                 
-                {user?.roles && user.roles.length > 0 ? (
+                {activeUser?.roles && activeUser.roles.length > 0 ? (
                   <div className="space-y-2">
-                    {user.roles.map(role => (
+                    {activeUser.roles.map(role => (
                       <div key={role.id} className="flex items-center justify-between p-2 border rounded-md">
                         <div>
                           <p className="font-medium capitalize">{role.role}</p>
@@ -72,17 +76,17 @@ const UserSidePanel = ({ user, onSuccess, onCancel }: Props) => {
               <div className="space-y-4">
                 <div>
                   <h4 className="text-sm font-medium">ID</h4>
-                  <p className="text-sm mt-1">{user?.id}</p>
+                  <p className="text-sm mt-1">{activeUser?.id}</p>
                 </div>
                 
                 <div>
                   <h4 className="text-sm font-medium">Email</h4>
-                  <p className="text-sm mt-1">{user?.email}</p>
+                  <p className="text-sm mt-1">{activeUser?.email}</p>
                 </div>
                 
                 <div>
                   <h4 className="text-sm font-medium">Nombre</h4>
-                  <p className="text-sm mt-1">{user?.full_name || "No especificado"}</p>
+                  <p className="text-sm mt-1">{activeUser?.full_name || "No especificado"}</p>
                 </div>
               </div>
             </TabsContent>

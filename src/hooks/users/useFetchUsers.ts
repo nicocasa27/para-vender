@@ -3,13 +3,65 @@ import { useState, useEffect } from 'react';
 import { UserWithRoles } from '@/types/auth';
 import { toast } from "sonner";
 import { fetchUserRolesData, fetchFromUserRolesView } from './api/userDataApi';
-import { processUserRolesData, fetchProfilesWithoutRoles } from './utils/userDataProcessing';
+import { processUserData } from './utils/userDataProcessing';
 import { transformViewData } from './utils/viewDataTransformer';
 
 export function useFetchUsers(isAdmin: boolean) {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchProfilesWithoutRoles = async (): Promise<UserWithRoles[]> => {
+    const { data: profiles, error } = await supabase
+      .from('profiles')
+      .select('*');
+      
+    if (error) throw error;
+      
+    return (profiles || []).map(profile => ({
+      id: profile.id,
+      email: profile.email || '',
+      full_name: profile.full_name || null,
+      created_at: profile.created_at,
+      roles: []
+    }));
+  };
+
+  const processUserRolesData = async (userRolesData: any[]): Promise<UserWithRoles[]> => {
+    // Get all unique user IDs from the roles
+    const userIds = [...new Set(userRolesData.map(role => role.user_id))];
+    
+    // Create a map to group roles by user
+    const rolesByUser: Record<string, any[]> = {};
+    userRolesData.forEach(role => {
+      if (!rolesByUser[role.user_id]) {
+        rolesByUser[role.user_id] = [];
+      }
+      rolesByUser[role.user_id].push(role);
+    });
+    
+    // Transform into UserWithRoles format
+    return Object.entries(rolesByUser).map(([userId, roles]) => {
+      // Get profile info from the first role (all roles for a user have same profile)
+      const firstRole = roles[0];
+      const profile = firstRole.profiles || {};
+      
+      return {
+        id: userId,
+        email: profile.email || '',
+        full_name: profile.full_name || null,
+        created_at: profile.created_at,
+        roles: roles.map(role => ({
+          id: role.id,
+          user_id: role.user_id,
+          role: role.role,
+          almacen_id: role.almacen_id,
+          created_at: role.created_at,
+          almacen_nombre: role.almacenes?.nombre || null
+        }))
+      };
+    });
+  };
 
   const fetchUsers = async () => {
     try {

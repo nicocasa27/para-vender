@@ -1,139 +1,105 @@
 
-import { useEffect, useState } from "react";
+import React from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart, ShoppingCart, Users, Warehouse } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { RecentSalesTable } from "@/components/dashboard/RecentSalesTable";
+import { InventorySummary } from "@/components/dashboard/InventorySummary";
+import { SalesChart } from "@/components/dashboard/SalesChart";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Dashboard() {
-  const { stores, isLoading: loadingStores } = useCurrentStores();
-  const [stats, setStats] = useState({
-    sales: 0,
-    products: 0,
-    users: 0,
-    growth: 0
-  });
-  const [recentSales, setRecentSales] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (loadingStores || stores.length === 0) return;
-      
-      setLoading(true);
-      const storeIds = stores.map(store => store.id);
-      
-      try {
-        // Fetch summary stats
-        const { data: salesData } = await supabase
-          .from("ventas")
-          .select("total")
-          .in("almacen_id", storeIds);
-          
-        const { count: productsCount } = await supabase
-          .from("productos")
-          .select("id", { count: 'exact', head: true });
-          
-        const { count: usersCount } = await supabase
-          .from("profiles")
-          .select("id", { count: 'exact', head: true });
-          
-        // Calculate total sales
-        const totalSales = salesData?.reduce((sum, sale) => sum + Number(sale.total), 0) || 0;
-        
-        // Fetch recent sales for table
-        const { data: recent } = await supabase
-          .from("ventas")
-          .select(`
-            id,
-            total,
-            created_at,
-            cliente,
-            almacen:almacen_id(nombre)
-          `)
-          .in("almacen_id", storeIds)
-          .order("created_at", { ascending: false })
-          .limit(5);
-        
-        setStats({
-          sales: totalSales,
-          products: productsCount || 0,
-          users: usersCount || 0,
-          growth: 18 // Placeholder value
-        });
-        
-        setRecentSales(recent || []);
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, [stores, loadingStores]);
+  const { stores, isLoading, hasStores } = useCurrentStores();
+  
+  // Create a storeIds map for the child components
+  const storeIdsMap = stores.reduce((acc, store) => {
+    acc[store.id] = store.nombre;
+    return acc;
+  }, {} as Record<string, string>);
+  
+  // Convert to array format for components that expect an array
+  const storeIdsArray = stores.map(store => store.id);
 
   return (
-    <MainLayout>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Ventas</CardTitle>
-            <ShoppingCart />
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-8 w-full" />
-            ) : (
-              <p className="text-2xl font-bold">${stats.sales.toLocaleString()}</p>
-            )}
-          </CardContent>
-        </Card>
+    <div>
+      <MainLayout>
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+            <p className="text-muted-foreground">
+              Vista general del rendimiento del negocio y estadísticas clave.
+            </p>
+          </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Productos</CardTitle>
-            <Warehouse />
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-8 w-full" />
-            ) : (
-              <p className="text-2xl font-bold">{stats.products}</p>
-            )}
-          </CardContent>
-        </Card>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <StatCard 
+              title="Ventas Totales" 
+              value="$12,254" 
+              description="+20.1% desde el mes pasado" 
+              trend="up"
+            />
+            <StatCard 
+              title="Nuevos Clientes" 
+              value="132" 
+              description="+19% desde el mes pasado" 
+              trend="up"
+            />
+            <StatCard 
+              title="Productos Vendidos" 
+              value="2,845" 
+              description="+12.2% desde el mes pasado" 
+              trend="up"
+            />
+            <StatCard 
+              title="Rentabilidad" 
+              value="32.5%" 
+              description="-4% desde el mes pasado" 
+              trend="down"
+            />
+          </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Usuarios</CardTitle>
-            <Users />
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-8 w-full" />
-            ) : (
-              <p className="text-2xl font-bold">{stats.users}</p>
-            )}
-          </CardContent>
-        </Card>
+          <div className="grid gap-6 md:grid-cols-7">
+            <Card className="col-span-4">
+              <CardHeader>
+                <CardTitle>Ventas Semanales</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SalesChart storeIds={storeIdsArray} />
+              </CardContent>
+            </Card>
+            
+            <Card className="col-span-3">
+              <CardHeader>
+                <CardTitle>Ventas Recientes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RecentSalesTable storeIds={storeIdsArray} />
+              </CardContent>
+            </Card>
+          </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Estadísticas</CardTitle>
-            <BarChart />
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-8 w-full" />
-            ) : (
-              <p className="text-2xl font-bold">+{stats.growth}%</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </MainLayout>
+          <Card>
+            <CardHeader>
+              <CardTitle>Gestión de Inventario</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="low">
+                <TabsList>
+                  <TabsTrigger value="low">Stock Bajo</TabsTrigger>
+                  <TabsTrigger value="all">Todo el Inventario</TabsTrigger>
+                </TabsList>
+                <TabsContent value="low" className="mt-4">
+                  <InventorySummary storeIds={storeIdsArray} showLowStock={true} />
+                </TabsContent>
+                <TabsContent value="all" className="mt-4">
+                  <InventorySummary storeIds={storeIdsArray} showLowStock={false} />
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
+      </MainLayout>
+    </div>
   );
 }

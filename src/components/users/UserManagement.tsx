@@ -21,7 +21,23 @@ export function UserManagement() {
   };
 
   const handleUserSelect = (user: UserWithRoles) => {
-    setSelectedUser(user);
+    // Convert auth.UserWithRoles to userManagementTypes.UserWithRoles if needed
+    const formattedUser: UserWithRoles = {
+      id: user.id,
+      email: user.email,
+      full_name: user.full_name,
+      created_at: user.created_at,
+      roles: user.roles.map(role => ({
+        id: role.id,
+        user_id: role.user_id,
+        role: role.role,
+        almacen_id: role.almacen_id,
+        created_at: role.created_at || '',
+        almacen_nombre: role.almacen_nombre
+      }))
+    };
+    
+    setSelectedUser(formattedUser);
   };
 
   return (
@@ -83,8 +99,11 @@ export function UserManagement() {
       
       {selectedUser && (
         <UserSidePanel
-          user={selectedUser}
-          onSuccess={loadUsers}
+          selectedUser={selectedUser}
+          onSuccess={async () => {
+            await loadUsers();
+            setSelectedUser(null);
+          }}
           onCancel={() => setSelectedUser(null)}
         />
       )}

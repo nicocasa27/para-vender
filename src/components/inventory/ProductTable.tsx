@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { ProductCard } from "./ProductCard";
 import { Product } from "@/types/inventory";
 
 const ProductTable = () => {
@@ -18,17 +17,41 @@ const ProductTable = () => {
   const loadProducts = async () => {
     setLoading(true);
     try {
-      // Ensure we're fetching columns that match our Product interface
-      const { data, error } = await supabase
+      // Fetch products and calculate stock_total from inventario
+      const { data: productsData, error: productsError } = await supabase
         .from('productos')
-        .select('id, nombre, precio_venta, stock_total, almacen_id');
+        .select('id, nombre, precio_venta, almacen_id');
 
-      if (error) {
-        throw error;
+      if (productsError) {
+        throw productsError;
       }
 
-      // Type assertion to ensure proper typing
-      setProducts(data as Product[]);
+      // Get inventory data to calculate stock
+      const { data: inventoryData, error: inventoryError } = await supabase
+        .from('inventario')
+        .select('producto_id, cantidad');
+        
+      if (inventoryError) {
+        throw inventoryError;
+      }
+      
+      // Calculate stock_total for each product
+      const productsWithStock: Product[] = productsData.map(product => {
+        // Sum up all inventory entries for this product
+        const stockTotal = inventoryData
+          .filter(item => item.producto_id === product.id)
+          .reduce((sum, item) => sum + Number(item.cantidad), 0);
+          
+        return {
+          id: product.id,
+          nombre: product.nombre,
+          precio_venta: Number(product.precio_venta),
+          stock_total: stockTotal,
+          almacen_id: product.almacen_id || ''
+        };
+      });
+
+      setProducts(productsWithStock);
     } catch (error) {
       console.error("Error loading products:", error);
       toast.error("Error al cargar productos", {

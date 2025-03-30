@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 import { getUserRolesByUserId } from "@/hooks/users/api/userDataQueries";
 import { UserRoleWithStore } from "@/hooks/users/types/userManagementTypes";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function UserRoles() {
   const { user, hasRole } = useAuth();

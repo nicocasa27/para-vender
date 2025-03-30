@@ -12,19 +12,34 @@ interface Props {
   onDelete?: (roleId: string) => void;
   onEdit?: (role: UserRoleWithStore) => void;
   isLoading?: boolean;
+  loading?: boolean;
+  onDeleteRole?: (roleId: string) => void;
 }
 
-const UserRolesTable = ({ roles, onDelete, onEdit, isLoading = false }: Props) => {
+const UserRolesTable = ({ 
+  roles, 
+  onDelete, 
+  onDeleteRole, 
+  onEdit, 
+  isLoading = false, 
+  loading = false 
+}: Props) => {
   const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
 
   const handleDelete = (roleId: string) => {
+    // Use whichever delete handler was provided
     if (onDelete) {
       onDelete(roleId);
+    } else if (onDeleteRole) {
+      onDeleteRole(roleId);
     }
     setRoleToDelete(null);
   };
 
-  if (isLoading) {
+  // Use either isLoading or loading prop
+  const isLoadingState = isLoading || loading;
+
+  if (isLoadingState) {
     return (
       <div className="flex justify-center p-8">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
@@ -79,7 +94,7 @@ const UserRolesTable = ({ roles, onDelete, onEdit, isLoading = false }: Props) =
                       <Edit className="h-4 w-4" />
                     </Button>
                   )}
-                  {onDelete && (
+                  {(onDelete || onDeleteRole) && (
                     <Button 
                       variant="ghost" 
                       size="icon"

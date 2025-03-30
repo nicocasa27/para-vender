@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { UserWithRoles, UserRoleWithStore } from "@/hooks/users/types/userManagementTypes";
+import { UserWithRoles, UserRole } from "@/hooks/users/types/userManagementTypes";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -48,7 +48,7 @@ export function UserRolesList({ user, onRoleAdded, onRoleDeleted }: Props) {
             <div className="flex flex-col">
               <span className="font-medium capitalize">{role.role}</span>
               <span className="text-xs text-muted-foreground">
-                {role.almacen_nombre || role.almacenes?.nombre || "Global"}
+                {role.almacen_nombre || (role.almacenes?.nombre) || "Global"}
               </span>
             </div>
             <Button
