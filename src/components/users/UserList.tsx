@@ -1,6 +1,12 @@
-
 import { UserWithRoles } from "@/types/auth";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 import { UserPlus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserRoleBadge } from "./UserRoleBadge";
@@ -62,7 +68,7 @@ export const UserList = memo(function UserList({ users, isLoading, onDeleteRole,
             // Usar nombre de profiles si está disponible, si no, usar el de top-level o fallback a "Sin nombre"
             const displayName = user.profiles?.full_name || user.full_name || "Sin nombre";
             const displayEmail = user.profiles?.email || user.email || "Sin email";
-            
+
             return (
               <TableRow key={user.id}>
                 <TableCell>
