@@ -1,76 +1,74 @@
-import { UserWithRoles } from "@/types/auth";
-import { Form } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
-import {
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useStores } from "@/hooks/useStores";
 import { RoleSelector } from "./RoleSelector";
-import { StoreMultiSelect } from "./StoreMultiSelect";
+import { StoreMultiSelect } from "@/components/users/StoreMultiSelect"; // ✅ Import corregido
 import { useRoleAssignmentV2 } from "@/hooks/useRoleAssignmentV2";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Role } from "@/types/auth";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
-interface UserRoleFormProps {
-  selectedUser: UserWithRoles | null;
+interface Props {
+  userId: string;
+  fullName: string;
+  email: string;
+  currentRoles: Role[];
   onSuccess: () => void;
-  onCancel: () => void;
 }
 
-export function UserRoleForm({ selectedUser, onSuccess, onCancel }: UserRoleFormProps) {
-  const { stores } = useStores();
-  const {
-    form,
-    currentRole,
-    needsStore,
-    isSubmitting,
-    handleAddRole,
-    selectedStoreIds,
-    setSelectedUser,
-    setSelectedStoreIds,
-  } = useRoleAssignmentV2({ onSuccess });
+export function UserRoleForm({
+  userId,
+  fullName,
+  email,
+  currentRoles,
+  onSuccess,
+}: Props) {
+  const [role, setRole] = useState<Role | "">("");
+  const [storeIds, setStoreIds] = useState<string[]>([]);
+  const { assignRole, loading } = useRoleAssignmentV2();
 
   useEffect(() => {
-    if (selectedUser) {
-      setSelectedUser(selectedUser);
-      setSelectedStoreIds([]); // Reset store selection
+    if (role !== "sales") {
+      setStoreIds([]); // Resetear sucursales si el rol no es sales
     }
-  }, [selectedUser]);
+  }, [role]);
 
-  const userName = selectedUser?.full_name || selectedUser?.email || "Usuario desconocido";
+  const handleSubmit = async () => {
+    if (!role) {
+      toast.error("Selecciona un rol");
+      return;
+    }
+
+    const success = await assignRole({ userId, role, almacenIds: storeIds });
+
+    if (success) {
+      toast.success("Rol asignado correctamente");
+      onSuccess();
+    }
+  };
 
   return (
-    <DialogContent className="sm:max-w-[425px]">
-      <DialogHeader>
-        <DialogTitle>Asignar Rol</DialogTitle>
-        <DialogDescription>Asigna un rol a {userName}</DialogDescription>
-      </DialogHeader>
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold">{fullName}</h3>
+        <p className="text-sm text-muted-foreground">{email}</p>
+        <Separator className="my-2" />
+      </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleAddRole)} className="space-y-4">
-          <RoleSelector control={form.control} />
+      <RoleSelector value={role} onChange={setRole} />
 
-          {needsStore && (
-            <StoreMultiSelect
-              stores={stores}
-              selected={selectedStoreIds}
-              onChange={setSelectedStoreIds}
-            />
-          )}
+      {role === "sales" && (
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Asignar sucursales</p>
+          <StoreMultiSelect selected={storeIds} onChange={setStoreIds} />
+        </div>
+      )}
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" type="button" onClick={onCancel}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Asignando..." : "Asignar rol"}
-            </Button>
-          </div>
-        </form>
-      </Form>
-    </DialogContent>
+      <div className="flex justify-end">
+        <Button onClick={handleSubmit} disabled={loading}>
+          Asignar Rol
+        </Button>
+      </div>
+    </div>
   );
 }
