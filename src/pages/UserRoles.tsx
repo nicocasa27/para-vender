@@ -90,7 +90,7 @@ const UserRoles = () => {
           users={users} 
           loading={loading}
           onDeleteRole={handleDeleteRole}
-          onAddRole={addRole}
+          // No pasamos onAddRole porque no es una prop esperada por UserRolesTable
           onRefresh={handleRefresh}
         />
       )}

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 type InventorySummaryItem = {
   store: string;
@@ -24,11 +24,25 @@ interface InventorySummaryProps {
 export const InventorySummary = ({ showLowStock = true, storeIds = [] }: InventorySummaryProps) => {
   const [inventorySummary, setInventorySummary] = useState<InventorySummaryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
+  const [hasError, setHasError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
+    // Evitar bucles infinitos de intentos fallidos
+    if (retryCount > 3) {
+      console.log("Máximo número de reintentos alcanzado, deteniendo intentos");
+      return;
+    }
+    
     const fetchInventoryData = async () => {
+      if (hasError && retryCount > 0) {
+        // Si ya ha fallado y estamos reintentando, esperamos un poco
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      
       setIsLoading(true);
+      setHasError(false);
+      
       try {
         // Fetch stores
         const { data: almacenes, error: almacenesError } = await supabase
@@ -41,6 +55,7 @@ export const InventorySummary = ({ showLowStock = true, storeIds = [] }: Invento
 
         if (!almacenes || almacenes.length === 0) {
           setInventorySummary([]);
+          setIsLoading(false);
           return;
         }
 
@@ -110,28 +125,19 @@ export const InventorySummary = ({ showLowStock = true, storeIds = [] }: Invento
         setInventorySummary(validResults);
       } catch (error) {
         console.error('Error fetching inventory summary:', error);
-        toast({
-          title: "Error",
-          description: "No se pudo cargar el resumen de inventario",
-          variant: "destructive",
-        });
-        setInventorySummary([]);
+        setHasError(true);
+        setRetryCount(prev => prev + 1);
+        toast.error("No se pudo cargar el resumen de inventario");
       } finally {
-        // Always set loading to false, even if there's an error
         setIsLoading(false);
       }
     };
 
     fetchInventoryData();
-    
-    // Return a cleanup function
-    return () => {
-      // Cleanup is important to prevent state updates after unmounting
-      setIsLoading(false);
-    };
-  }, [toast, storeIds]);
+  }, [storeIds, retryCount, hasError]);
 
-  if (isLoading) {
+  // Mostrar un mensaje de carga durante el primer intento
+  if (isLoading && retryCount === 0) {
     return (
       <Card className="transition-all duration-300 hover:shadow-elevation">
         <CardHeader>
@@ -142,6 +148,27 @@ export const InventorySummary = ({ showLowStock = true, storeIds = [] }: Invento
         <CardContent>
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Después de los reintentos, mostrar un mensaje de error más amigable
+  if (hasError && retryCount > 2) {
+    return (
+      <Card className="transition-all duration-300 hover:shadow-elevation">
+        <CardHeader>
+          <CardTitle className="text-base font-medium">
+            {showLowStock ? "Alertas de Stock Bajo" : "Capacidad de Inventario"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col justify-center items-center h-64 text-muted-foreground">
+            <AlertTriangle className="h-12 w-12 mb-4 text-amber-500" />
+            <p className="text-center">
+              No se pudo cargar el resumen de inventario. Por favor intente más tarde.
+            </p>
           </div>
         </CardContent>
       </Card>

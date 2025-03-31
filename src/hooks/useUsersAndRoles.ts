@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { UserWithRoles } from '@/hooks/users/types/userManagementTypes';
+import { UserWithRoles, RoleWithStore } from '@/hooks/users/types/userManagementTypes';
 import { useRoleManagement } from './users/useRoleManagement';
 import { useUserDeletion } from './users/useUserDeletion';
 import { supabase } from '@/integrations/supabase/client';
@@ -62,13 +62,16 @@ export function useUsersAndRoles(isAdmin: boolean) {
           
           // Añadir el rol al usuario
           const user = userMap.get(row.user_id);
+          // Asegurarse de que almacen_nombre sea una propiedad reconocida por TypeScript
+          const almacenNombre = (row as any).almacen_nombre || null;
+          
           user.roles.push({
             id: row.id,
             user_id: row.user_id,
             role: row.role,
             almacen_id: row.almacen_id,
             created_at: row.created_at,
-            almacen_nombre: row.almacen_nombre || null
+            almacen_nombre: almacenNombre
           });
         });
         
@@ -113,7 +116,14 @@ export function useUsersAndRoles(isAdmin: boolean) {
         const userRoles = allRoles.filter(role => role.user_id === profile.id) || [];
         
         // Si el usuario no tiene roles asignados explícitamente, le asignamos el rol predeterminado 'viewer'
-        const roles = userRoles.length > 0 ? userRoles : [{
+        const roles: RoleWithStore[] = userRoles.length > 0 ? userRoles.map(role => ({
+          id: role.id,
+          user_id: role.user_id,
+          role: role.role,
+          almacen_id: role.almacen_id,
+          created_at: role.created_at || new Date().toISOString(),
+          almacen_nombre: role.almacenes?.nombre || null
+        })) : [{
           id: `default-viewer-${profile.id}`,
           user_id: profile.id,
           role: 'viewer',
@@ -127,11 +137,7 @@ export function useUsersAndRoles(isAdmin: boolean) {
           email: profile.email || "",
           full_name: profile.full_name,
           created_at: profile.created_at,
-          roles: roles.map(role => ({
-            ...role,
-            created_at: role.created_at || new Date().toISOString(),
-            almacen_nombre: role.almacenes?.nombre || null
-          }))
+          roles: roles
         };
       });
       
