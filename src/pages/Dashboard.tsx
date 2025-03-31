@@ -1,9 +1,11 @@
 
 import React, { useState, useEffect } from "react";
-import { StatCard } from "@/components/dashboard/StatCard";
-import { SalesChart } from "@/components/dashboard/SalesChart";
-import { RecentSalesTable } from "@/components/dashboard/RecentSalesTable";
-import { InventorySummary } from "@/components/dashboard/InventorySummary";
+import { 
+  StatCard, 
+  SalesChart, 
+  RecentSalesTable, 
+  InventorySummary 
+} from "@/components/dashboard";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
 import { DollarSign, ShoppingBag, Truck, Users } from "lucide-react";
 
@@ -68,7 +70,7 @@ const Dashboard = () => {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <div className="col-span-2">
-          <SalesChart />
+          <SalesChart storeIds={selectedStoreIds} />
         </div>
         <div>
           <RecentSalesTable />
