@@ -69,12 +69,12 @@ export const fetchTopSellingProducts = async (
     });
     
     // Ejecutar la consulta con timeout
-    const result = await Promise.race([
+    const queryResult = await Promise.race([
       query,
       timeoutPromise
     ]) as any;
     
-    const { data, error } = result;
+    const { data, error } = queryResult;
     
     if (error) {
       throw error;
