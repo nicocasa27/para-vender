@@ -1,96 +1,121 @@
 
 import { useState, useEffect } from "react";
-import { Loader2, Package, FileX } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
 } from "@/components/ui/table";
+import { format } from "date-fns";
+import { ArrowRight, RefreshCw } from "lucide-react";
 
-import { getRecentTransfers } from "./stock-transfer-api";
-import { TransferRecord } from "./types";
-import { Skeleton } from "@/components/ui/skeleton";
+interface TransferRecord {
+  id: string;
+  created_at: string;
+  cantidad: number;
+  producto: {
+    nombre: string;
+  };
+  almacen_origen: {
+    nombre: string;
+  };
+  almacen_destino: {
+    nombre: string;
+  };
+}
 
 export function TransferHistory() {
-  const [transferRecords, setTransferRecords] = useState<TransferRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  const [transfers, setTransfers] = useState<TransferRecord[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadTransferHistory();
+    loadTransfers();
   }, []);
 
-  const loadTransferHistory = async () => {
-    setIsLoading(true);
+  const loadTransfers = async () => {
+    setLoading(true);
     try {
-      const history = await getRecentTransfers();
-      setTransferRecords(history);
+      const { data, error } = await supabase
+        .from('movimientos')
+        .select(`
+          id,
+          created_at,
+          cantidad,
+          producto:producto_id(nombre),
+          almacen_origen:almacen_origen_id(nombre),
+          almacen_destino:almacen_destino_id(nombre)
+        `)
+        .eq('tipo', 'transferencia')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      setTransfers(data || []);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo cargar el historial de transferencias.",
-        variant: "destructive",
-      });
+      console.error("Error al cargar transferencias:", error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const renderSkeletonRows = () => {
-    return Array(3).fill(0).map((_, i) => (
-      <TableRow key={`skeleton-${i}`}>
-        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-      </TableRow>
-    ));
-  };
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center p-8">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-[300px]">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Fecha</TableHead>
-            <TableHead>Producto</TableHead>
-            <TableHead>Origen</TableHead>
-            <TableHead>Destino</TableHead>
-            <TableHead>Cantidad</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {isLoading ? (
-            renderSkeletonRows()
-          ) : transferRecords.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={5} className="h-[250px]">
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                  <FileX className="h-12 w-12 mb-2 text-muted-foreground/60" />
-                  <p className="text-base font-medium">No hay transferencias registradas</p>
-                  <p className="text-sm mt-1">Utilice el formulario para registrar transferencias de stock</p>
-                </div>
-              </TableCell>
-            </TableRow>
-          ) : (
-            transferRecords.map((transfer) => (
-              <TableRow key={transfer.id} className="animate-fade-in">
-                <TableCell>{transfer.fecha}</TableCell>
-                <TableCell>{transfer.producto}</TableCell>
-                <TableCell>{transfer.origen}</TableCell>
-                <TableCell>{transfer.destino}</TableCell>
-                <TableCell>{transfer.cantidad}</TableCell>
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-sm font-medium">Últimas transferencias</h3>
+        <Button variant="outline" size="sm" onClick={loadTransfers}>
+          <RefreshCw className="h-3 w-3 mr-1" />
+          Actualizar
+        </Button>
+      </div>
+      
+      {transfers.length === 0 ? (
+        <div className="text-center p-8 border rounded bg-muted/20">
+          <p className="text-muted-foreground">No hay transferencias recientes</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Producto</TableHead>
+                <TableHead>Transferencia</TableHead>
+                <TableHead className="text-right">Cantidad</TableHead>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {transfers.map((transfer) => (
+                <TableRow key={transfer.id}>
+                  <TableCell className="whitespace-nowrap">
+                    {format(new Date(transfer.created_at), 'dd/MM/yyyy HH:mm')}
+                  </TableCell>
+                  <TableCell>{transfer.producto.nombre}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col xs:flex-row items-start xs:items-center text-sm">
+                      <span className="font-medium">{transfer.almacen_origen.nombre}</span>
+                      <ArrowRight className="h-3 w-3 mx-1 hidden xs:block" />
+                      <span className="font-medium">{transfer.almacen_destino.nombre}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">{transfer.cantidad}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }
