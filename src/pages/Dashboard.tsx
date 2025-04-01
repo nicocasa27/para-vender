@@ -8,10 +8,13 @@ import {
 } from "@/components/dashboard";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
 import { DollarSign, ShoppingBag, Truck, Users } from "lucide-react";
+import { fetchDashboardStats, DashboardStats } from "@/services/dashboard";
 
 const Dashboard = () => {
   const { stores, isLoading: loadingStores } = useCurrentStores();
   const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     if (stores && stores.length > 0) {
@@ -19,33 +22,26 @@ const Dashboard = () => {
     }
   }, [stores]);
   
-  // Convert string values to numbers for proper typing
-  const stats = [
-    {
-      title: "Ventas Hoy",
-      value: 1254,
-      icon: DollarSign,
-      description: "+12% respecto a ayer",
-    },
-    {
-      title: "Nuevos Clientes",
-      value: 34,
-      icon: Users,
-      description: "+2% respecto a ayer",
-    },
-    {
-      title: "Productos Vendidos",
-      value: 324,
-      icon: ShoppingBag,
-      description: "+8% respecto a ayer",
-    },
-    {
-      title: "Transferencias",
-      value: 12,
-      icon: Truck,
-      description: "+4% respecto a ayer",
-    },
-  ];
+  useEffect(() => {
+    const loadDashboardStats = async () => {
+      setIsLoading(true);
+      try {
+        const stats = await fetchDashboardStats();
+        setDashboardStats(stats);
+      } catch (error) {
+        console.error("Error cargando estadísticas del dashboard:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadDashboardStats();
+    
+    // Actualizar los datos cada 5 minutos
+    const interval = setInterval(loadDashboardStats, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -57,15 +53,38 @@ const Dashboard = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, index) => (
-          <StatCard
-            key={index}
-            title={stat.title}
-            value={stat.value}
-            icon={stat.icon}
-            description={stat.description}
-          />
-        ))}
+        <StatCard
+          title="Ventas Hoy"
+          value={isLoading ? "Cargando..." : `$${dashboardStats?.ventasHoy.total.toLocaleString() || 0}`}
+          icon={DollarSign}
+          description={`+${dashboardStats?.ventasHoy.porcentaje || 0}% respecto a ayer`}
+          trend={dashboardStats?.ventasHoy.porcentaje}
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Nuevos Clientes"
+          value={isLoading ? "Cargando..." : (dashboardStats?.nuevosClientes.total.toString() || "0")}
+          icon={Users}
+          description={`+${dashboardStats?.nuevosClientes.porcentaje || 0}% respecto a ayer`}
+          trend={dashboardStats?.nuevosClientes.porcentaje}
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Productos Vendidos"
+          value={isLoading ? "Cargando..." : (dashboardStats?.productosVendidos.total.toString() || "0")}
+          icon={ShoppingBag}
+          description={`+${dashboardStats?.productosVendidos.porcentaje || 0}% respecto a ayer`}
+          trend={dashboardStats?.productosVendidos.porcentaje}
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Transferencias"
+          value={isLoading ? "Cargando..." : (dashboardStats?.transferencias.total.toString() || "0")}
+          icon={Truck}
+          description={`+${dashboardStats?.transferencias.porcentaje || 0}% respecto a ayer`}
+          trend={dashboardStats?.transferencias.porcentaje}
+          isLoading={isLoading}
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -73,7 +92,7 @@ const Dashboard = () => {
           <SalesChart storeIds={selectedStoreIds} />
         </div>
         <div>
-          <RecentSalesTable />
+          <RecentSalesTable storeIds={selectedStoreIds} />
         </div>
       </div>
 

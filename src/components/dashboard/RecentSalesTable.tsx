@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal, RefreshCw } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSupabaseQuery } from "@/hooks/useSupabaseQuery";
+import { toast } from "sonner";
 
 type SaleItem = {
   id: string;
@@ -45,93 +46,101 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
   const itemsPerPage = 5;
   const { handleError } = useSupabaseQuery();
 
-  useEffect(() => {
-    const fetchRecentSales = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch ventas from Supabase
-        let query = supabase
-          .from('ventas')
-          .select(`
-            id, 
-            total, 
-            estado, 
-            created_at,
-            cliente,
-            almacenes(nombre),
-            almacen_id
-          `)
-          .order('created_at', { ascending: false })
-          .limit(10);
-        
-        // Apply store filter if storeIds are provided
-        if (storeIds.length > 0) {
-          query = query.in('almacen_id', storeIds);
-        }
-          
-        const { data: ventas, error: ventasError } = await query;
-
-        if (ventasError) {
-          handleError(ventasError, "Error al cargar ventas recientes");
-          return;
-        }
-
-        if (!ventas || ventas.length === 0) {
-          setRecentSales([]);
-          return;
-        }
-
-        // Transform the data
-        const salesData: SaleItem[] = await Promise.all(ventas.map(async (venta) => {
-          // Get a product from this sale
-          const { data: detalles, error: detallesError } = await supabase
-            .from('detalles_venta')
-            .select(`
-              producto_id,
-              productos(nombre)
-            `)
-            .eq('venta_id', venta.id)
-            .limit(1);
-
-          if (detallesError) {
-            handleError(detallesError, "Error al cargar detalles de venta");
-          }
-
-          const productName = detalles && detalles.length > 0 && detalles[0].productos
-            ? (detalles[0].productos as any).nombre
-            : 'Producto desconocido';
-
-          // Generate customer initials or use existing if cliente is provided
-          const customerName = venta.cliente || 'Cliente Anónimo';
-          const initials = customerName
-            .split(' ')
-            .map(word => word[0])
-            .join('')
-            .toUpperCase()
-            .substring(0, 2);
-
-          return {
-            id: venta.id,
-            customer: customerName,
-            customerInitial: initials,
-            product: productName,
-            date: venta.created_at,
-            amount: venta.total,
-            status: venta.estado,
-            store: venta.almacenes ? (venta.almacenes as any).nombre : 'Desconocida',
-          };
-        }));
-
-        setRecentSales(salesData);
-      } catch (error: any) {
-        handleError(error, "Error al cargar ventas recientes");
-      } finally {
-        setIsLoading(false);
+  const fetchRecentSales = async () => {
+    setIsLoading(true);
+    try {
+      console.log("Fetching recent sales with store IDs:", storeIds);
+      
+      // Fetch ventas from Supabase con límite mayor para paginación
+      let query = supabase
+        .from('ventas')
+        .select(`
+          id, 
+          total, 
+          estado, 
+          created_at,
+          cliente,
+          almacenes(nombre),
+          almacen_id
+        `)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      
+      // Apply store filter if storeIds are provided
+      if (storeIds.length > 0) {
+        query = query.in('almacen_id', storeIds);
       }
-    };
+        
+      const { data: ventas, error: ventasError } = await query;
 
+      if (ventasError) {
+        handleError(ventasError, "Error al cargar ventas recientes");
+        return;
+      }
+
+      console.log("Ventas fetched:", ventas?.length || 0);
+
+      if (!ventas || ventas.length === 0) {
+        setRecentSales([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Transform the data
+      const salesData = await Promise.all(ventas.map(async (venta) => {
+        // Get a product from this sale
+        const { data: detalles, error: detallesError } = await supabase
+          .from('detalles_venta')
+          .select(`
+            producto_id,
+            productos(nombre)
+          `)
+          .eq('venta_id', venta.id)
+          .limit(1);
+
+        if (detallesError) {
+          console.error("Error al cargar detalles:", detallesError);
+        }
+
+        const productName = detalles && detalles.length > 0 && detalles[0].productos
+          ? (detalles[0].productos as any).nombre
+          : 'Producto desconocido';
+
+        // Generate customer initials or use existing if cliente is provided
+        const customerName = venta.cliente || 'Cliente Anónimo';
+        const initials = customerName
+          .split(' ')
+          .map(word => word[0])
+          .join('')
+          .toUpperCase()
+          .substring(0, 2);
+
+        return {
+          id: venta.id,
+          customer: customerName,
+          customerInitial: initials,
+          product: productName,
+          date: venta.created_at,
+          amount: venta.total,
+          status: venta.estado,
+          store: venta.almacenes ? (venta.almacenes as any).nombre : 'Desconocida',
+        };
+      }));
+
+      console.log("Sales data transformed:", salesData.length);
+      setRecentSales(salesData);
+    } catch (error: any) {
+      console.error("Error fetchRecentSales:", error);
+      handleError(error, "Error al cargar ventas recientes");
+      toast.error("No se pudieron cargar las ventas recientes");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchRecentSales();
-  }, [handleError, storeIds]);
+  }, [storeIds]); // Re-fetch when storeIds change
 
   const totalPages = Math.ceil(recentSales.length / itemsPerPage);
   const currentPageItems = recentSales.slice(
@@ -142,6 +151,11 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString();
+  };
+
+  const handleRefresh = () => {
+    fetchRecentSales();
+    toast.success("Ventas recientes actualizadas");
   };
 
   const renderSkeletonRows = () => {
@@ -171,9 +185,15 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
     <Card className="transition-all duration-300 hover:shadow-elevation min-h-[500px]">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base font-medium">Ventas Recientes</CardTitle>
-        <Button variant="outline" size="sm">
-          Ver Todas
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Actualizar
+          </Button>
+          <Button variant="outline" size="sm">
+            Ver Todas
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
