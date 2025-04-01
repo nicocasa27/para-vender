@@ -87,21 +87,24 @@ const Dashboard = () => {
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <div className="col-span-2">
+      {/* Layout modificado para que la tabla de ventas recientes sea más alta */}
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+        <div className="lg:col-span-2">
           <SalesChart storeIds={selectedStoreIds} />
         </div>
-        <div>
+        <div className="lg:col-span-1">
           <RecentSalesTable storeIds={selectedStoreIds} />
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <InventorySummary
           showLowStock={true}
+          storeIds={selectedStoreIds}
         />
         <InventorySummary
           showLowStock={false}
+          storeIds={selectedStoreIds}
         />
       </div>
     </div>

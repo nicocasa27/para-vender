@@ -43,7 +43,7 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
   const [recentSales, setRecentSales] = useState<SaleItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 8; // Incrementado para mostrar más elementos
   const { handleError } = useSupabaseQuery();
 
   const fetchRecentSales = async () => {
@@ -64,7 +64,7 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
           almacen_id
         `)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(30); // Incrementado para tener más datos disponibles para paginación
       
       // Apply store filter if storeIds are provided
       if (storeIds.length > 0) {
@@ -159,7 +159,7 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
   };
 
   const renderSkeletonRows = () => {
-    return Array(5).fill(0).map((_, i) => (
+    return Array(itemsPerPage).fill(0).map((_, i) => (
       <TableRow key={`skeleton-${i}`}>
         <TableCell>
           <div className="flex items-center gap-2">
@@ -182,7 +182,7 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
   };
 
   return (
-    <Card className="transition-all duration-300 hover:shadow-elevation min-h-[500px]">
+    <Card className="transition-all duration-300 hover:shadow-elevation h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base font-medium">Ventas Recientes</CardTitle>
         <div className="flex gap-2">
@@ -195,8 +195,8 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
+      <CardContent className="flex-1 flex flex-col">
+        <div className="overflow-x-auto flex-1">
           <Table>
             <TableHeader>
               <TableRow>
@@ -293,7 +293,7 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
           </Table>
         </div>
         {!isLoading && recentSales.length > 0 && totalPages > 1 && (
-          <div className="flex items-center justify-end space-x-2 py-4">
+          <div className="flex items-center justify-end space-x-2 py-4 mt-auto">
             <Button
               variant="outline"
               size="sm"

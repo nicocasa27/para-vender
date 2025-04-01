@@ -45,9 +45,12 @@ export const InventorySummary = ({ showLowStock = true, storeIds = [] }: Invento
       
       try {
         // Fetch stores
-        const { data: almacenes, error: almacenesError } = await supabase
-          .from('almacenes')
-          .select('id, nombre');
+        let storeQuery = supabase.from('almacenes').select('id, nombre');
+        
+        // Filter stores if storeIds are provided and not empty
+        const { data: almacenes, error: almacenesError } = storeIds.length > 0 
+          ? await storeQuery.in('id', storeIds)
+          : await storeQuery;
 
         if (almacenesError) {
           throw new Error(`Error fetching almacenes: ${almacenesError.message}`);
@@ -59,13 +62,8 @@ export const InventorySummary = ({ showLowStock = true, storeIds = [] }: Invento
           return;
         }
 
-        // Filter stores if storeIds are provided
-        const filteredStores = storeIds.length > 0 
-          ? almacenes.filter(store => storeIds.includes(store.id))
-          : almacenes;
-
         // Prepare promises for each store to fetch inventory data in parallel
-        const storePromises = filteredStores.map(async (almacen) => {
+        const storePromises = almacenes.map(async (almacen) => {
           try {
             // Fetch inventory for this store
             const { data: inventario, error: inventarioError } = await supabase
@@ -139,7 +137,7 @@ export const InventorySummary = ({ showLowStock = true, storeIds = [] }: Invento
   // Mostrar un mensaje de carga durante el primer intento
   if (isLoading && retryCount === 0) {
     return (
-      <Card className="transition-all duration-300 hover:shadow-elevation">
+      <Card className="transition-all duration-300 hover:shadow-elevation h-full">
         <CardHeader>
           <CardTitle className="text-base font-medium">
             {showLowStock ? "Alertas de Stock Bajo" : "Capacidad de Inventario"}
@@ -157,7 +155,7 @@ export const InventorySummary = ({ showLowStock = true, storeIds = [] }: Invento
   // Después de los reintentos, mostrar un mensaje de error más amigable
   if (hasError && retryCount > 2) {
     return (
-      <Card className="transition-all duration-300 hover:shadow-elevation">
+      <Card className="transition-all duration-300 hover:shadow-elevation h-full">
         <CardHeader>
           <CardTitle className="text-base font-medium">
             {showLowStock ? "Alertas de Stock Bajo" : "Capacidad de Inventario"}
@@ -176,7 +174,7 @@ export const InventorySummary = ({ showLowStock = true, storeIds = [] }: Invento
   }
 
   return (
-    <Card className="transition-all duration-300 hover:shadow-elevation">
+    <Card className="transition-all duration-300 hover:shadow-elevation h-full">
       <CardHeader>
         <CardTitle className="text-base font-medium">
           {showLowStock ? "Alertas de Stock Bajo" : "Capacidad de Inventario"}
