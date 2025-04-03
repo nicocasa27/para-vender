@@ -24,6 +24,12 @@ interface InventorySummaryProps {
   storeIds?: string[];
 }
 
+// Definimos un tipo para los datos que vienen de Supabase
+type SupabaseStore = {
+  id: string;
+  nombre: string;
+};
+
 export const InventorySummary = ({ showLowStock = true, storeIds = [] }: InventorySummaryProps) => {
   const [inventorySummary, setInventorySummary] = useState<InventorySummaryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,7 +70,7 @@ export const InventorySummary = ({ showLowStock = true, storeIds = [] }: Invento
       let storeQuery = supabase.from('almacenes').select('id, nombre');
       
       // Filter stores if storeIds are provided and not empty
-      const { data: almacenes, error: almacenesError } = storeIds.length > 0 
+      const { data: supabaseStores, error: almacenesError } = storeIds.length > 0 
         ? await storeQuery.in('id', storeIds)
         : await storeQuery;
 
@@ -75,6 +81,12 @@ export const InventorySummary = ({ showLowStock = true, storeIds = [] }: Invento
         });
         throw new Error(`Error fetching almacenes: ${almacenesError.message}`);
       }
+
+      // Transformar los datos de Supabase al formato esperado por el estado
+      const almacenes = (supabaseStores || []).map((store: SupabaseStore) => ({
+        id: store.id,
+        name: store.nombre // Transformamos 'nombre' a 'name'
+      }));
 
       // Actualizar información de depuración
       setDebugInfo(prev => ({
@@ -95,7 +107,7 @@ export const InventorySummary = ({ showLowStock = true, storeIds = [] }: Invento
       // Prepare promises for each store to fetch inventory data in parallel
       const storePromises = almacenes.map(async (almacen) => {
         try {
-          console.log(`InventorySummary: Consultando inventario para almacén ${almacen.nombre} (${almacen.id})`);
+          console.log(`InventorySummary: Consultando inventario para almacén ${almacen.name} (${almacen.id})`);
           
           // Fetch inventory for this store
           const { data: inventario, error: inventarioError } = await supabase
@@ -108,11 +120,11 @@ export const InventorySummary = ({ showLowStock = true, storeIds = [] }: Invento
             .eq('almacen_id', almacen.id);
 
           if (inventarioError) {
-            console.error(`InventorySummary: Error fetching inventory for store ${almacen.nombre}:`, inventarioError);
+            console.error(`InventorySummary: Error fetching inventory for store ${almacen.name}:`, inventarioError);
             return null;
           }
 
-          console.log(`InventorySummary: Encontrados ${inventario?.length || 0} productos en inventario para ${almacen.nombre}`);
+          console.log(`InventorySummary: Encontrados ${inventario?.length || 0} productos en inventario para ${almacen.name}`);
 
           // Calculate capacity as a percentage of total max stock
           let totalQuantity = 0;
@@ -148,13 +160,13 @@ export const InventorySummary = ({ showLowStock = true, storeIds = [] }: Invento
             : 0;
 
           return {
-            store: almacen.nombre,
+            store: almacen.name,
             storeId: almacen.id,
             capacity: Math.min(capacity, 100), // Cap at 100%
             lowStock: lowStockItems
           };
         } catch (error) {
-          console.error(`InventorySummary: Error processing store ${almacen.nombre}:`, error);
+          console.error(`InventorySummary: Error processing store ${almacen.name}:`, error);
           return null;
         }
       });
@@ -275,7 +287,7 @@ export const InventorySummary = ({ showLowStock = true, storeIds = [] }: Invento
                   {debugInfo.foundStores.length > 0 && (
                     <ul className="list-disc pl-4">
                       {debugInfo.foundStores.map(store => (
-                        <li key={store.id}>{store.nombre} ({store.id})</li>
+                        <li key={store.id}>{store.name} ({store.id})</li>
                       ))}
                     </ul>
                   )}
