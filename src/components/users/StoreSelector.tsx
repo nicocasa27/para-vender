@@ -1,3 +1,4 @@
+
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Control } from "react-hook-form";
@@ -18,7 +19,7 @@ export function StoreSelector({ control, stores }: StoreSelectorProps) {
           <FormLabel>Sucursal</FormLabel>
           <Select
             onValueChange={field.onChange}
-            defaultValue={field.value}
+            defaultValue={field.value || undefined}
           >
             <FormControl>
               <SelectTrigger>

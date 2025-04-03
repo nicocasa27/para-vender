@@ -239,7 +239,7 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
     const product = products.find(p => p.id === productId);
     if (!product) return 0;
     
-    return Object.values(product.stock).reduce((sum, qty) => sum + qty, 0);
+    return Object.values(product.stock || {}).reduce((sum, qty) => sum + qty, 0);
   };
 
   return (
@@ -266,7 +266,7 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
                     products
                       .filter(product => {
                         // Filtrar productos que tienen stock en alguna sucursal
-                        const totalStock = Object.values(product.stock).reduce((sum, val) => sum + val, 0);
+                        const totalStock = Object.values(product.stock || {}).reduce((sum, val) => sum + val, 0);
                         return totalStock > 0;
                       })
                       .map((product) => (
@@ -388,4 +388,4 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
       </form>
     </Form>
   );
-};
+}
