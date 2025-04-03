@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -356,11 +357,14 @@ const ProductTable = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all-categories">Todas las categorías</SelectItem>
-            {categories.map((category) => (
-              <SelectItem key={category.id} value={category.id || "cat-sin-id"}>
-                {category.nombre || "Categoría sin nombre"}
-              </SelectItem>
-            ))}
+            {categories
+              .filter(category => !!category.id)
+              .map((category) => (
+                <SelectItem key={category.id} value={category.id || "cat-sin-id"}>
+                  {category.nombre || "Categoría sin nombre"}
+                </SelectItem>
+              ))
+            }
           </SelectContent>
         </Select>
 
@@ -370,11 +374,14 @@ const ProductTable = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all-stores">Todas las sucursales</SelectItem>
-            {stores.map((store) => (
-              <SelectItem key={store.id} value={store.id || "store-sin-id"}>
-                {store.nombre || "Sucursal sin nombre"}
-              </SelectItem>
-            ))}
+            {stores
+              .filter(store => !!store.id)
+              .map((store) => (
+                <SelectItem key={store.id} value={store.id || "store-sin-id"}>
+                  {store.nombre || "Sucursal sin nombre"}
+                </SelectItem>
+              ))
+            }
           </SelectContent>
         </Select>
       </div>
