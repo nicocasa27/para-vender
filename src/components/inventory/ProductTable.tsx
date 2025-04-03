@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -58,7 +57,6 @@ const ProductTable = () => {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Cargar datos iniciales
     loadProducts();
     loadCategories();
     loadStores();
@@ -67,7 +65,6 @@ const ProductTable = () => {
   const loadProducts = async () => {
     setLoading(true);
     try {
-      // Fetch products and calculate stock_total from inventario
       const { data: productsData, error: productsError } = await supabase
         .from('productos')
         .select(`
@@ -87,7 +84,6 @@ const ProductTable = () => {
         throw productsError;
       }
 
-      // Get inventory data to calculate stock
       const { data: inventoryData, error: inventoryError } = await supabase
         .from('inventario')
         .select(`
@@ -101,15 +97,11 @@ const ProductTable = () => {
         throw inventoryError;
       }
       
-      // Calculate stock_total for each product and include store-specific stock info
       const productsWithStock: Product[] = productsData.map(product => {
-        // Get inventory entries for this product
         const productInventory = inventoryData.filter(item => item.producto_id === product.id);
         
-        // Sum up all inventory entries for this product
         const stockTotal = productInventory.reduce((sum, item) => sum + Number(item.cantidad), 0);
         
-        // Create a map of stock by store
         const stockByStore: {[key: string]: number} = {};
         const storeNames: {[key: string]: string} = {};
         
@@ -176,24 +168,36 @@ const ProductTable = () => {
 
   const handleAddProduct = async (productData: any) => {
     try {
-      // Primero insertar el producto
+      console.log("Adding product:", productData);
+      
+      if (!productData.name || !productData.category || !productData.unit) {
+        toast.error("Datos incompletos", {
+          description: "Por favor complete todos los campos obligatorios"
+        });
+        return;
+      }
+      
       const { data: newProduct, error: productError } = await supabase
         .from('productos')
         .insert([{
           nombre: productData.name,
-          precio_compra: productData.purchasePrice,
-          precio_venta: productData.salePrice,
+          precio_compra: productData.purchasePrice || 0,
+          precio_venta: productData.salePrice || 0,
           categoria_id: productData.category,
           unidad_id: productData.unit,
-          stock_minimo: productData.minStock,
-          stock_maximo: productData.maxStock
+          stock_minimo: productData.minStock || 0,
+          stock_maximo: productData.maxStock || 0
         }])
         .select('id')
         .single();
 
-      if (productError) throw productError;
+      if (productError) {
+        console.error("Error inserting product:", productError);
+        throw productError;
+      }
 
-      // Luego añadir el inventario inicial si se especifica
+      console.log("Product added successfully:", newProduct);
+
       if (productData.initialStock > 0 && productData.warehouse) {
         const { error: inventoryError } = await supabase
           .from('inventario')
@@ -203,10 +207,12 @@ const ProductTable = () => {
             cantidad: productData.initialStock
           }]);
 
-        if (inventoryError) throw inventoryError;
+        if (inventoryError) {
+          console.error("Error inserting inventory:", inventoryError);
+          throw inventoryError;
+        }
 
-        // Registrar el movimiento
-        await supabase
+        const { error: movementError } = await supabase
           .from('movimientos')
           .insert([{
             tipo: 'entrada',
@@ -215,14 +221,17 @@ const ProductTable = () => {
             cantidad: productData.initialStock,
             notas: 'Stock inicial'
           }]);
+          
+        if (movementError) {
+          console.error("Error registering movement:", movementError);
+        }
       }
 
       toast.success("Producto agregado", {
         description: `${productData.name} ha sido agregado correctamente`
       });
       
-      loadProducts(); // Recargar la tabla
-      
+      loadProducts();
     } catch (error) {
       console.error("Error adding product:", error);
       toast.error("Error al agregar producto", {
@@ -235,28 +244,38 @@ const ProductTable = () => {
     if (!currentProduct) return;
     
     try {
-      // Actualizar el producto
+      console.log("Updating product:", productData);
+      
+      if (!productData.name || !productData.category || !productData.unit) {
+        toast.error("Datos incompletos", {
+          description: "Por favor complete todos los campos obligatorios"
+        });
+        return;
+      }
+      
       const { error: productError } = await supabase
         .from('productos')
         .update({
           nombre: productData.name,
-          precio_compra: productData.purchasePrice,
-          precio_venta: productData.salePrice,
+          precio_compra: productData.purchasePrice || 0,
+          precio_venta: productData.salePrice || 0,
           categoria_id: productData.category,
           unidad_id: productData.unit,
-          stock_minimo: productData.minStock,
-          stock_maximo: productData.maxStock
+          stock_minimo: productData.minStock || 0,
+          stock_maximo: productData.maxStock || 0
         })
         .eq('id', currentProduct.id);
 
-      if (productError) throw productError;
+      if (productError) {
+        console.error("Error updating product:", productError);
+        throw productError;
+      }
 
       toast.success("Producto actualizado", {
         description: `${productData.name} ha sido actualizado correctamente`
       });
       
-      loadProducts(); // Recargar la tabla
-      
+      loadProducts();
     } catch (error) {
       console.error("Error updating product:", error);
       toast.error("Error al actualizar producto", {
@@ -269,7 +288,6 @@ const ProductTable = () => {
     if (!deleteProductId) return;
     
     try {
-      // Primero eliminar entradas de inventario
       const { error: inventoryError } = await supabase
         .from('inventario')
         .delete()
@@ -277,7 +295,6 @@ const ProductTable = () => {
 
       if (inventoryError) throw inventoryError;
 
-      // Luego eliminar el producto
       const { error: productError } = await supabase
         .from('productos')
         .delete()
@@ -289,7 +306,6 @@ const ProductTable = () => {
         description: "El producto ha sido eliminado correctamente"
       });
       
-      // Recargar la tabla y cerrar el diálogo
       loadProducts();
       setDeleteProductId(null);
       
@@ -339,7 +355,6 @@ const ProductTable = () => {
         </div>
       </div>
 
-      {/* Filtros y búsqueda */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="relative">
           <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
@@ -444,7 +459,6 @@ const ProductTable = () => {
         </div>
       )}
 
-      {/* Modal para agregar producto */}
       {isAddModalOpen && (
         <ProductModal
           isOpen={isAddModalOpen}
@@ -453,7 +467,6 @@ const ProductTable = () => {
         />
       )}
 
-      {/* Modal para editar producto */}
       {isEditModalOpen && currentProduct && (
         <ProductModal
           isOpen={isEditModalOpen}
@@ -475,7 +488,6 @@ const ProductTable = () => {
         />
       )}
 
-      {/* Diálogo de confirmación para eliminar */}
       <AlertDialog open={deleteProductId !== null} onOpenChange={(open) => !open && setDeleteProductId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -496,7 +508,6 @@ const ProductTable = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Panel lateral para historial de movimientos */}
       <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
         <SheetContent className="sm:max-w-md md:max-w-lg overflow-y-auto">
           <SheetHeader>
