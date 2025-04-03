@@ -19,6 +19,7 @@ export interface Product {
   };
   stock_minimo: number;
   stock_maximo: number;
+  stock_total?: number; // Calculado en base a stock
 }
 
 export function useProducts(selectedStore: string = "all") {
@@ -79,12 +80,15 @@ export function useProducts(selectedStore: string = "all") {
         // Filter inventory items for this product
         const productInventory = inventoryData?.filter(inv => inv.producto_id === product.id) || [];
         
-        // Create a map of store name to stock quantity
+        // Create a map of store ID to stock quantity
         const stockByStore: {[key: string]: number} = {};
+        
+        let stockTotal = 0;
+        
         productInventory.forEach(item => {
-          if (item.almacenes) {
-            stockByStore[item.almacenes.nombre] = Number(item.cantidad) || 0;
-          }
+          const qty = Number(item.cantidad) || 0;
+          stockByStore[item.almacen_id] = qty;
+          stockTotal += qty;
         });
         
         return {
@@ -97,6 +101,7 @@ export function useProducts(selectedStore: string = "all") {
           precio_compra: Number(product.precio_compra) || 0,
           precio_venta: Number(product.precio_venta) || 0,
           stock: stockByStore,
+          stock_total: stockTotal,
           stock_minimo: Number(product.stock_minimo) || 0,
           stock_maximo: Number(product.stock_maximo) || 0,
         };

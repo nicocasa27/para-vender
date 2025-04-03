@@ -4,7 +4,7 @@ export interface Product {
   nombre: string;
   precio_venta: number;
   stock_total: number;
-  almacen_id: string;
+  almacen_id?: string;
   categoria?: string;
   unidad?: string;
   categoria_id?: string;

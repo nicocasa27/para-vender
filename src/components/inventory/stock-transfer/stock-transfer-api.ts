@@ -132,24 +132,16 @@ export const executeStockTransfer = async (
     }
     
     // 2. Update source inventory (decrement)
-    const newSourceQuantity = await supabase.rpc(
-      "decrement", 
-      { 
-        current_value: sourceInventory.cantidad,
-        x: quantity 
-      }
-    );
+    const newSourceQuantity = Number(sourceInventory.cantidad) - quantity;
     
-    if (newSourceQuantity.error) {
-      toast.error("Error al actualizar inventario de origen", {
-        description: newSourceQuantity.error.message
-      });
-      throw newSourceQuantity.error;
+    if (newSourceQuantity < 0) {
+      toast.error("Stock insuficiente en el almacén de origen");
+      throw new Error("Stock insuficiente");
     }
     
     const { error: sourceUpdateError } = await supabase
       .from("inventario")
-      .update({ cantidad: newSourceQuantity.data })
+      .update({ cantidad: newSourceQuantity })
       .eq("id", sourceInventory.id);
     
     if (sourceUpdateError) {
@@ -178,24 +170,11 @@ export const executeStockTransfer = async (
     
     if (targetInventory) {
       // 4a. Update existing target inventory (increment)
-      const newTargetQuantity = await supabase.rpc(
-        "increment", 
-        { 
-          current_value: targetInventory.cantidad,
-          x: quantity 
-        }
-      );
-      
-      if (newTargetQuantity.error) {
-        toast.error("Error al actualizar inventario de destino", {
-          description: newTargetQuantity.error.message
-        });
-        throw newTargetQuantity.error;
-      }
+      const newTargetQuantity = Number(targetInventory.cantidad) + quantity;
       
       const { error: targetUpdateError } = await supabase
         .from("inventario")
-        .update({ cantidad: newTargetQuantity.data })
+        .update({ cantidad: newTargetQuantity })
         .eq("id", targetInventory.id);
       
       if (targetUpdateError) {

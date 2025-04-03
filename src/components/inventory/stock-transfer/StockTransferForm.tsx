@@ -82,17 +82,28 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
   // Update available stock when product or source store changes
   useEffect(() => {
     if (selectedProductId && selectedSourceStore) {
-      const selectedProduct = products.find(p => p.id === selectedProductId);
-      if (selectedProduct && selectedProduct.stock_by_store) {
-        const stock = selectedProduct.stock_by_store[selectedSourceStore] || 0;
-        setAvailableStock(stock);
-      } else {
-        setAvailableStock(0);
-      }
+      const calculateAvailableStock = async () => {
+        const { data, error } = await supabase
+          .from("inventario")
+          .select("cantidad")
+          .eq("producto_id", selectedProductId)
+          .eq("almacen_id", selectedSourceStore)
+          .maybeSingle();
+        
+        if (error) {
+          console.error("Error fetching stock:", error);
+          setAvailableStock(0);
+          return;
+        }
+        
+        setAvailableStock(data ? Number(data.cantidad) : 0);
+      };
+      
+      calculateAvailableStock();
     } else {
       setAvailableStock(null);
     }
-  }, [selectedProductId, selectedSourceStore, products]);
+  }, [selectedProductId, selectedSourceStore]);
 
   const onSubmit = async (data: TransferFormValues) => {
     // Validate that source and destination are different
@@ -109,82 +120,9 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
 
     setIsSubmitting(true);
     try {
-      // Start a Supabase transaction using RPC call to transfer_stock function
-      // If the function doesn't exist, perform operations manually
-      const { data: result, error: transferError } = await supabase.rpc('transfer_stock', {
-        p_producto_id: data.productId,
-        p_almacen_origen: data.sourceStore,
-        p_almacen_destino: data.destinationStore,
-        p_cantidad: data.quantity
-      });
-
-      // If the RPC function doesn't exist, do it manually
-      if (transferError && transferError.message.includes('does not exist')) {
-        // 1. Reduce stock from source
-        const { error: sourceError } = await supabase
-          .from('inventario')
-          .update({ 
-            cantidad: supabase.rpc('decrement', { 
-              current_value: availableStock, 
-              x: data.quantity 
-            })
-          })
-          .eq('producto_id', data.productId)
-          .eq('almacen_id', data.sourceStore);
-
-        if (sourceError) throw sourceError;
-
-        // 2. Check if destination already has this product
-        const { data: destInventory } = await supabase
-          .from('inventario')
-          .select('id, cantidad')
-          .eq('producto_id', data.productId)
-          .eq('almacen_id', data.destinationStore)
-          .maybeSingle();
-
-        if (destInventory) {
-          // Update existing inventory
-          const { error: destError } = await supabase
-            .from('inventario')
-            .update({ 
-              cantidad: supabase.rpc('increment', { 
-                current_value: destInventory.cantidad, 
-                x: data.quantity 
-              }),
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', destInventory.id);
-
-          if (destError) throw destError;
-        } else {
-          // Create new inventory entry
-          const { error: newDestError } = await supabase
-            .from('inventario')
-            .insert({
-              producto_id: data.productId,
-              almacen_id: data.destinationStore,
-              cantidad: data.quantity
-            });
-
-          if (newDestError) throw newDestError;
-        }
-
-        // 3. Record the movement
-        const { error: movementError } = await supabase
-          .from('movimientos')
-          .insert({
-            tipo: 'transferencia',
-            producto_id: data.productId,
-            almacen_origen_id: data.sourceStore,
-            almacen_destino_id: data.destinationStore,
-            cantidad: data.quantity
-          });
-
-        if (movementError) throw movementError;
-      } else if (transferError) {
-        throw transferError;
-      }
-
+      // Execute the stock transfer using the API functions
+      await executeTransfer(data.productId, data.sourceStore, data.destinationStore, data.quantity);
+      
       toast.success("Transferencia completada", {
         description: `Se transfirieron ${data.quantity} unidades correctamente`
       });
@@ -206,10 +144,102 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
     }
   };
 
+  // Function to execute the transfer operations
+  const executeTransfer = async (
+    productId: string,
+    sourceStore: string,
+    destinationStore: string,
+    quantity: number
+  ) => {
+    // 1. Get current quantity in source store
+    const { data: sourceData, error: sourceError } = await supabase
+      .from("inventario")
+      .select("cantidad")
+      .eq("producto_id", productId)
+      .eq("almacen_id", sourceStore)
+      .single();
+      
+    if (sourceError) throw sourceError;
+    const sourceQuantity = Number(sourceData.cantidad);
+    
+    if (quantity > sourceQuantity) {
+      throw new Error("Stock insuficiente");
+    }
+    
+    // 2. Update source inventory (decrement)
+    const { error: sourceUpdateError } = await supabase
+      .from("inventario")
+      .update({ 
+        cantidad: sourceQuantity - quantity,
+        updated_at: new Date().toISOString() 
+      })
+      .eq("producto_id", productId)
+      .eq("almacen_id", sourceStore);
+    
+    if (sourceUpdateError) throw sourceUpdateError;
+    
+    // 3. Check if product exists in target store
+    const { data: destData, error: destError } = await supabase
+      .from("inventario")
+      .select("cantidad")
+      .eq("producto_id", productId)
+      .eq("almacen_id", destinationStore)
+      .maybeSingle();
+    
+    if (destError) throw destError;
+    
+    if (destData) {
+      // 4a. Update existing target inventory (increment)
+      const destQuantity = Number(destData.cantidad);
+      
+      const { error: destUpdateError } = await supabase
+        .from("inventario")
+        .update({ 
+          cantidad: destQuantity + quantity,
+          updated_at: new Date().toISOString() 
+        })
+        .eq("producto_id", productId)
+        .eq("almacen_id", destinationStore);
+      
+      if (destUpdateError) throw destUpdateError;
+    } else {
+      // 4b. Create new inventory record
+      const { error: newInvError } = await supabase
+        .from("inventario")
+        .insert({
+          producto_id: productId,
+          almacen_id: destinationStore,
+          cantidad: quantity
+        });
+      
+      if (newInvError) throw newInvError;
+    }
+    
+    // 5. Record the movement
+    const { error: moveError } = await supabase
+      .from("movimientos")
+      .insert({
+        tipo: "transferencia",
+        producto_id: productId,
+        almacen_origen_id: sourceStore,
+        almacen_destino_id: destinationStore,
+        cantidad: quantity
+      });
+    
+    if (moveError) throw moveError;
+  };
+
   // Helper function to get store name by ID
   const getStoreName = (storeId: string) => {
     const store = stores.find(s => s.id === storeId);
     return store?.nombre || "";
+  };
+
+  const getProductTotalStock = (productId: string) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return 0;
+    
+    return Object.values(product.stock).reduce((sum, qty) => sum + qty, 0);
   };
 
   return (
@@ -234,10 +264,14 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
                     </div>
                   ) : (
                     products
-                      .filter(product => product.stock_total > 0)
+                      .filter(product => {
+                        // Filtrar productos que tienen stock en alguna sucursal
+                        const totalStock = Object.values(product.stock).reduce((sum, val) => sum + val, 0);
+                        return totalStock > 0;
+                      })
                       .map((product) => (
                         <SelectItem key={product.id} value={product.id}>
-                          {product.nombre} (Stock: {product.stock_total})
+                          {product.nombre} (Stock: {getProductTotalStock(product.id)})
                         </SelectItem>
                       ))
                   )}

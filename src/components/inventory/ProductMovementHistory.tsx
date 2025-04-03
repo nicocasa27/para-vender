@@ -53,8 +53,8 @@ export const ProductMovementHistory: React.FC<ProductMovementHistoryProps> = ({ 
           cantidad,
           created_at,
           notas,
-          origen:almacen_origen_id(nombre),
-          destino:almacen_destino_id(nombre)
+          origen:almacenes!movimientos_almacen_origen_id_fkey(nombre),
+          destino:almacenes!movimientos_almacen_destino_id_fkey(nombre)
         `)
         .eq('producto_id', productId)
         .order('created_at', { ascending: false });

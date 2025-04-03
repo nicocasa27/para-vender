@@ -46,8 +46,8 @@ export function TransferHistory() {
           created_at,
           cantidad,
           producto:producto_id(nombre),
-          almacen_origen:almacen_origen_id(nombre),
-          almacen_destino:almacen_destino_id(nombre)
+          almacen_origen:almacenes!movimientos_almacen_origen_id_fkey(nombre),
+          almacen_destino:almacenes!movimientos_almacen_destino_id_fkey(nombre)
         `)
         .eq('tipo', 'transferencia')
         .order('created_at', { ascending: false })
