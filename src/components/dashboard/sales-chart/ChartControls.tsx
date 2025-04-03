@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -39,7 +38,7 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
         <SelectContent>
           <SelectItem value="all">Todas las Tiendas</SelectItem>
           {stores
-            .filter(store => !!store.id)
+            .filter(store => !!store.id && store.id !== "") // Ya hay un filtro para store.id, pero falta asegurar que no sea una cadena vacía
             .map(store => (
               <SelectItem key={store.id} value={store.id || "sin-id"}>
                 {store.nombre || "Sin nombre"}

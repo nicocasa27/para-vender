@@ -189,7 +189,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   </FormControl>
                   <SelectContent>
                     {categories
-                      .filter(category => !!category.id && !!category.name)
+                      .filter(category => !!category.id && !!category.name && category.id !== "") // Añadir validación para cadena vacía
                       .map((category) => (
                         <SelectItem key={category.id} value={category.id || "no-id"}>
                           {category.name || "Sin nombre"}
@@ -219,7 +219,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   </FormControl>
                   <SelectContent>
                     {units
-                      .filter(unit => !!unit.id && !!unit.name)
+                      .filter(unit => !!unit.id && !!unit.name && unit.id !== "") // Añadir validación para cadena vacía
                       .map((unit) => (
                         <SelectItem key={unit.id} value={unit.id || "no-id"}>
                           {unit.name || "Sin nombre"}
@@ -351,7 +351,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                       </FormControl>
                       <SelectContent>
                         {warehouses
-                          .filter(warehouse => !!warehouse.id && !!warehouse.name)
+                          .filter(warehouse => !!warehouse.id && !!warehouse.name && warehouse.id !== "") // Añadir validación para cadena vacía
                           .map((warehouse) => (
                             <SelectItem key={warehouse.id} value={warehouse.id || "no-id"}>
                               {warehouse.name || "Sin nombre"}

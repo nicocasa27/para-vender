@@ -253,7 +253,7 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
                     products
                       .filter(product => {
                         const totalStock = Object.values(product.stock || {}).reduce((sum, val) => sum + val, 0);
-                        return totalStock > 0 && !!product.id;
+                        return totalStock > 0 && !!product.id && product.id !== ""; // Añadir validación para cadena vacía
                       })
                       .map((product) => (
                         <SelectItem key={product.id} value={product.id || "no-id"}>
@@ -283,7 +283,7 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
                   </FormControl>
                   <SelectContent>
                     {stores
-                      .filter(store => !!store.id && !!store.nombre)
+                      .filter(store => !!store.id && !!store.nombre && store.id !== "") // Añadir validación para cadena vacía
                       .map((store) => (
                         <SelectItem key={store.id} value={store.id || "no-id"}>
                           {store.nombre || "Sin nombre"}
