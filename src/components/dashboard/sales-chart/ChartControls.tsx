@@ -39,7 +39,9 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
         <SelectContent>
           <SelectItem value="all">Todas las Tiendas</SelectItem>
           {stores.map(store => (
-            <SelectItem key={store.id} value={store.id}>{store.nombre}</SelectItem>
+            <SelectItem key={store.id} value={store.id || "no-id"}>
+              {store.nombre}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>

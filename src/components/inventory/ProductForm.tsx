@@ -175,7 +175,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 <FormLabel>Categoría</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
+                  defaultValue={field.value || undefined}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -184,7 +184,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   </FormControl>
                   <SelectContent>
                     {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
+                      <SelectItem key={category.id} value={category.id || "no-id"}>
                         {category.name}
                       </SelectItem>
                     ))}
@@ -203,7 +203,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 <FormLabel>Tipo de Unidad</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
+                  defaultValue={field.value || undefined}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -212,7 +212,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   </FormControl>
                   <SelectContent>
                     {units.map((unit) => (
-                      <SelectItem key={unit.id} value={unit.id}>
+                      <SelectItem key={unit.id} value={unit.id || "no-id"}>
                         {unit.name}
                       </SelectItem>
                     ))}
@@ -333,7 +333,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     <FormLabel>Almacén</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      defaultValue={field.value || undefined}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -342,7 +342,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                       </FormControl>
                       <SelectContent>
                         {warehouses.map((warehouse) => (
-                          <SelectItem key={warehouse.id} value={warehouse.id}>
+                          <SelectItem key={warehouse.id} value={warehouse.id || "no-id"}>
                             {warehouse.name}
                           </SelectItem>
                         ))}

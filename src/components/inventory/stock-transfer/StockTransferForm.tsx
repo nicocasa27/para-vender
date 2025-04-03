@@ -251,7 +251,7 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
           render={({ field }) => (
             <FormItem>
               <FormLabel>Producto</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar producto" />
@@ -270,7 +270,7 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
                         return totalStock > 0;
                       })
                       .map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
+                        <SelectItem key={product.id} value={product.id || "no-id"}>
                           {product.nombre} (Stock: {getProductTotalStock(product.id)})
                         </SelectItem>
                       ))
@@ -289,7 +289,7 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Almacén Origen</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar origen" />
@@ -297,7 +297,7 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
                   </FormControl>
                   <SelectContent>
                     {stores.map((store) => (
-                      <SelectItem key={store.id} value={store.id}>
+                      <SelectItem key={store.id} value={store.id || "no-id"}>
                         {store.nombre}
                       </SelectItem>
                     ))}
@@ -318,7 +318,7 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Almacén Destino</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar destino" />
@@ -328,7 +328,7 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
                     {stores.map((store) => (
                       <SelectItem 
                         key={store.id} 
-                        value={store.id}
+                        value={store.id || "no-id"}
                         disabled={store.id === form.getValues("sourceStore")}
                       >
                         {store.nombre}
