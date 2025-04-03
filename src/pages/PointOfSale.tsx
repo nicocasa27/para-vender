@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/auth";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
@@ -155,11 +154,13 @@ export default function PointOfSale() {
                 <SelectValue placeholder="Seleccionar sucursal" />
               </SelectTrigger>
               <SelectContent>
-                {stores.map((store) => (
-                  <SelectItem key={store.id} value={store.id}>
-                    {store.nombre}
-                  </SelectItem>
-                ))}
+                {stores
+                  .filter(store => !!store.id && store.id !== "") // Añadir filtro para evitar valores vacíos
+                  .map((store) => (
+                    <SelectItem key={store.id} value={store.id || "store-sin-id"}>
+                      {store.nombre || "Sucursal sin nombre"}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>

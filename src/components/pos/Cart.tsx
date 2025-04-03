@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -142,11 +141,13 @@ export const Cart: React.FC<CartProps> = ({
               <SelectValue placeholder="Seleccionar Sucursal" />
             </SelectTrigger>
             <SelectContent>
-              {stores.map(store => (
-                <SelectItem key={store.id} value={store.id}>
-                  {store.nombre}
-                </SelectItem>
-              ))}
+              {stores
+                .filter(store => !!store.id && store.id !== "")
+                .map(store => (
+                  <SelectItem key={store.id} value={store.id || "store-sin-id"}>
+                    {store.nombre || "Sucursal sin nombre"}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </div>

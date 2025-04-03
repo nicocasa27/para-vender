@@ -1,4 +1,3 @@
-
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Control } from "react-hook-form";
@@ -28,9 +27,9 @@ export function StoreSelector({ control, stores }: StoreSelectorProps) {
             </FormControl>
             <SelectContent>
               {stores
-                .filter(store => !!store.id && !!store.nombre)
+                .filter(store => !!store.id && !!store.nombre && store.id !== "")
                 .map((store) => (
-                  <SelectItem key={store.id} value={store.id || "no-id"}>
+                  <SelectItem key={store.id} value={store.id || "store-sin-id"}>
                     {store.nombre || "Sin nombre"}
                   </SelectItem>
                 ))}

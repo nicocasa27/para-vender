@@ -1,4 +1,3 @@
-
 import { Role, RoleWithStore } from "@/hooks/users/types/userManagementTypes";
 import {
   Select,
@@ -88,7 +87,7 @@ export function UserRolesList({ roles, isLoading, onRoleUpdated }: Props) {
             </SelectTrigger>
             <SelectContent>
               {ROLES.map((r) => (
-                <SelectItem key={r} value={r}>
+                <SelectItem key={r} value={r || "role-undefined"}>
                   {r}
                 </SelectItem>
               ))}

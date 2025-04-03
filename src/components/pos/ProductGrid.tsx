@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Search, Filter, ShoppingCart, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -205,11 +204,13 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onProductSelect, selec
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas las categorías</SelectItem>
-              {categorias.map((categoria) => (
-                <SelectItem key={categoria.id} value={categoria.nombre.toLowerCase()}>
-                  {categoria.nombre}
-                </SelectItem>
-              ))}
+              {categorias
+                .filter(categoria => !!categoria.id && categoria.nombre && categoria.id !== "")
+                .map((categoria) => (
+                  <SelectItem key={categoria.id} value={categoria.nombre.toLowerCase() || "categoria-sin-nombre"}>
+                    {categoria.nombre || "Sin nombre"}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
           

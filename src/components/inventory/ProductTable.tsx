@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -358,8 +357,8 @@ const ProductTable = () => {
           <SelectContent>
             <SelectItem value="">Todas las categorías</SelectItem>
             {categories.map((category) => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.nombre}
+              <SelectItem key={category.id} value={category.id || "cat-sin-id"}>
+                {category.nombre || "Categoría sin nombre"}
               </SelectItem>
             ))}
           </SelectContent>
@@ -372,8 +371,8 @@ const ProductTable = () => {
           <SelectContent>
             <SelectItem value="">Todas las sucursales</SelectItem>
             {stores.map((store) => (
-              <SelectItem key={store.id} value={store.id}>
-                {store.nombre}
+              <SelectItem key={store.id} value={store.id || "store-sin-id"}>
+                {store.nombre || "Sucursal sin nombre"}
               </SelectItem>
             ))}
           </SelectContent>
