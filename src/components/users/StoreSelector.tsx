@@ -27,11 +27,13 @@ export function StoreSelector({ control, stores }: StoreSelectorProps) {
               </SelectTrigger>
             </FormControl>
             <SelectContent>
-              {stores.map((store) => (
-                <SelectItem key={store.id} value={store.id}>
-                  {store.nombre}
-                </SelectItem>
-              ))}
+              {stores
+                .filter(store => !!store.id && !!store.nombre)
+                .map((store) => (
+                  <SelectItem key={store.id} value={store.id || "no-id"}>
+                    {store.nombre || "Sin nombre"}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
           <FormMessage />

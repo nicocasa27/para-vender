@@ -16,7 +16,7 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <Select
-        value={chartType}
+        value={chartType || "bar"}
         onValueChange={onChartTypeChange}
       >
         <SelectTrigger className="w-[120px] h-8">
@@ -38,11 +38,13 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todas las Tiendas</SelectItem>
-          {stores.map(store => (
-            <SelectItem key={store.id} value={store.id || "sin-id"}>
-              {store.nombre}
-            </SelectItem>
-          ))}
+          {stores
+            .filter(store => !!store.id)
+            .map(store => (
+              <SelectItem key={store.id} value={store.id || "sin-id"}>
+                {store.nombre || "Sin nombre"}
+              </SelectItem>
+            ))}
         </SelectContent>
       </Select>
       <Tabs

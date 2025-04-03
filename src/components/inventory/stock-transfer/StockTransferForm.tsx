@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -79,7 +78,6 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
     loadStores();
   }, []);
 
-  // Update available stock when product or source store changes
   useEffect(() => {
     if (selectedProductId && selectedSourceStore) {
       const calculateAvailableStock = async () => {
@@ -106,13 +104,11 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
   }, [selectedProductId, selectedSourceStore]);
 
   const onSubmit = async (data: TransferFormValues) => {
-    // Validate that source and destination are different
     if (data.sourceStore === data.destinationStore) {
       toast.error("Los almacenes de origen y destino deben ser diferentes");
       return;
     }
 
-    // Validate stock availability
     if (availableStock !== null && data.quantity > availableStock) {
       toast.error(`Stock insuficiente. Solo hay ${availableStock} unidades disponibles.`);
       return;
@@ -120,7 +116,6 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
 
     setIsSubmitting(true);
     try {
-      // Execute the stock transfer using the API functions
       await executeTransfer(data.productId, data.sourceStore, data.destinationStore, data.quantity);
       
       toast.success("Transferencia completada", {
@@ -144,14 +139,12 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
     }
   };
 
-  // Function to execute the transfer operations
   const executeTransfer = async (
     productId: string,
     sourceStore: string,
     destinationStore: string,
     quantity: number
   ) => {
-    // 1. Get current quantity in source store
     const { data: sourceData, error: sourceError } = await supabase
       .from("inventario")
       .select("cantidad")
@@ -166,7 +159,6 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
       throw new Error("Stock insuficiente");
     }
     
-    // 2. Update source inventory (decrement)
     const { error: sourceUpdateError } = await supabase
       .from("inventario")
       .update({ 
@@ -178,7 +170,6 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
     
     if (sourceUpdateError) throw sourceUpdateError;
     
-    // 3. Check if product exists in target store
     const { data: destData, error: destError } = await supabase
       .from("inventario")
       .select("cantidad")
@@ -189,7 +180,6 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
     if (destError) throw destError;
     
     if (destData) {
-      // 4a. Update existing target inventory (increment)
       const destQuantity = Number(destData.cantidad);
       
       const { error: destUpdateError } = await supabase
@@ -203,7 +193,6 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
       
       if (destUpdateError) throw destUpdateError;
     } else {
-      // 4b. Create new inventory record
       const { error: newInvError } = await supabase
         .from("inventario")
         .insert({
@@ -215,7 +204,6 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
       if (newInvError) throw newInvError;
     }
     
-    // 5. Record the movement
     const { error: moveError } = await supabase
       .from("movimientos")
       .insert({
@@ -229,7 +217,6 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
     if (moveError) throw moveError;
   };
 
-  // Helper function to get store name by ID
   const getStoreName = (storeId: string) => {
     const store = stores.find(s => s.id === storeId);
     return store?.nombre || "";
@@ -265,13 +252,12 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
                   ) : (
                     products
                       .filter(product => {
-                        // Filtrar productos que tienen stock en alguna sucursal
                         const totalStock = Object.values(product.stock || {}).reduce((sum, val) => sum + val, 0);
-                        return totalStock > 0;
+                        return totalStock > 0 && !!product.id;
                       })
                       .map((product) => (
                         <SelectItem key={product.id} value={product.id || "no-id"}>
-                          {product.nombre} (Stock: {getProductTotalStock(product.id)})
+                          {product.nombre || "Producto sin nombre"} (Stock: {getProductTotalStock(product.id)})
                         </SelectItem>
                       ))
                   )}
@@ -296,11 +282,13 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {stores.map((store) => (
-                      <SelectItem key={store.id} value={store.id || "no-id"}>
-                        {store.nombre}
-                      </SelectItem>
-                    ))}
+                    {stores
+                      .filter(store => !!store.id && !!store.nombre)
+                      .map((store) => (
+                        <SelectItem key={store.id} value={store.id || "no-id"}>
+                          {store.nombre || "Sin nombre"}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -325,15 +313,17 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {stores.map((store) => (
-                      <SelectItem 
-                        key={store.id} 
-                        value={store.id || "no-id"}
-                        disabled={store.id === form.getValues("sourceStore")}
-                      >
-                        {store.nombre}
-                      </SelectItem>
-                    ))}
+                    {stores
+                      .filter(store => !!store.id && !!store.nombre)
+                      .map((store) => (
+                        <SelectItem 
+                          key={store.id} 
+                          value={store.id || "no-id"}
+                          disabled={store.id === form.getValues("sourceStore")}
+                        >
+                          {store.nombre || "Sin nombre"}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />

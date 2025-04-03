@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -83,7 +82,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         
         if (categoriesError) throw categoriesError;
         
-        setCategories(categoriesData.map(cat => ({ id: cat.id, name: cat.nombre })));
+        setCategories(categoriesData
+          .filter(cat => !!cat.id && !!cat.nombre)
+          .map(cat => ({ id: cat.id, name: cat.nombre }))
+        );
         
         // Obtener unidades
         const { data: unitsData, error: unitsError } = await supabase
@@ -92,7 +94,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         
         if (unitsError) throw unitsError;
         
-        setUnits(unitsData.map(unit => ({ id: unit.id, name: unit.nombre })));
+        setUnits(unitsData
+          .filter(unit => !!unit.id && !!unit.nombre)
+          .map(unit => ({ id: unit.id, name: unit.nombre }))
+        );
 
         // Obtener almacenes
         const { data: warehousesData, error: warehousesError } = await supabase
@@ -101,7 +106,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         
         if (warehousesError) throw warehousesError;
         
-        setWarehouses(warehousesData.map(warehouse => ({ id: warehouse.id, name: warehouse.nombre })));
+        setWarehouses(warehousesData
+          .filter(warehouse => !!warehouse.id && !!warehouse.nombre)
+          .map(warehouse => ({ id: warehouse.id, name: warehouse.nombre }))
+        );
       } catch (error) {
         console.error("Error fetching data:", error);
         toast({
@@ -185,7 +193,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   <SelectContent>
                     {categories.map((category) => (
                       <SelectItem key={category.id} value={category.id || "no-id"}>
-                        {category.name}
+                        {category.name || "Sin nombre"}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -213,7 +221,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   <SelectContent>
                     {units.map((unit) => (
                       <SelectItem key={unit.id} value={unit.id || "no-id"}>
-                        {unit.name}
+                        {unit.name || "Sin nombre"}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -343,7 +351,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                       <SelectContent>
                         {warehouses.map((warehouse) => (
                           <SelectItem key={warehouse.id} value={warehouse.id || "no-id"}>
-                            {warehouse.name}
+                            {warehouse.name || "Sin nombre"}
                           </SelectItem>
                         ))}
                       </SelectContent>
