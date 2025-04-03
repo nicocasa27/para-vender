@@ -75,7 +75,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   useEffect(() => {
     async function fetchData() {
       try {
-        // Obtener categorías
         const { data: categoriesData, error: categoriesError } = await supabase
           .from("categorias")
           .select("id, nombre");
@@ -87,7 +86,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           .map(cat => ({ id: cat.id, name: cat.nombre }))
         );
         
-        // Obtener unidades
         const { data: unitsData, error: unitsError } = await supabase
           .from("unidades")
           .select("id, nombre");
@@ -99,7 +97,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           .map(unit => ({ id: unit.id, name: unit.nombre }))
         );
 
-        // Obtener almacenes
         const { data: warehousesData, error: warehousesError } = await supabase
           .from("almacenes")
           .select("id, nombre");
@@ -191,11 +188,13 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id || "no-id"}>
-                        {category.name || "Sin nombre"}
-                      </SelectItem>
-                    ))}
+                    {categories
+                      .filter(category => !!category.id && !!category.name)
+                      .map((category) => (
+                        <SelectItem key={category.id} value={category.id || "no-id"}>
+                          {category.name || "Sin nombre"}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -219,11 +218,13 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {units.map((unit) => (
-                      <SelectItem key={unit.id} value={unit.id || "no-id"}>
-                        {unit.name || "Sin nombre"}
-                      </SelectItem>
-                    ))}
+                    {units
+                      .filter(unit => !!unit.id && !!unit.name)
+                      .map((unit) => (
+                        <SelectItem key={unit.id} value={unit.id || "no-id"}>
+                          {unit.name || "Sin nombre"}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -349,11 +350,13 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {warehouses.map((warehouse) => (
-                          <SelectItem key={warehouse.id} value={warehouse.id || "no-id"}>
-                            {warehouse.name || "Sin nombre"}
-                          </SelectItem>
-                        ))}
+                        {warehouses
+                          .filter(warehouse => !!warehouse.id && !!warehouse.name)
+                          .map((warehouse) => (
+                            <SelectItem key={warehouse.id} value={warehouse.id || "no-id"}>
+                              {warehouse.name || "Sin nombre"}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
