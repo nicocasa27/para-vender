@@ -355,7 +355,7 @@ const ProductTable = () => {
             <SelectValue placeholder="Filtrar por categoría" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas las categorías</SelectItem>s</SelectItem>
+            <SelectItem value="all-categories">Todas las categorías</SelectItem>
             {categories.map((category) => (
               <SelectItem key={category.id} value={category.id || "cat-sin-id"}>
                 {category.nombre || "Categoría sin nombre"}
@@ -369,7 +369,7 @@ const ProductTable = () => {
             <SelectValue placeholder="Filtrar por sucursal" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas las sucursales</SelectItem>electItem>
+            <SelectItem value="all-stores">Todas las sucursales</SelectItem>
             {stores.map((store) => (
               <SelectItem key={store.id} value={store.id || "store-sin-id"}>
                 {store.nombre || "Sucursal sin nombre"}
