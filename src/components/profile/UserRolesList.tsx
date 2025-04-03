@@ -88,7 +88,7 @@ export function UserRolesList({ roles, isLoading, onRoleUpdated }: Props) {
             <SelectContent>
               {ROLES.map((r) => (
                 <SelectItem key={r} value={r || "role-undefined"}>
-                  {r}
+                  {r || "Rol no definido"}
                 </SelectItem>
               ))}
             </SelectContent>

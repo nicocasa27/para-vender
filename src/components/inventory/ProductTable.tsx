@@ -303,8 +303,8 @@ const ProductTable = () => {
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !categoryFilter || product.categoria_id === categoryFilter;
-    const matchesStore = !storeFilter || product.stock_by_store?.[storeFilter] !== undefined;
+    const matchesCategory = !categoryFilter || categoryFilter === "all-categories" || product.categoria_id === categoryFilter;
+    const matchesStore = !storeFilter || storeFilter === "all-stores" || product.stock_by_store?.[storeFilter] !== undefined;
     
     return matchesSearch && matchesCategory && matchesStore;
   });
@@ -355,7 +355,7 @@ const ProductTable = () => {
             <SelectValue placeholder="Filtrar por categoría" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas las categorías</SelectItem>
+            <SelectItem value="">Todas las categorías</SelectItem>s</SelectItem>
             {categories.map((category) => (
               <SelectItem key={category.id} value={category.id || "cat-sin-id"}>
                 {category.nombre || "Categoría sin nombre"}
@@ -369,7 +369,7 @@ const ProductTable = () => {
             <SelectValue placeholder="Filtrar por sucursal" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas las sucursales</SelectItem>
+            <SelectItem value="">Todas las sucursales</SelectItem>electItem>
             {stores.map((store) => (
               <SelectItem key={store.id} value={store.id || "store-sin-id"}>
                 {store.nombre || "Sucursal sin nombre"}
