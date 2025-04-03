@@ -39,14 +39,14 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
         <SelectContent>
           <SelectItem value="all">Todas las Tiendas</SelectItem>
           {stores.map(store => (
-            <SelectItem key={store.id} value={store.id || "no-id"}>
+            <SelectItem key={store.id} value={store.id || "sin-id"}>
               {store.nombre}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
       <Tabs
-        defaultValue="monthly"
+        defaultValue={timeRange || "monthly"}
         value={timeRange}
         onValueChange={onTimeRangeChange}
       >
