@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -75,40 +76,70 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   useEffect(() => {
     async function fetchData() {
       try {
+        console.log("Fetching form data (categories, units, warehouses)...");
+        
+        // Fetch categories
         const { data: categoriesData, error: categoriesError } = await supabase
           .from("categorias")
           .select("id, nombre");
         
-        if (categoriesError) throw categoriesError;
+        if (categoriesError) {
+          console.error("Error fetching categories:", categoriesError);
+          throw categoriesError;
+        }
         
-        setCategories(categoriesData
-          .filter(cat => !!cat.id && !!cat.nombre)
-          .map(cat => ({ id: cat.id, name: cat.nombre }))
-        );
+        console.log("Categories fetched:", categoriesData?.length || 0);
         
+        // Filter valid categories
+        const validCategories = categoriesData
+          ?.filter(cat => !!cat.id && !!cat.nombre && cat.id.trim() !== "")
+          .map(cat => ({ id: cat.id, name: cat.nombre })) || [];
+          
+        console.log("Valid categories:", validCategories.length);
+        setCategories(validCategories);
+        
+        // Fetch units
         const { data: unitsData, error: unitsError } = await supabase
           .from("unidades")
           .select("id, nombre");
         
-        if (unitsError) throw unitsError;
+        if (unitsError) {
+          console.error("Error fetching units:", unitsError);
+          throw unitsError;
+        }
         
-        setUnits(unitsData
-          .filter(unit => !!unit.id && !!unit.nombre)
-          .map(unit => ({ id: unit.id, name: unit.nombre }))
-        );
+        console.log("Units fetched:", unitsData?.length || 0);
+        
+        // Filter valid units
+        const validUnits = unitsData
+          ?.filter(unit => !!unit.id && !!unit.nombre && unit.id.trim() !== "")
+          .map(unit => ({ id: unit.id, name: unit.nombre })) || [];
+          
+        console.log("Valid units:", validUnits.length);
+        setUnits(validUnits);
 
+        // Fetch warehouses
         const { data: warehousesData, error: warehousesError } = await supabase
           .from("almacenes")
           .select("id, nombre");
         
-        if (warehousesError) throw warehousesError;
+        if (warehousesError) {
+          console.error("Error fetching warehouses:", warehousesError);
+          throw warehousesError;
+        }
         
-        setWarehouses(warehousesData
-          .filter(warehouse => !!warehouse.id && !!warehouse.nombre)
-          .map(warehouse => ({ id: warehouse.id, name: warehouse.nombre }))
-        );
+        console.log("Warehouses fetched:", warehousesData?.length || 0);
+        
+        // Filter valid warehouses
+        const validWarehouses = warehousesData
+          ?.filter(warehouse => !!warehouse.id && !!warehouse.nombre && warehouse.id.trim() !== "")
+          .map(warehouse => ({ id: warehouse.id, name: warehouse.nombre })) || [];
+          
+        console.log("Valid warehouses:", validWarehouses.length);
+        setWarehouses(validWarehouses);
+        
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching form data:", error);
         toast({
           title: "Error",
           description: "No se pudieron cargar los datos. Intente nuevamente.",
@@ -140,6 +171,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   });
 
   const handleSubmit = (data: ProductFormValues) => {
+    console.log("Form data being submitted:", data);
     onSubmit(data);
   };
 
@@ -147,6 +179,32 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     return (
       <div className="flex items-center justify-center p-8">
         <Loader className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Check if we have required data
+  if (categories.length === 0 || units.length === 0 || (!isEditing && warehouses.length === 0)) {
+    console.warn("Missing required data:", {
+      categories: categories.length,
+      units: units.length,
+      warehouses: warehouses.length
+    });
+    
+    return (
+      <div className="flex flex-col items-center justify-center p-8 space-y-4">
+        <div className="text-center text-destructive font-medium">
+          No se pudieron cargar los datos necesarios
+        </div>
+        <p className="text-sm text-center text-muted-foreground max-w-md">
+          Asegúrese de que existan categorías, unidades y sucursales en el sistema antes de continuar.
+        </p>
+        <Button 
+          variant="outline" 
+          onClick={() => window.location.reload()}
+        >
+          Intentar nuevamente
+        </Button>
       </div>
     );
   }
@@ -188,13 +246,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {categories
-                      .filter(category => !!category.id && !!category.name && category.id !== "") // Añadir validación para cadena vacía
-                      .map((category) => (
-                        <SelectItem key={category.id} value={category.id || "no-id"}>
-                          {category.name || "Sin nombre"}
-                        </SelectItem>
-                      ))}
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -218,13 +274,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {units
-                      .filter(unit => !!unit.id && !!unit.name && unit.id !== "") // Añadir validación para cadena vacía
-                      .map((unit) => (
-                        <SelectItem key={unit.id} value={unit.id || "no-id"}>
-                          {unit.name || "Sin nombre"}
-                        </SelectItem>
-                      ))}
+                    {units.map((unit) => (
+                      <SelectItem key={unit.id} value={unit.id}>
+                        {unit.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -350,13 +404,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {warehouses
-                          .filter(warehouse => !!warehouse.id && !!warehouse.name && warehouse.id !== "") // Añadir validación para cadena vacía
-                          .map((warehouse) => (
-                            <SelectItem key={warehouse.id} value={warehouse.id || "no-id"}>
-                              {warehouse.name || "Sin nombre"}
-                            </SelectItem>
-                          ))}
+                        {warehouses.map((warehouse) => (
+                          <SelectItem key={warehouse.id} value={warehouse.id}>
+                            {warehouse.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

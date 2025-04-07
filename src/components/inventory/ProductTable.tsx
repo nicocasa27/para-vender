@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -49,8 +50,8 @@ const ProductTable = () => {
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("");
-  const [storeFilter, setStoreFilter] = useState<string>("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all-categories");
+  const [storeFilter, setStoreFilter] = useState<string>("all-stores");
   const [categories, setCategories] = useState<Category[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -142,27 +143,67 @@ const ProductTable = () => {
 
   const loadCategories = async () => {
     try {
+      console.log("Cargando categorías...");
       const { data, error } = await supabase
         .from('categorias')
         .select('id, nombre');
       
-      if (error) throw error;
-      setCategories(data);
+      if (error) {
+        console.error("Error al cargar categorías:", error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        console.log("No se encontraron categorías en la base de datos");
+      } else {
+        console.log("Categorías cargadas:", data.length);
+      }
+      
+      // Filtrar categorías inválidas (sin id o nombre)
+      const validCategories = data.filter(
+        (cat) => !!cat.id && !!cat.nombre && cat.id.trim() !== ""
+      );
+      
+      console.log("Categorías válidas:", validCategories.length);
+      setCategories(validCategories);
     } catch (error) {
       console.error("Error loading categories:", error);
+      toast.error("Error al cargar categorías", {
+        description: "No se pudieron cargar las categorías correctamente"
+      });
     }
   };
 
   const loadStores = async () => {
     try {
+      console.log("Cargando sucursales...");
       const { data, error } = await supabase
         .from('almacenes')
         .select('id, nombre');
       
-      if (error) throw error;
-      setStores(data);
+      if (error) {
+        console.error("Error al cargar sucursales:", error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        console.log("No se encontraron sucursales en la base de datos");
+      } else {
+        console.log("Sucursales cargadas:", data.length);
+      }
+      
+      // Filtrar sucursales inválidas (sin id o nombre)
+      const validStores = data.filter(
+        (store) => !!store.id && !!store.nombre && store.id.trim() !== ""
+      );
+      
+      console.log("Sucursales válidas:", validStores.length);
+      setStores(validStores);
     } catch (error) {
       console.error("Error loading stores:", error);
+      toast.error("Error al cargar sucursales", {
+        description: "No se pudieron cargar las sucursales correctamente"
+      });
     }
   };
 
