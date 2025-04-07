@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Product, Category, Store } from "@/types/inventory";
 
 export async function fetchProducts() {
+  console.log("Fetching products from Supabase...");
+  
   const { data: productsData, error: productsError } = await supabase
     .from('productos')
     .select(`
@@ -12,12 +14,24 @@ export async function fetchProducts() {
       stock_minimo,
       stock_maximo,
       categoria_id,
-      categorias(id, nombre),
+      categorias (id, nombre),
       unidad_id,
-      unidades(nombre)
+      unidades (nombre)
     `);
 
-  if (productsError) throw productsError;
+  if (productsError) {
+    console.error("Error fetching products:", productsError);
+    throw productsError;
+  }
+  
+  console.log("Products fetched:", productsData?.length || 0);
+  console.log("Sample product categoria data:", 
+    productsData && productsData.length > 0 
+      ? JSON.stringify({
+          categoria_id: productsData[0].categoria_id,
+          categorias: productsData[0].categorias
+        }) 
+      : "No products found");
 
   const { data: inventoryData, error: inventoryError } = await supabase
     .from('inventario')
@@ -28,17 +42,33 @@ export async function fetchProducts() {
       almacenes(nombre)
     `);
     
-  if (inventoryError) throw inventoryError;
+  if (inventoryError) {
+    console.error("Error fetching inventory:", inventoryError);
+    throw inventoryError;
+  }
+  
+  console.log("Inventory items fetched:", inventoryData?.length || 0);
   
   return { productsData, inventoryData };
 }
 
 export async function fetchCategories() {
+  console.log("Fetching categories from Supabase...");
+  
   const { data, error } = await supabase
     .from('categorias')
-    .select('id, nombre');
+    .select('id, nombre')
+    .order('nombre');
   
-  if (error) throw error;
+  if (error) {
+    console.error("Error fetching categories:", error);
+    throw error;
+  }
+  
+  console.log("Categories fetched:", data?.length || 0);
+  if (data && data.length > 0) {
+    console.log("Sample categories:", data.slice(0, 3).map(c => `${c.id}: ${c.nombre}`));
+  }
   
   return data;
 }

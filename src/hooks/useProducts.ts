@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Product, Category, Store } from '@/types/inventory';
@@ -32,16 +33,21 @@ export function useProducts() {
           }
         });
         
-        // Corregir cómo se accede a la información de categoría
+        // Corregir acceso a la información de categoría
         let categoryName = "Sin categoría";
+        let categoryId = product.categoria_id || "";
+        
         if (product.categorias) {
-          if (Array.isArray(product.categorias) && product.categorias.length > 0) {
-            categoryName = product.categorias[0].nombre;
-          } 
-          else if (typeof product.categorias === 'object' && product.categorias.nombre) {
-            categoryName = product.categorias.nombre;
+          if (typeof product.categorias === 'object' && product.categorias !== null) {
+            // Acceder directamente al nombre de la categoría
+            categoryName = product.categorias.nombre || "Sin categoría";
           }
         }
+        
+        console.log("Producto:", product.nombre, 
+          "- categoría_id:", categoryId, 
+          "- categoría nombre:", categoryName, 
+          "- categorias objeto:", JSON.stringify(product.categorias));
           
         return {
           id: product.id,
@@ -51,7 +57,7 @@ export function useProducts() {
           stock_total: stockTotal,
           stock_by_store: stockByStore,
           store_names: storeNames,
-          categoria_id: product.categoria_id,
+          categoria_id: categoryId,
           categoria: categoryName,
           unidad_id: product.unidad_id,
           unidad: product.unidades?.nombre || "Unidad",
@@ -75,9 +81,13 @@ export function useProducts() {
     try {
       const data = await inventoryService.fetchCategories();
       
+      console.log("Categorías cargadas:", data);
+      
       const validCategories = data.filter(
         (cat) => !!cat.id && !!cat.nombre && cat.id.trim() !== ""
       );
+      
+      console.log("Categorías válidas filtradas:", validCategories);
       
       setCategories(validCategories);
     } catch (error) {

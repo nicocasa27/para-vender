@@ -1,3 +1,4 @@
+
 import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,14 +69,17 @@ export function ProductTableHeader({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all-categories">Todas las categorías</SelectItem>
-            {categories
-              .filter(category => !!category.id)
-              .map((category) => (
-                <SelectItem key={category.id} value={category.id || "cat-sin-id"}>
-                  {category.nombre || "Categoría sin nombre"}
+            {categories.length > 0 ? (
+              categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.nombre}
                 </SelectItem>
               ))
-            }
+            ) : (
+              <SelectItem value="no-categories" disabled>
+                No hay categorías disponibles
+              </SelectItem>
+            )}
           </SelectContent>
         </Select>
 
@@ -85,14 +89,17 @@ export function ProductTableHeader({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all-stores">Todas las sucursales</SelectItem>
-            {stores
-              .filter(store => !!store.id)
-              .map((store) => (
-                <SelectItem key={store.id} value={store.id || "store-sin-id"}>
-                  {store.nombre || "Sucursal sin nombre"}
+            {stores.length > 0 ? (
+              stores.map((store) => (
+                <SelectItem key={store.id} value={store.id}>
+                  {store.nombre}
                 </SelectItem>
               ))
-            }
+            ) : (
+              <SelectItem value="no-stores" disabled>
+                No hay sucursales disponibles
+              </SelectItem>
+            )}
           </SelectContent>
         </Select>
       </div>
