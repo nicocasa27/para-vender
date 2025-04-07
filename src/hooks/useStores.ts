@@ -1,7 +1,6 @@
-
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface Store {
   id: string;
@@ -9,59 +8,51 @@ export interface Store {
 }
 
 export function useStores() {
-  const { data: stores = [], isLoading, error } = useQuery({
-    queryKey: ['stores'],
-    queryFn: async () => {
-      // Verificar si debemos usar la tabla almacenes o sucursales
-      const { data: checkSucursales, error: checkError } = await supabase
-        .from("sucursales")
-        .select("count(*)")
-        .single();
-      
-      // Si existe la tabla sucursales y no hay error, usamos esa
-      if (!checkError && checkSucursales) {
-        console.log("Usando tabla sucursales para las tiendas/almacenes");
+  const [stores, setStores] = useState<Store[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
         const { data, error } = await supabase
-          .from("sucursales")
+          .from("almacenes")  // Cambiado de "sucursales" a "almacenes"
           .select("id, nombre")
-          .order("nombre");
+          .order('nombre');
 
         if (error) {
-          console.error("Error al cargar sucursales:", error);
-          toast.error("Error al cargar sucursales", {
-            description: error.message,
-          });
-          return [];
+          throw new Error(error.message);
         }
 
-        return data || [];
-      } else {
-        // Fallback a la tabla almacenes (para compatibilidad)
-        console.log("Usando tabla almacenes para las tiendas");
-        const { data, error } = await supabase
-          .from("almacenes")
-          .select("id, nombre")
-          .order("nombre");
+        // Si no hay almacenes, crear uno por defecto
+        if (!data || data.length === 0) {
+          const { data: defaultStore, error: createError } = await supabase
+            .from("almacenes")  // Cambiado de "sucursales" a "almacenes"
+            .insert([{ nombre: "Principal" }])
+            .select("id, nombre")
+            .single();
 
-        if (error) {
-          console.error("Error al cargar almacenes:", error);
-          toast.error("Error al cargar sucursales", {
-            description: error.message,
-          });
-          return [];
+          if (createError) {
+            throw new Error(createError.message);
+          }
+
+          setStores(defaultStore ? [defaultStore] : []);
+        } else {
+          setStores(data);
         }
-
-        return data || [];
+        
+      } catch (err: any) {
+        setError(err);
+        toast.error("Error al cargar sucursales", {
+          description: err.message,
+        });
+      } finally {
+        setIsLoading(false);
       }
-    },
-    staleTime: 60000,
-    refetchOnWindowFocus: false,
-  });
+    };
 
-  return {
-    stores,
-    isLoading,
-    hasStores: stores.length > 0,
-    error,
-  };
+    fetchStores();
+  }, []);
+
+  return { stores, isLoading, error };
 }

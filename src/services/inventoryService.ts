@@ -1,6 +1,16 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Product, Category, Store } from "@/types/inventory";
+import { toast } from 'sonner';
+
+export interface InventoryMovement {
+  id?: string;
+  producto_id: string;
+  almacen_id: string;  // Cambiado de sucursal_id a almacen_id
+  cantidad: number;
+  tipo: 'entrada' | 'salida';
+  motivo?: string;
+  fecha?: string;
+}
 
 export async function fetchProducts() {
   console.log("Fetching products from Supabase...");
@@ -256,4 +266,164 @@ async function determineStoreFieldName(): Promise<'sucursal_id' | 'almacen_id'> 
   }
   
   return 'almacen_id';
+}
+
+export async function getInventory() {
+  try {
+    const { data, error } = await supabase
+      .from('inventario')
+      .select(`
+        id,
+        cantidad,
+        producto_id,
+        almacen_id,  // Cambiado de sucursal_id a almacen_id
+        productos(id, nombre),
+        almacenes(id, nombre)  // Cambiado de sucursales a almacenes
+      `);
+
+    if (error) throw error;
+    return data;
+  } catch (error: any) {
+    toast.error('Error al obtener el inventario', {
+      description: error.message,
+    });
+    return [];
+  }
+}
+
+export async function addInventoryMovement(movement: InventoryMovement) {
+  try {
+    // 1. Registrar el movimiento
+    const { data: movementData, error: movementError } = await supabase
+      .from('movimientos')
+      .insert({
+        producto_id: movement.producto_id,
+        almacen_id: movement.almacen_id,  // Cambiado de sucursal_id a almacen_id
+        cantidad: movement.cantidad,
+        tipo: movement.tipo,
+        motivo: movement.motivo || '',
+        fecha: movement.fecha || new Date().toISOString()
+      })
+      .select('id')
+      .single();
+
+    if (movementError) throw movementError;
+
+    // 2. Actualizar el inventario
+    // Primero verificar si existe un registro para este producto en este almacén
+    const { data: existingInventory, error: checkError } = await supabase
+      .from('inventario')
+      .select('id, cantidad')
+      .eq('producto_id', movement.producto_id)
+      .eq('almacen_id', movement.almacen_id)  // Cambiado de sucursal_id a almacen_id
+      .maybeSingle();
+
+    if (checkError) throw checkError;
+
+    // Calcular la nueva cantidad
+    const movementAmount = movement.tipo === 'entrada' ? movement.cantidad : -movement.cantidad;
+    
+    if (existingInventory) {
+      // Actualizar registro existente
+      const newQuantity = existingInventory.cantidad + movementAmount;
+      
+      const { error: updateError } = await supabase
+        .from('inventario')
+        .update({ cantidad: newQuantity })
+        .eq('id', existingInventory.id);
+        
+      if (updateError) throw updateError;
+    } else {
+      // Crear nuevo registro de inventario
+      const { error: insertError } = await supabase
+        .from('inventario')
+        .insert({
+          producto_id: movement.producto_id,
+          almacen_id: movement.almacen_id,  // Cambiado de sucursal_id a almacen_id
+          cantidad: movementAmount
+        });
+        
+      if (insertError) throw insertError;
+    }
+
+    toast.success(
+      movement.tipo === 'entrada' 
+        ? 'Entrada de inventario registrada' 
+        : 'Salida de inventario registrada'
+    );
+    
+    return true;
+  } catch (error: any) {
+    toast.error('Error al registrar movimiento', {
+      description: error.message,
+    });
+    return false;
+  }
+}
+
+// Función para transferir inventario entre almacenes
+export async function transferInventory(
+  productoId: string,
+  origenId: string,
+  destinoId: string,
+  cantidad: number,
+  motivo: string = 'Transferencia'
+) {
+  try {
+    // Verificar que los almacenes existan
+    const { data: almacenes, error: almacenesError } = await supabase
+      .from("almacenes")  // Cambiado de "sucursales" a "almacenes"
+      .select('id, nombre')
+      .in('id', [origenId, destinoId]);
+      
+    if (almacenesError) throw almacenesError;
+    if (!almacenes || almacenes.length !== 2) {
+      throw new Error('Uno o ambos almacenes no existen');
+    }
+    
+    // Verificar que hay suficiente stock en el origen
+    const { data: inventarioOrigen, error: origenError } = await supabase
+      .from('inventario')
+      .select('cantidad')
+      .eq('producto_id', productoId)
+      .eq('almacen_id', origenId)  // Cambiado de sucursal_id a almacen_id
+      .single();
+      
+    if (origenError) throw origenError;
+    if (!inventarioOrigen || inventarioOrigen.cantidad < cantidad) {
+      throw new Error('No hay suficiente stock para transferir');
+    }
+    
+    // Realizar la transferencia como dos movimientos
+    // 1. Salida del almacén origen
+    const salida = await addInventoryMovement({
+      producto_id: productoId,
+      almacen_id: origenId,  // Cambiado de sucursal_id a almacen_id
+      cantidad: cantidad,
+      tipo: 'salida',
+      motivo: `Transferencia a ${almacenes.find(a => a.id === destinoId)?.nombre || 'otro almacén'}`
+    });
+    
+    // 2. Entrada al almacén destino
+    const entrada = await addInventoryMovement({
+      producto_id: productoId,
+      almacen_id: destinoId,  // Cambiado de sucursal_id a almacen_id
+      cantidad: cantidad,
+      tipo: 'entrada',
+      motivo: `Transferencia desde ${almacenes.find(a => a.id === origenId)?.nombre || 'otro almacén'}`
+    });
+    
+    if (salida && entrada) {
+      toast.success('Transferencia completada exitosamente');
+      return true;
+    } else {
+      throw new Error('Error al procesar la transferencia');
+    }
+    
+  } catch (error: any) {
+    toast.error('Error en la transferencia', {
+      description: error.message,
+    });
+    return false;
+  }
 }
