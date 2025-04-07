@@ -129,29 +129,36 @@ export async function addProduct(productData: any) {
 }
 
 export async function updateProduct(productId: string, productData: any) {
-  console.log("Updating product:", productId, productData);
+  console.log("Updating product with ID:", productId);
+  console.log("Product data to update:", productData);
   
   try {
-    const { error } = await supabase
+    // Crear objeto de actualización con los datos
+    const updateData = {
+      nombre: productData.name,
+      precio_compra: productData.purchasePrice || 0,
+      precio_venta: productData.salePrice || 0,
+      categoria_id: productData.category,
+      unidad_id: productData.unit,
+      stock_minimo: productData.minStock || 0,
+      stock_maximo: productData.maxStock || 0
+    };
+    
+    console.log("Update data:", updateData);
+    
+    const { data, error } = await supabase
       .from('productos')
-      .update({
-        nombre: productData.name,
-        precio_compra: productData.purchasePrice || 0,
-        precio_venta: productData.salePrice || 0,
-        categoria_id: productData.category,
-        unidad_id: productData.unit,
-        stock_minimo: productData.minStock || 0,
-        stock_maximo: productData.maxStock || 0
-      })
-      .eq('id', productId);
+      .update(updateData)
+      .eq('id', productId)
+      .select();
 
     if (error) {
       console.error("Error updating product:", error);
       throw error;
     }
     
-    console.log("Product updated successfully");
-    return { success: true };
+    console.log("Product updated successfully:", data);
+    return { success: true, data };
   } catch (error) {
     console.error("Exception updating product:", error);
     throw error;

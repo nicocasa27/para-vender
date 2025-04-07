@@ -4,6 +4,7 @@ import { ProductForm } from "./ProductForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Loader } from "lucide-react";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
+import { toast } from "sonner";
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -27,10 +28,21 @@ export function ProductModal({
     console.log("ProductModal handleSubmit:", data);
     setIsSubmitting(true);
     try {
-      await onSubmit(data);
+      // Pasar el ID del producto cuando estamos editando
+      if (isEditing && initialData?.id) {
+        console.log("Editing product with ID:", initialData.id);
+        await onSubmit({
+          ...data,
+          id: initialData.id
+        });
+      } else {
+        await onSubmit(data);
+      }
+      toast.success(isEditing ? "Producto actualizado correctamente" : "Producto agregado correctamente");
       onClose();
     } catch (error) {
       console.error("Error submitting product:", error);
+      toast.error(isEditing ? "Error al actualizar producto" : "Error al agregar producto");
       setIsSubmitting(false);
     }
   };

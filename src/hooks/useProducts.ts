@@ -138,9 +138,18 @@ export function useProducts() {
     }
   };
 
-  const handleEditProduct = async (productId: string, productData: any) => {
+  const handleEditProduct = async (productData: any) => {
     try {
-      console.log("Editing product:", productId, productData);
+      const productId = productData.id;
+      console.log("Editing product with ID:", productId);
+      console.log("Product data:", productData);
+      
+      if (!productId) {
+        toast.error("Error al actualizar", {
+          description: "Identificador de producto no válido"
+        });
+        return;
+      }
       
       if (!productData.name || !productData.category || !productData.unit) {
         toast.error("Datos incompletos", {
