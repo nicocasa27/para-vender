@@ -30,35 +30,43 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
 }) => {
   const columns: ColumnDef<Product>[] = [
     {
-      accessorKey: "name",
+      accessorKey: "nombre",
       header: "Nombre",
     },
     {
-      accessorKey: "categoryName",
+      accessorKey: "categoria",
       header: "Categoría",
     },
     {
-      accessorKey: "unitName",
+      accessorKey: "unidad",
       header: "Unidad",
     },
     {
-      accessorKey: "purchasePrice",
+      accessorKey: "precio_compra",
       header: "Precio Compra",
+      cell: ({ row }) => {
+        const value = row.original.precio_compra;
+        return <span>${value?.toFixed(2) || '0.00'}</span>;
+      }
     },
     {
-      accessorKey: "salePrice",
+      accessorKey: "precio_venta",
       header: "Precio Venta",
+      cell: ({ row }) => {
+        const value = row.original.precio_venta;
+        return <span>${value?.toFixed(2) || '0.00'}</span>;
+      }
     },
     {
-      accessorKey: "minStock",
+      accessorKey: "stock_minimo",
       header: "Stock Mínimo",
     },
     {
-      accessorKey: "maxStock",
+      accessorKey: "stock_maximo",
       header: "Stock Máximo",
     },
     {
-      accessorKey: "currentStock",
+      accessorKey: "stock_total",
       header: "Stock Actual",
     },
     {

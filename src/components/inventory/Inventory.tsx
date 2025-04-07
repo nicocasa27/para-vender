@@ -2,29 +2,53 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCcw } from "lucide-react";
+import { Plus, RefreshCw, Loader } from "lucide-react";
 import { ProductsView } from "./ProductsView";
 import { CategoriesView } from "./CategoriesView";
 import { StoresView } from "./StoresView";
 import { TransfersView } from "./TransfersView";
+import { useProductMetadata } from "@/hooks/useProductMetadata";
+import { useStores } from "@/hooks/useStores";
+import { ProductModal } from "./ProductModal";
+import { Product } from "@/types/inventory";
+import { useProducts } from "@/hooks/useProducts";
 
 export const Inventory = () => {
   const [activeTab, setActiveTab] = useState("products");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const { hasMetadata, isLoading: metadataLoading } = useProductMetadata();
+  const { stores, isLoading: storesLoading } = useStores();
+  const { addProduct, refreshProducts } = useProducts();
+
+  const handleAddProduct = async (productData: any) => {
+    await addProduct(productData);
+    setIsAddModalOpen(false);
+    refreshProducts();
+  };
 
   const handleRefresh = () => {
-    // Este método se pasa a los componentes hijos para refrescar los datos
-    // cuando sea necesario (por ejemplo, después de editar/añadir/eliminar)
-    // Cada componente tiene su propia lógica de refresco
+    refreshProducts();
   };
+
+  const isLoading = metadataLoading || storesLoading;
 
   return (
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Inventario</h1>
-        <Button variant="outline" onClick={handleRefresh}>
-          <RefreshCcw className="h-4 w-4 mr-2" />
-          Actualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Actualizar
+          </Button>
+          <Button 
+            onClick={() => setIsAddModalOpen(true)}
+            disabled={!hasMetadata || stores.length === 0}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo Producto
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -51,6 +75,14 @@ export const Inventory = () => {
           <TransfersView onRefresh={handleRefresh} />
         </TabsContent>
       </Tabs>
+
+      {isAddModalOpen && (
+        <ProductModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onSubmit={handleAddProduct}
+        />
+      )}
     </div>
   );
 };

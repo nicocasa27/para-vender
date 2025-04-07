@@ -15,8 +15,8 @@ export function useStores() {
       // Verificar si debemos usar la tabla almacenes o sucursales
       const { data: checkSucursales, error: checkError } = await supabase
         .from("sucursales")
-        .select("id")
-        .limit(1);
+        .select("count(*)")
+        .single();
       
       // Si existe la tabla sucursales y no hay error, usamos esa
       if (!checkError && checkSucursales) {
