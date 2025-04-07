@@ -56,7 +56,7 @@ export function useProductMetadata() {
       console.log("Fetching units...");
       const { data, error } = await supabase
         .from("unidades")
-        .select("id, nombre")
+        .select("id, nombre, abreviatura")
         .order("nombre");
 
       if (error) {
@@ -77,7 +77,7 @@ export function useProductMetadata() {
         // Intentar obtener la unidad recién creada
         const { data: newData } = await supabase
           .from("unidades")
-          .select("id, nombre")
+          .select("id, nombre, abreviatura")
           .order("nombre");
         return newData || [];
       }
@@ -110,7 +110,10 @@ export function useProductMetadata() {
     
     const { data, error } = await supabase
       .from("unidades")
-      .insert([{ nombre: "Unidad" }])
+      .insert([{ 
+        nombre: "Unidad", 
+        abreviatura: "u" 
+      }])
       .select("id");
       
     if (error) {

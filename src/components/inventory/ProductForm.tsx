@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -168,7 +169,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   <SelectContent>
                     {categories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
-                        {category.name}
+                        {category.nombre}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -196,7 +197,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   <SelectContent>
                     {units.map((unit) => (
                       <SelectItem key={unit.id} value={unit.id}>
-                        {unit.name}
+                        {unit.nombre}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -326,7 +327,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                       <SelectContent>
                         {warehouses.map((warehouse) => (
                           <SelectItem key={warehouse.id} value={warehouse.id}>
-                            {warehouse.name}
+                            {warehouse.nombre}
                           </SelectItem>
                         ))}
                       </SelectContent>
