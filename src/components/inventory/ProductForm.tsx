@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -105,7 +104,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   }
 
   // Check if we have required data
-  if (!hasMetadata || (!isEditing && warehouses.length === 0)) {
+  if (!hasMetadata && (!isEditing && warehouses.length === 0)) {
     console.warn("Missing required data:", {
       categories: categories.length,
       units: units.length,
