@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { ProductForm } from "./ProductForm";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Loader } from "lucide-react";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
 
@@ -24,14 +24,14 @@ export function ProductModal({
   const { isLoading: metadataLoading } = useProductMetadata();
 
   const handleSubmit = async (data: any) => {
+    console.log("ProductModal handleSubmit:", data);
     setIsSubmitting(true);
     try {
       await onSubmit(data);
+      onClose();
     } catch (error) {
       console.error("Error submitting product:", error);
-    } finally {
       setIsSubmitting(false);
-      onClose();
     }
   };
 
@@ -42,6 +42,11 @@ export function ProductModal({
           <DialogTitle>
             {isEditing ? "Editar Producto" : "Agregar Nuevo Producto"}
           </DialogTitle>
+          <DialogDescription>
+            {isEditing 
+              ? "Actualice los datos del producto seleccionado." 
+              : "Complete el formulario para crear un nuevo producto."}
+          </DialogDescription>
         </DialogHeader>
 
         {metadataLoading ? (

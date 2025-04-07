@@ -44,16 +44,11 @@ export function useProducts() {
           }
         }
         
-        console.log("Producto:", product.nombre, 
-          "- categoría_id:", categoryId, 
-          "- categoría nombre:", categoryName, 
-          "- categorias objeto:", JSON.stringify(product.categorias));
-          
         return {
           id: product.id,
           nombre: product.nombre,
-          precio_venta: Number(product.precio_venta),
-          precio_compra: Number(product.precio_compra),
+          precio_venta: Number(product.precio_venta) || 0,
+          precio_compra: Number(product.precio_compra) || 0,
           stock_total: stockTotal,
           stock_by_store: stockByStore,
           store_names: storeNames,
@@ -61,8 +56,8 @@ export function useProducts() {
           categoria: categoryName,
           unidad_id: product.unidad_id,
           unidad: product.unidades?.nombre || "Unidad",
-          stock_minimo: Number(product.stock_minimo),
-          stock_maximo: Number(product.stock_maximo)
+          stock_minimo: Number(product.stock_minimo) || 0,
+          stock_maximo: Number(product.stock_maximo) || 0
         };
       });
 
@@ -83,13 +78,15 @@ export function useProducts() {
       
       console.log("Categorías cargadas:", data);
       
-      const validCategories = data.filter(
-        (cat) => !!cat.id && !!cat.nombre && cat.id.trim() !== ""
-      );
-      
-      console.log("Categorías válidas filtradas:", validCategories);
-      
-      setCategories(validCategories);
+      if (Array.isArray(data)) {
+        const validCategories = data.filter(
+          (cat) => !!cat.id && !!cat.nombre && cat.id.trim() !== ""
+        );
+        
+        console.log("Categorías válidas filtradas:", validCategories);
+        
+        setCategories(validCategories);
+      }
     } catch (error) {
       console.error("Error loading categories:", error);
       toast.error("Error al cargar categorías", {
@@ -102,11 +99,13 @@ export function useProducts() {
     try {
       const data = await inventoryService.fetchStores();
       
-      const validStores = data.filter(
-        (store) => !!store.id && !!store.nombre && store.id.trim() !== ""
-      );
-      
-      setStores(validStores);
+      if (Array.isArray(data)) {
+        const validStores = data.filter(
+          (store) => !!store.id && !!store.nombre && store.id.trim() !== ""
+        );
+        
+        setStores(validStores);
+      }
     } catch (error) {
       console.error("Error loading stores:", error);
       toast.error("Error al cargar sucursales", {
@@ -141,6 +140,8 @@ export function useProducts() {
 
   const handleEditProduct = async (productId: string, productData: any) => {
     try {
+      console.log("Editing product:", productId, productData);
+      
       if (!productData.name || !productData.category || !productData.unit) {
         toast.error("Datos incompletos", {
           description: "Por favor complete todos los campos obligatorios"
@@ -148,13 +149,14 @@ export function useProducts() {
         return;
       }
       
-      await inventoryService.updateProduct(productId, productData);
+      const result = await inventoryService.updateProduct(productId, productData);
+      console.log("Update result:", result);
       
       toast.success("Producto actualizado", {
         description: `${productData.name} ha sido actualizado correctamente`
       });
       
-      loadProducts();
+      await loadProducts();
     } catch (error) {
       console.error("Error updating product:", error);
       toast.error("Error al actualizar producto", {

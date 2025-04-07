@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Product, Category, Store } from "@/types/inventory";
 
@@ -128,20 +129,33 @@ export async function addProduct(productData: any) {
 }
 
 export async function updateProduct(productId: string, productData: any) {
-  const { error } = await supabase
-    .from('productos')
-    .update({
-      nombre: productData.name,
-      precio_compra: productData.purchasePrice || 0,
-      precio_venta: productData.salePrice || 0,
-      categoria_id: productData.category,
-      unidad_id: productData.unit,
-      stock_minimo: productData.minStock || 0,
-      stock_maximo: productData.maxStock || 0
-    })
-    .eq('id', productId);
+  console.log("Updating product:", productId, productData);
+  
+  try {
+    const { error } = await supabase
+      .from('productos')
+      .update({
+        nombre: productData.name,
+        precio_compra: productData.purchasePrice || 0,
+        precio_venta: productData.salePrice || 0,
+        categoria_id: productData.category,
+        unidad_id: productData.unit,
+        stock_minimo: productData.minStock || 0,
+        stock_maximo: productData.maxStock || 0
+      })
+      .eq('id', productId);
 
-  if (error) throw error;
+    if (error) {
+      console.error("Error updating product:", error);
+      throw error;
+    }
+    
+    console.log("Product updated successfully");
+    return { success: true };
+  } catch (error) {
+    console.error("Exception updating product:", error);
+    throw error;
+  }
 }
 
 export async function deleteProduct(productId: string) {
