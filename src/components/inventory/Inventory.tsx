@@ -1,18 +1,8 @@
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader, Plus, Filter, RefreshCcw } from "lucide-react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { ProductsTable } from "@/components/inventory/ProductsTable";
-import { ProductForm } from "@/components/inventory/ProductForm";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { useProductMetadata } from "@/hooks/useProductMetadata";
-import { useStores } from "@/hooks/useStores";
-import { Product } from "@/types/inventory";
+import { RefreshCcw } from "lucide-react";
 import { ProductsView } from "./ProductsView";
 import { CategoriesView } from "./CategoriesView";
 import { StoresView } from "./StoresView";
@@ -20,8 +10,6 @@ import { TransfersView } from "./TransfersView";
 
 export const Inventory = () => {
   const [activeTab, setActiveTab] = useState("products");
-  const { hasMetadata } = useProductMetadata();
-  const { stores } = useStores();
 
   const handleRefresh = () => {
     // Este método se pasa a los componentes hijos para refrescar los datos
@@ -33,6 +21,10 @@ export const Inventory = () => {
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Inventario</h1>
+        <Button variant="outline" onClick={handleRefresh}>
+          <RefreshCcw className="h-4 w-4 mr-2" />
+          Actualizar
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
