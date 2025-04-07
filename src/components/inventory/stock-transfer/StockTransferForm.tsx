@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,7 +44,7 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
   const [stores, setStores] = useState<{ id: string; nombre: string }[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableStock, setAvailableStock] = useState<number | null>(null);
-  const { products, isLoading: productsLoading } = useProducts("all");
+  const { products, loading } = useProducts();
 
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(transferSchema),
@@ -226,7 +227,7 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
     const product = products.find(p => p.id === productId);
     if (!product) return 0;
     
-    return Object.values(product.stock || {}).reduce((sum, qty) => sum + qty, 0);
+    return product.stock_total;
   };
 
   return (
@@ -245,19 +246,18 @@ export function StockTransferForm({ onTransferSuccess }: StockTransferFormProps)
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {productsLoading ? (
+                  {loading ? (
                     <div className="flex justify-center p-2">
                       <Loader className="animate-spin h-4 w-4" />
                     </div>
                   ) : (
                     products
                       .filter(product => {
-                        const totalStock = Object.values(product.stock || {}).reduce((sum, val) => sum + val, 0);
-                        return totalStock > 0 && !!product.id && product.id !== ""; // Añadir validación para cadena vacía
+                        return product.stock_total > 0 && !!product.id && product.id !== "";
                       })
                       .map((product) => (
                         <SelectItem key={product.id} value={product.id || "no-id"}>
-                          {product.nombre || "Producto sin nombre"} (Stock: {getProductTotalStock(product.id)})
+                          {product.nombre || "Producto sin nombre"} (Stock: {product.stock_total})
                         </SelectItem>
                       ))
                   )}
