@@ -1,0 +1,13 @@
+import { useState, useEffect } from "react";
+import { useProducts } from "@/hooks/useProducts";
+import { useProductMetadata } from "@/hooks/useProductMetadata";
+import { Product } from "@/types/inventory";on";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";tle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area"; from "lucide-react";
+import { Plus, RefreshCw, Search, Edit, Trash2, History } from "lucide-react";
+import { ProductHistorySheet } from "@/components/ProductHistorySheet";
+import { toast } from "sonner";

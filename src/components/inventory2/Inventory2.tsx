@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,11 +25,7 @@ export const Inventory2 = () => {
   const { stores } = useStores();
   const router = useRouter();
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -91,7 +87,11 @@ export const Inventory2 = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const handleCreateProduct = async (formData: any) => {
     setIsSubmitting(true);
@@ -219,14 +219,18 @@ export const Inventory2 = () => {
     setIsEditing(false);
   };
 
+  const handleRefresh = () => {
+    fetchProducts();
+  };
+
   return (
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Inventario 2.0</h1>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchProducts}>
-            <RefreshCcw className="h-4 w-4 mr-2" />
-            Actualizar
+          <Button size="sm" variant="outline" disabled={isLoading} onClick={handleRefresh}>
+            {isLoading ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
+            Refrescar
           </Button>
           <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
             <SheetTrigger asChild>

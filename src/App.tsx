@@ -1,4 +1,3 @@
-
 import React from 'react'
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -10,7 +9,6 @@ import { AuthProvider } from "./contexts/auth/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AdminInitializer } from "./components/admin/AdminInitializer";
 import Dashboard from "./pages/Dashboard";
-import Inventory from "./pages/Inventory";
 import PointOfSale from "./pages/PointOfSale";
 import Analytics from "./pages/Analytics";
 import UserRoles from "./pages/UserRoles";
@@ -49,7 +47,6 @@ const App = () => {
                 <Route element={<MainLayout />}>
                   <Route path="/" element={<Index />} />
                   <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/inventory" element={<Inventory />} />
                   <Route path="/pos" element={<PointOfSale />} />
                   <Route path="/analytics" element={<Analytics />} />
                   
