@@ -11,7 +11,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Store,
-  Users
+  Users,
+  Archive
 } from "lucide-react";
 
 interface SideNavProps {
@@ -29,22 +30,27 @@ export const SideNav: React.FC<SideNavProps> = ({ open, setOpen }) => {
       icon: LayoutDashboard,
     },
     {
-      title: "Inventory",
+      title: "Inventario",
       href: "/inventory",
       icon: Package,
     },
     {
-      title: "Point of Sale",
+      title: "Inventario 2.0",
+      href: "/inventory2",
+      icon: Archive,
+    },
+    {
+      title: "Punto de Venta",
       href: "/pos",
       icon: ShoppingCart,
     },
     {
-      title: "Analytics",
+      title: "Análisis",
       href: "/analytics",
       icon: BarChart4,
     },
     {
-      title: "User Roles",
+      title: "Roles de Usuario",
       href: "/user-roles",
       icon: Users,
     },
@@ -103,4 +109,4 @@ export const SideNav: React.FC<SideNavProps> = ({ open, setOpen }) => {
       </ScrollArea>
     </div>
   );
-};
+}
