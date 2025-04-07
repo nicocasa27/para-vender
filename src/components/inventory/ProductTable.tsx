@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -76,7 +75,7 @@ const ProductTable = () => {
           stock_minimo,
           stock_maximo,
           categoria_id,
-          categorias(nombre),
+          categorias(id, nombre),
           unidad_id,
           unidades(nombre)
         `);
@@ -85,6 +84,9 @@ const ProductTable = () => {
         throw productsError;
       }
 
+      // Debugging: verificar estructura de datos
+      console.log("Datos de productos recibidos:", productsData);
+      
       const { data: inventoryData, error: inventoryError } = await supabase
         .from('inventario')
         .select(`
@@ -112,6 +114,23 @@ const ProductTable = () => {
             storeNames[item.almacen_id] = item.almacenes.nombre;
           }
         });
+        
+        // Debugging: verificar categoría de cada producto
+        console.log("Procesando producto:", product.nombre, "categoría:", product.categorias);
+          
+        // Corregir cómo se accede a la información de categoría
+        // Supabase puede devolver categorías como un array en algunas configuraciones de relación
+        let categoryName = "Sin categoría";
+        if (product.categorias) {
+          // Si es un array, tomar el primer elemento
+          if (Array.isArray(product.categorias) && product.categorias.length > 0) {
+            categoryName = product.categorias[0].nombre;
+          } 
+          // Si es un objeto, acceder directamente
+          else if (typeof product.categorias === 'object' && product.categorias.nombre) {
+            categoryName = product.categorias.nombre;
+          }
+        }
           
         return {
           id: product.id,
@@ -122,7 +141,7 @@ const ProductTable = () => {
           stock_by_store: stockByStore,
           store_names: storeNames,
           categoria_id: product.categoria_id,
-          categoria: product.categorias?.nombre || "Sin categoría",
+          categoria: categoryName,
           unidad_id: product.unidad_id,
           unidad: product.unidades?.nombre || "Unidad",
           stock_minimo: Number(product.stock_minimo),
