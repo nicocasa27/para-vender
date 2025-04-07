@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -22,7 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useProductMetadata } from "@/hooks/useProductMetadata";
+import { useStores } from "@/hooks/useStores";
 
 const productFormSchema = z.object({
   name: z.string().min(2, {
@@ -68,90 +68,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   isEditing = false,
 }) => {
   const { toast } = useToast();
-  const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
-  const [units, setUnits] = useState<{id: string, name: string}[]>([]);
-  const [warehouses, setWarehouses] = useState<{id: string, name: string}[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        console.log("Fetching form data (categories, units, warehouses)...");
-        
-        // Fetch categories
-        const { data: categoriesData, error: categoriesError } = await supabase
-          .from("categorias")
-          .select("id, nombre");
-        
-        if (categoriesError) {
-          console.error("Error fetching categories:", categoriesError);
-          throw categoriesError;
-        }
-        
-        console.log("Categories fetched:", categoriesData?.length || 0);
-        
-        // Filter valid categories
-        const validCategories = categoriesData
-          ?.filter(cat => !!cat.id && !!cat.nombre && cat.id.trim() !== "")
-          .map(cat => ({ id: cat.id, name: cat.nombre })) || [];
-          
-        console.log("Valid categories:", validCategories.length);
-        setCategories(validCategories);
-        
-        // Fetch units
-        const { data: unitsData, error: unitsError } = await supabase
-          .from("unidades")
-          .select("id, nombre");
-        
-        if (unitsError) {
-          console.error("Error fetching units:", unitsError);
-          throw unitsError;
-        }
-        
-        console.log("Units fetched:", unitsData?.length || 0);
-        
-        // Filter valid units
-        const validUnits = unitsData
-          ?.filter(unit => !!unit.id && !!unit.nombre && unit.id.trim() !== "")
-          .map(unit => ({ id: unit.id, name: unit.nombre })) || [];
-          
-        console.log("Valid units:", validUnits.length);
-        setUnits(validUnits);
-
-        // Fetch warehouses
-        const { data: warehousesData, error: warehousesError } = await supabase
-          .from("almacenes")
-          .select("id, nombre");
-        
-        if (warehousesError) {
-          console.error("Error fetching warehouses:", warehousesError);
-          throw warehousesError;
-        }
-        
-        console.log("Warehouses fetched:", warehousesData?.length || 0);
-        
-        // Filter valid warehouses
-        const validWarehouses = warehousesData
-          ?.filter(warehouse => !!warehouse.id && !!warehouse.nombre && warehouse.id.trim() !== "")
-          .map(warehouse => ({ id: warehouse.id, name: warehouse.nombre })) || [];
-          
-        console.log("Valid warehouses:", validWarehouses.length);
-        setWarehouses(validWarehouses);
-        
-      } catch (error) {
-        console.error("Error fetching form data:", error);
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar los datos. Intente nuevamente.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    
-    fetchData();
-  }, [toast]);
+  const { categories, units, isLoading: metadataLoading, hasMetadata } = useProductMetadata();
+  const { stores: warehouses, isLoading: warehousesLoading } = useStores();
+  
+  const isLoading = metadataLoading || warehousesLoading;
 
   const defaultValues: Partial<ProductFormValues> = initialData || {
     name: "",
@@ -184,7 +104,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   }
 
   // Check if we have required data
-  if (categories.length === 0 || units.length === 0 || (!isEditing && warehouses.length === 0)) {
+  if (!hasMetadata || (!isEditing && warehouses.length === 0)) {
     console.warn("Missing required data:", {
       categories: categories.length,
       units: units.length,

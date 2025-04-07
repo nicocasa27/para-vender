@@ -1,6 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { useProducts } from "@/hooks/useProducts";
+import { useProductMetadata } from "@/hooks/useProductMetadata";
 import { Product } from "@/types/inventory";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { ProductModal } from "@/components/inventory/ProductModal";
 import { DeleteProductDialog } from "@/components/inventory/DeleteProductDialog";
 import { Plus, RefreshCw, Search, Edit, Trash2, History } from "lucide-react";
 import { ProductHistorySheet } from "../inventory/ProductHistorySheet";
+import { toast } from "sonner";
 
 interface ProductsViewProps {
   onRefresh?: () => void;
@@ -31,6 +32,8 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
     deleteProduct
   } = useProducts();
 
+  const { categories: metadataCategories, units, hasMetadata, isLoading: metadataLoading } = useProductMetadata();
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
@@ -38,6 +41,14 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [productDetailId, setProductDetailId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!hasMetadata && !metadataLoading) {
+      toast.error("Faltan datos básicos", {
+        description: "No se pueden cargar categorías o unidades. Se intentarán crear valores por defecto."
+      });
+    }
+  }, [hasMetadata, metadataLoading]);
 
   const handleAddProduct = async (productData: any) => {
     await addProduct(productData);
@@ -99,7 +110,10 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
   const getCategoryName = (categoryId?: string) => {
     if (!categoryId) return "Sin categoría";
     const category = categories.find(c => c.id === categoryId);
-    return category ? category.nombre : "Sin categoría";
+    if (category) return category.nombre;
+    
+    const metadataCategory = metadataCategories.find(c => c.id === categoryId);
+    return metadataCategory ? metadataCategory.nombre : "Sin categoría";
   };
 
   return (
@@ -195,7 +209,6 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
         )}
       </div>
 
-      {/* Modals and dialogs */}
       {isAddModalOpen && (
         <ProductModal
           isOpen={isAddModalOpen}
@@ -237,7 +250,6 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
         productId={selectedProductId}
       />
 
-      {/* Product Detail Dialog */}
       {productDetailId && (
         <Dialog 
           open={!!productDetailId} 
