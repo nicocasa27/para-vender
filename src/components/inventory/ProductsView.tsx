@@ -164,11 +164,11 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <div className="text-muted-foreground">Precio compra:</div>
-                    <div className="font-medium">${product.precio_compra?.toFixed(2)}</div>
+                    <div className="font-medium">{product.precio_compra != null ? product.precio_compra.toFixed(2) : 'N/A'}</div>
                   </div>
                   <div>
                     <div className="text-muted-foreground">Precio venta:</div>
-                    <div className="font-medium">${product.precio_venta.toFixed(2)}</div>
+                    <div className="font-medium">{product.precio_venta != null ? product.precio_venta.toFixed(2) : 'N/A'}</div>
                   </div>
                 </div>
               </CardContent>
@@ -283,11 +283,11 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
                         </div>
                         <div className="grid grid-cols-2 text-sm">
                           <span className="text-muted-foreground">Precio compra:</span>
-                          <span>${product.precio_compra?.toFixed(2)}</span>
+                          <span>{product.precio_compra != null ? product.precio_compra.toFixed(2) : 'N/A'}</span>
                         </div>
                         <div className="grid grid-cols-2 text-sm">
                           <span className="text-muted-foreground">Precio venta:</span>
-                          <span>${product.precio_venta.toFixed(2)}</span>
+                          <span>{product.precio_venta != null ? product.precio_venta.toFixed(2) : 'N/A'}</span>
                         </div>
                       </div>
                     </div>
