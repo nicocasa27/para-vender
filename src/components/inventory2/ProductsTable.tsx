@@ -1,4 +1,3 @@
-
 import { Product } from "@/types/inventory";
 import {
   ColumnDef,
@@ -30,43 +29,35 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
 }) => {
   const columns: ColumnDef<Product>[] = [
     {
-      accessorKey: "nombre",
+      accessorKey: "name",
       header: "Nombre",
     },
     {
-      accessorKey: "categoria",
+      accessorKey: "categoryName",
       header: "Categoría",
     },
     {
-      accessorKey: "unidad",
+      accessorKey: "unitName",
       header: "Unidad",
     },
     {
-      accessorKey: "precio_compra",
+      accessorKey: "purchasePrice",
       header: "Precio Compra",
-      cell: ({ row }) => {
-        const value = row.original.precio_compra;
-        return <span>${value?.toFixed(2) || '0.00'}</span>;
-      }
     },
     {
-      accessorKey: "precio_venta",
+      accessorKey: "salePrice",
       header: "Precio Venta",
-      cell: ({ row }) => {
-        const value = row.original.precio_venta;
-        return <span>${value?.toFixed(2) || '0.00'}</span>;
-      }
     },
     {
-      accessorKey: "stock_minimo",
+      accessorKey: "minStock",
       header: "Stock Mínimo",
     },
     {
-      accessorKey: "stock_maximo",
+      accessorKey: "maxStock",
       header: "Stock Máximo",
     },
     {
-      accessorKey: "stock_total",
+      accessorKey: "currentStock",
       header: "Stock Actual",
     },
     {

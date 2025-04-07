@@ -119,7 +119,7 @@ export const Inventory2 = () => {
           .from("inventario")
           .insert([{
             producto_id: productData.id,
-            almacen_id: formData.warehouse,  // Cambiado de sucursal_id a almacen_id
+            sucursal_id: formData.warehouse,
             cantidad: formData.initialStock
           }]);
 

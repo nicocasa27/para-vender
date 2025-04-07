@@ -103,16 +103,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     );
   }
 
-  // Check if we have required data - simplificar la condición para que funcione correctamente
-  if (
-    (categories.length === 0 || units.length === 0) || // Siempre necesitamos categorías y unidades
-    (!isEditing && warehouses.length === 0) // Solo necesitamos warehouses al crear un producto nuevo
-  ) {
+  // Check if we have required data
+  if (!hasMetadata && (!isEditing && warehouses.length === 0)) {
     console.warn("Missing required data:", {
       categories: categories.length,
       units: units.length,
-      warehouses: warehouses.length,
-      isEditing
+      warehouses: warehouses.length
     });
     
     return (
@@ -121,10 +117,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           No se pudieron cargar los datos necesarios
         </div>
         <p className="text-sm text-center text-muted-foreground max-w-md">
-          {isEditing 
-            ? "Asegúrese de que existan categorías y unidades en el sistema antes de continuar."
-            : "Asegúrese de que existan categorías, unidades y sucursales en el sistema antes de continuar."
-          }
+          Asegúrese de que existan categorías, unidades y sucursales en el sistema antes de continuar.
         </p>
         <Button 
           variant="outline" 
