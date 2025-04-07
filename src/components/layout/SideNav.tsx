@@ -11,8 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Store,
-  Users,
-  Archive
+  Users
 } from "lucide-react";
 
 interface SideNavProps {
@@ -33,11 +32,6 @@ export const SideNav: React.FC<SideNavProps> = ({ open, setOpen }) => {
       title: "Inventario",
       href: "/inventory",
       icon: Package,
-    },
-    {
-      title: "Inventario 2.0",
-      href: "/inventory2",
-      icon: Archive,
     },
     {
       title: "Punto de Venta",

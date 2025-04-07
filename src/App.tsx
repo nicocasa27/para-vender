@@ -11,7 +11,6 @@ import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AdminInitializer } from "./components/admin/AdminInitializer";
 import Dashboard from "./pages/Dashboard";
 import Inventory from "./pages/Inventory";
-import Inventory2 from "./pages/Inventory2";
 import PointOfSale from "./pages/PointOfSale";
 import Analytics from "./pages/Analytics";
 import UserRoles from "./pages/UserRoles";
@@ -51,7 +50,6 @@ const App = () => {
                   <Route path="/" element={<Index />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/inventory" element={<Inventory />} />
-                  <Route path="/inventory2" element={<Inventory2 />} />
                   <Route path="/pos" element={<PointOfSale />} />
                   <Route path="/analytics" element={<Analytics />} />
                   
