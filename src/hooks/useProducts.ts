@@ -1,136 +1,205 @@
+import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+import { Product, Category, Store } from '@/types/inventory';
+import * as inventoryService from '@/services/inventoryService';
 
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { toast } from "sonner";
+export function useProducts() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all-categories');
+  const [storeFilter, setStoreFilter] = useState<string>('all-stores');
 
-export interface Product {
-  id: string;
-  nombre: string;
-  categoria: string;
-  categoria_id: string;
-  unidad: string;
-  unidad_id: string;
-  precio_compra: number;
-  precio_venta: number;
-  stock: {
-    [key: string]: number;
-  };
-  stock_minimo: number;
-  stock_maximo: number;
-  stock_total?: number; // Calculado en base a stock
-}
-
-export function useProducts(selectedStore: string = "all") {
-  const { toast: uiToast } = useToast();
-  
-  const fetchProducts = async () => {
+  const loadProducts = useCallback(async () => {
+    setLoading(true);
     try {
-      console.log("Fetching products, selectedStore:", selectedStore);
+      const { productsData, inventoryData } = await inventoryService.fetchProducts();
       
-      // Get all products with their basic info
-      const { data: productsData, error: productsError } = await supabase
-        .from("productos")
-        .select(`
-          id, nombre, precio_compra, precio_venta, stock_minimo, stock_maximo,
-          categoria_id, categorias(nombre),
-          unidad_id, unidades(nombre)
-        `);
-      
-      if (productsError) {
-        console.error("Error fetching products data:", productsError);
-        toast.error("Error al cargar productos", {
-          description: productsError.message
-        });
-        throw productsError;
-      }
-      
-      if (!productsData || productsData.length === 0) {
-        console.log("No products found");
-        return [];
-      }
-      
-      // Get inventory data - for all stores or a specific one
-      const inventoryQuery = supabase
-        .from("inventario")
-        .select(`
-          cantidad,
-          almacen_id,
-          producto_id,
-          almacenes(id, nombre)
-        `);
+      const productsWithStock: Product[] = productsData.map(product => {
+        const productInventory = inventoryData.filter(item => item.producto_id === product.id);
         
-      if (selectedStore !== "all") {
-        inventoryQuery.eq("almacen_id", selectedStore);
-      }
-      
-      const { data: inventoryData, error: inventoryError } = await inventoryQuery;
-      
-      if (inventoryError) {
-        console.error("Error fetching inventory data:", inventoryError);
-        toast.error("Error al cargar datos de inventario", {
-          description: inventoryError.message
-        });
-        throw inventoryError;
-      }
-      
-      // Process products with their stock information
-      const productsWithStock = productsData.map(product => {
-        // Filter inventory items for this product
-        const productInventory = inventoryData?.filter(inv => inv.producto_id === product.id) || [];
+        const stockTotal = productInventory.reduce((sum, item) => sum + Number(item.cantidad), 0);
         
-        // Create a map of store ID to stock quantity
         const stockByStore: {[key: string]: number} = {};
-        
-        let stockTotal = 0;
+        const storeNames: {[key: string]: string} = {};
         
         productInventory.forEach(item => {
-          const qty = Number(item.cantidad) || 0;
-          stockByStore[item.almacen_id] = qty;
-          stockTotal += qty;
+          stockByStore[item.almacen_id] = Number(item.cantidad);
+          if (item.almacenes) {
+            storeNames[item.almacen_id] = item.almacenes.nombre;
+          }
         });
         
+        // Corregir cómo se accede a la información de categoría
+        let categoryName = "Sin categoría";
+        if (product.categorias) {
+          if (Array.isArray(product.categorias) && product.categorias.length > 0) {
+            categoryName = product.categorias[0].nombre;
+          } 
+          else if (typeof product.categorias === 'object' && product.categorias.nombre) {
+            categoryName = product.categorias.nombre;
+          }
+        }
+          
         return {
           id: product.id,
           nombre: product.nombre,
-          categoria: product.categorias ? product.categorias.nombre : "Sin categoría",
-          categoria_id: product.categoria_id,
-          unidad: product.unidades ? product.unidades.nombre : "Unidad",
-          unidad_id: product.unidad_id,
-          precio_compra: Number(product.precio_compra) || 0,
-          precio_venta: Number(product.precio_venta) || 0,
-          stock: stockByStore,
+          precio_venta: Number(product.precio_venta),
+          precio_compra: Number(product.precio_compra),
           stock_total: stockTotal,
-          stock_minimo: Number(product.stock_minimo) || 0,
-          stock_maximo: Number(product.stock_maximo) || 0,
+          stock_by_store: stockByStore,
+          store_names: storeNames,
+          categoria_id: product.categoria_id,
+          categoria: categoryName,
+          unidad_id: product.unidad_id,
+          unidad: product.unidades?.nombre || "Unidad",
+          stock_minimo: Number(product.stock_minimo),
+          stock_maximo: Number(product.stock_maximo)
         };
       });
-      
-      console.log(`Processed ${productsWithStock.length} products with stock information`);
-      return productsWithStock;
-    } catch (error: any) {
-      console.error("Error fetching products:", error);
-      uiToast({
-        title: "Error",
-        description: error.message || "No se pudieron cargar los productos",
-        variant: "destructive",
+
+      setProducts(productsWithStock);
+    } catch (error) {
+      console.error("Error loading products:", error);
+      toast.error("Error al cargar productos", {
+        description: "No se pudieron cargar los productos"
       });
-      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadCategories = useCallback(async () => {
+    try {
+      const data = await inventoryService.fetchCategories();
+      
+      const validCategories = data.filter(
+        (cat) => !!cat.id && !!cat.nombre && cat.id.trim() !== ""
+      );
+      
+      setCategories(validCategories);
+    } catch (error) {
+      console.error("Error loading categories:", error);
+      toast.error("Error al cargar categorías", {
+        description: "No se pudieron cargar las categorías correctamente"
+      });
+    }
+  }, []);
+
+  const loadStores = useCallback(async () => {
+    try {
+      const data = await inventoryService.fetchStores();
+      
+      const validStores = data.filter(
+        (store) => !!store.id && !!store.nombre && store.id.trim() !== ""
+      );
+      
+      setStores(validStores);
+    } catch (error) {
+      console.error("Error loading stores:", error);
+      toast.error("Error al cargar sucursales", {
+        description: "No se pudieron cargar las sucursales correctamente"
+      });
+    }
+  }, []);
+
+  const handleAddProduct = async (productData: any) => {
+    try {
+      if (!productData.name || !productData.category || !productData.unit) {
+        toast.error("Datos incompletos", {
+          description: "Por favor complete todos los campos obligatorios"
+        });
+        return;
+      }
+      
+      await inventoryService.addProduct(productData);
+      
+      toast.success("Producto agregado", {
+        description: `${productData.name} ha sido agregado correctamente`
+      });
+      
+      loadProducts();
+    } catch (error) {
+      console.error("Error adding product:", error);
+      toast.error("Error al agregar producto", {
+        description: "No se pudo guardar el producto"
+      });
     }
   };
 
-  const { 
-    data: products = [], 
-    isLoading,
-    error,
-    refetch 
-  } = useQuery({
-    queryKey: ['products', selectedStore],
-    queryFn: fetchProducts,
-    staleTime: 30000, // 30 seconds
-    refetchOnWindowFocus: false,
+  const handleEditProduct = async (productId: string, productData: any) => {
+    try {
+      if (!productData.name || !productData.category || !productData.unit) {
+        toast.error("Datos incompletos", {
+          description: "Por favor complete todos los campos obligatorios"
+        });
+        return;
+      }
+      
+      await inventoryService.updateProduct(productId, productData);
+      
+      toast.success("Producto actualizado", {
+        description: `${productData.name} ha sido actualizado correctamente`
+      });
+      
+      loadProducts();
+    } catch (error) {
+      console.error("Error updating product:", error);
+      toast.error("Error al actualizar producto", {
+        description: "No se pudo actualizar el producto"
+      });
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      await inventoryService.deleteProduct(productId);
+      
+      toast.success("Producto eliminado", {
+        description: "El producto ha sido eliminado correctamente"
+      });
+      
+      loadProducts();
+      return true;
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      toast.error("Error al eliminar producto", {
+        description: "No se pudo eliminar el producto"
+      });
+      return false;
+    }
+  };
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = !categoryFilter || categoryFilter === "all-categories" || product.categoria_id === categoryFilter;
+    const matchesStore = !storeFilter || storeFilter === "all-stores" || product.stock_by_store?.[storeFilter] !== undefined;
+    
+    return matchesSearch && matchesCategory && matchesStore;
   });
 
-  return { products, isLoading, error, refetch };
+  useEffect(() => {
+    loadProducts();
+    loadCategories();
+    loadStores();
+  }, [loadProducts, loadCategories, loadStores]);
+
+  return {
+    products: filteredProducts,
+    categories,
+    stores,
+    loading,
+    searchTerm,
+    setSearchTerm,
+    categoryFilter,
+    setCategoryFilter,
+    storeFilter,
+    setStoreFilter,
+    refreshProducts: loadProducts,
+    addProduct: handleAddProduct,
+    editProduct: handleEditProduct,
+    deleteProduct: handleDeleteProduct,
+  };
 }

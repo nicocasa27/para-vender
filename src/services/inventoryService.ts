@@ -1,0 +1,131 @@
+import { supabase } from "@/integrations/supabase/client";
+import { Product, Category, Store } from "@/types/inventory";
+
+export async function fetchProducts() {
+  const { data: productsData, error: productsError } = await supabase
+    .from('productos')
+    .select(`
+      id, 
+      nombre, 
+      precio_venta,
+      precio_compra,
+      stock_minimo,
+      stock_maximo,
+      categoria_id,
+      categorias(id, nombre),
+      unidad_id,
+      unidades(nombre)
+    `);
+
+  if (productsError) throw productsError;
+
+  const { data: inventoryData, error: inventoryError } = await supabase
+    .from('inventario')
+    .select(`
+      producto_id, 
+      cantidad, 
+      almacen_id, 
+      almacenes(nombre)
+    `);
+    
+  if (inventoryError) throw inventoryError;
+  
+  return { productsData, inventoryData };
+}
+
+export async function fetchCategories() {
+  const { data, error } = await supabase
+    .from('categorias')
+    .select('id, nombre');
+  
+  if (error) throw error;
+  
+  return data;
+}
+
+export async function fetchStores() {
+  const { data, error } = await supabase
+    .from('almacenes')
+    .select('id, nombre');
+  
+  if (error) throw error;
+  
+  return data;
+}
+
+export async function addProduct(productData: any) {
+  const { data: newProduct, error: productError } = await supabase
+    .from('productos')
+    .insert([{
+      nombre: productData.name,
+      precio_compra: productData.purchasePrice || 0,
+      precio_venta: productData.salePrice || 0,
+      categoria_id: productData.category,
+      unidad_id: productData.unit,
+      stock_minimo: productData.minStock || 0,
+      stock_maximo: productData.maxStock || 0
+    }])
+    .select('id')
+    .single();
+
+  if (productError) throw productError;
+
+  if (productData.initialStock > 0 && productData.warehouse) {
+    const { error: inventoryError } = await supabase
+      .from('inventario')
+      .insert([{
+        producto_id: newProduct.id,
+        almacen_id: productData.warehouse,
+        cantidad: productData.initialStock
+      }]);
+
+    if (inventoryError) throw inventoryError;
+
+    const { error: movementError } = await supabase
+      .from('movimientos')
+      .insert([{
+        tipo: 'entrada',
+        producto_id: newProduct.id,
+        almacen_destino_id: productData.warehouse,
+        cantidad: productData.initialStock,
+        notas: 'Stock inicial'
+      }]);
+      
+    if (movementError) throw movementError;
+  }
+
+  return newProduct;
+}
+
+export async function updateProduct(productId: string, productData: any) {
+  const { error } = await supabase
+    .from('productos')
+    .update({
+      nombre: productData.name,
+      precio_compra: productData.purchasePrice || 0,
+      precio_venta: productData.salePrice || 0,
+      categoria_id: productData.category,
+      unidad_id: productData.unit,
+      stock_minimo: productData.minStock || 0,
+      stock_maximo: productData.maxStock || 0
+    })
+    .eq('id', productId);
+
+  if (error) throw error;
+}
+
+export async function deleteProduct(productId: string) {
+  const { error: inventoryError } = await supabase
+    .from('inventario')
+    .delete()
+    .eq('producto_id', productId);
+
+  if (inventoryError) throw inventoryError;
+
+  const { error: productError } = await supabase
+    .from('productos')
+    .delete()
+    .eq('id', productId);
+
+  if (productError) throw productError;
+}
