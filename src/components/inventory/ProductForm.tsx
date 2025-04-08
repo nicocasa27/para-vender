@@ -116,7 +116,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     });
   }, [categories.length, units.length, warehouses.length, hasMetadata, isLoading]);
 
-  const defaultValues: Partial<ProductFormValues> = initialData || {
+  // Crear defaultValues con valores iniciales o valores por defecto
+  const defaultValues: Partial<ProductFormValues> = {
     name: "",
     category: "",
     unit: "",
@@ -126,6 +127,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     maxStock: 0,
     initialStock: 0,
     warehouse: "",
+    ...initialData // Sobrescribir con datos iniciales si existen
   };
 
   const form = useForm<ProductFormValues>({
@@ -136,12 +138,13 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   // Reset form when initialData changes
   useEffect(() => {
     if (initialData) {
+      console.log("Resetting form with initial data:", initialData);
       form.reset(initialData);
     }
   }, [form, initialData]);
 
-  const handleSubmit = (data: ProductFormValues) => {
-    console.log("Form data being submitted:", data);
+  const handleFormSubmit = (data: ProductFormValues) => {
+    console.log("Form submitted with data:", data);
     
     // Validar que hay categorías y unidades antes de enviar
     if (categories.length === 0 || units.length === 0) {
@@ -223,7 +226,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(handleSubmit)}
+        onSubmit={form.handleSubmit(handleFormSubmit)}
         className="space-y-6 animate-fade-in"
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -249,8 +252,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 <FormLabel>Categoría</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  defaultValue={field.value || undefined}
-                  value={field.value || undefined}
+                  defaultValue={field.value}
+                  value={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -278,8 +281,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 <FormLabel>Tipo de Unidad</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  defaultValue={field.value || undefined}
-                  value={field.value || undefined}
+                  defaultValue={field.value}
+                  value={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -409,8 +412,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     <FormLabel>Almacén</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value || undefined}
-                      value={field.value || undefined}
+                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>

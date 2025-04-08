@@ -144,7 +144,8 @@ export function useProductMetadata() {
       error.message.toLowerCase().includes('permission') ||
       error.message.toLowerCase().includes('privilege') ||
       error.code === '403' || 
-      error.status === 403
+      error.code === '401' || // Unauthorized
+      error.message.includes('403') // Error message might contain HTTP status code
     );
   }
 

@@ -88,6 +88,7 @@ export function ProductModal({
         await onSubmit(data);
       }
       toast.success(isEditing ? "Producto actualizado correctamente" : "Producto agregado correctamente");
+      onClose(); // Cerrar el modal después de una actualización exitosa
     } catch (error) {
       console.error("Error submitting product:", error);
       toast.error(isEditing ? "Error al actualizar producto" : "Error al agregar producto");
