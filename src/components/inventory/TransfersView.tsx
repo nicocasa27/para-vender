@@ -1,58 +1,55 @@
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { StockTransferForm } from "../inventory/stock-transfer/StockTransferForm";
-import { TransferHistory } from "../inventory/stock-transfer/TransferHistory";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
+import { RefreshCw, Plus } from "lucide-react";
 
 interface TransfersViewProps {
   onRefresh?: () => void;
 }
 
 export function TransfersView({ onRefresh }: TransfersViewProps) {
-  const [refreshHistoryToggle, setRefreshHistoryToggle] = useState(false);
-
-  const handleTransferSuccess = () => {
-    setRefreshHistoryToggle(!refreshHistoryToggle);
-    if (onRefresh) onRefresh();
+  const [loading, setLoading] = useState(false);
+  
+  const handleRefresh = () => {
+    setLoading(true);
+    
+    // Simulamos una carga
+    setTimeout(() => {
+      setLoading(false);
+      if (onRefresh) onRefresh();
+      toast.info("Información de transferencias actualizada");
+    }, 500);
   };
 
   return (
-    <div className="space-y-6">
-      <Tabs defaultValue="transfer">
-        <TabsList>
-          <TabsTrigger value="transfer">Transferir Stock</TabsTrigger>
-          <TabsTrigger value="history">Historial</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="transfer" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Transferir Inventario</CardTitle>
-              <CardDescription>
-                Mueva productos entre sucursales
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <StockTransferForm onTransferSuccess={handleTransferSuccess} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="history" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Historial de Transferencias</CardTitle>
-              <CardDescription>
-                Últimas transferencias realizadas
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TransferHistory key={refreshHistoryToggle.toString()} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-medium">Transferencias de Inventario</h2>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Actualizar
+          </Button>
+          <Button size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva Transferencia
+          </Button>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Transferencias entre sucursales</CardTitle>
+          <CardDescription>
+            Gestione el movimiento de productos entre sucursales
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-center py-8 text-muted-foreground">
+          La funcionalidad de transferencias está en desarrollo.
+        </CardContent>
+      </Card>
     </div>
   );
 }

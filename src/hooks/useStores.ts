@@ -2,29 +2,32 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-export interface Store {
-  id: string;
-  nombre: string;
-}
+import { Store } from "@/types/inventory";
 
 export function useStores() {
   const { data: stores = [], isLoading, error } = useQuery({
     queryKey: ['stores'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("almacenes")
-        .select("id, nombre")
-        .order("nombre");
+      try {
+        const { data, error } = await supabase
+          .from("almacenes")
+          .select("id, nombre")
+          .order("nombre");
 
-      if (error) {
-        toast.error("Error al cargar sucursales", {
-          description: error.message,
-        });
+        if (error) {
+          console.error("Error al cargar sucursales:", error);
+          toast.error("Error al cargar sucursales", {
+            description: error.message,
+          });
+          return [];
+        }
+
+        console.log("Sucursales cargadas:", data);
+        return data || [];
+      } catch (e) {
+        console.error("Error en useStores:", e);
         return [];
       }
-
-      return data || [];
     },
     staleTime: 60000,
     refetchOnWindowFocus: false,

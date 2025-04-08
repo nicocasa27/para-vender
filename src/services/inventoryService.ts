@@ -26,13 +26,6 @@ export async function fetchProducts() {
   }
   
   console.log("Products fetched:", productsData?.length || 0);
-  console.log("Sample product categoria data:", 
-    productsData && productsData.length > 0 
-      ? JSON.stringify({
-          categoria_id: productsData[0].categoria_id,
-          categorias: productsData[0].categorias
-        }) 
-      : "No products found");
 
   const { data: inventoryData, error: inventoryError } = await supabase
     .from('inventario')
@@ -67,9 +60,6 @@ export async function fetchCategories() {
   }
   
   console.log("Categories fetched:", data?.length || 0);
-  if (data && data.length > 0) {
-    console.log("Sample categories:", data.slice(0, 3).map(c => `${c.id}: ${c.nombre}`));
-  }
   
   return data;
 }
@@ -85,6 +75,8 @@ export async function fetchStores() {
 }
 
 export async function addProduct(productData: any) {
+  console.log("Adding product:", productData);
+  
   const { data: newProduct, error: productError } = await supabase
     .from('productos')
     .insert([{
@@ -99,7 +91,10 @@ export async function addProduct(productData: any) {
     .select('id')
     .single();
 
-  if (productError) throw productError;
+  if (productError) {
+    console.error("Error creating product:", productError);
+    throw productError;
+  }
 
   if (productData.initialStock > 0 && productData.warehouse) {
     const { error: inventoryError } = await supabase
@@ -110,7 +105,10 @@ export async function addProduct(productData: any) {
         cantidad: productData.initialStock
       }]);
 
-    if (inventoryError) throw inventoryError;
+    if (inventoryError) {
+      console.error("Error creating inventory:", inventoryError);
+      throw inventoryError;
+    }
 
     const { error: movementError } = await supabase
       .from('movimientos')
@@ -122,7 +120,10 @@ export async function addProduct(productData: any) {
         notas: 'Stock inicial'
       }]);
       
-    if (movementError) throw movementError;
+    if (movementError) {
+      console.error("Error creating movement:", movementError);
+      throw movementError;
+    }
   }
 
   return newProduct;
@@ -166,17 +167,32 @@ export async function updateProduct(productId: string, productData: any) {
 }
 
 export async function deleteProduct(productId: string) {
-  const { error: inventoryError } = await supabase
-    .from('inventario')
-    .delete()
-    .eq('producto_id', productId);
+  try {
+    console.log("Deleting inventory for product:", productId);
+    const { error: inventoryError } = await supabase
+      .from('inventario')
+      .delete()
+      .eq('producto_id', productId);
 
-  if (inventoryError) throw inventoryError;
+    if (inventoryError) {
+      console.error("Error deleting inventory:", inventoryError);
+      throw inventoryError;
+    }
 
-  const { error: productError } = await supabase
-    .from('productos')
-    .delete()
-    .eq('id', productId);
+    console.log("Deleting product:", productId);
+    const { error: productError } = await supabase
+      .from('productos')
+      .delete()
+      .eq('id', productId);
 
-  if (productError) throw productError;
+    if (productError) {
+      console.error("Error deleting product:", productError);
+      throw productError;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Exception deleting product:", error);
+    throw error;
+  }
 }

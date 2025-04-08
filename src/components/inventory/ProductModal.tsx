@@ -28,7 +28,7 @@ export function ProductModal({
     console.log("ProductModal handleSubmit:", data);
     setIsSubmitting(true);
     try {
-      // Pasar el ID del producto cuando estamos editando
+      // Asegurarse de que el ID del producto se pase cuando estamos editando
       if (isEditing && initialData?.id) {
         console.log("Editing product with ID:", initialData.id);
         await onSubmit({
@@ -39,10 +39,10 @@ export function ProductModal({
         await onSubmit(data);
       }
       toast.success(isEditing ? "Producto actualizado correctamente" : "Producto agregado correctamente");
-      onClose();
     } catch (error) {
       console.error("Error submitting product:", error);
       toast.error(isEditing ? "Error al actualizar producto" : "Error al agregar producto");
+    } finally {
       setIsSubmitting(false);
     }
   };

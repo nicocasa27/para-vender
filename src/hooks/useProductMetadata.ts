@@ -89,40 +89,48 @@ export function useProductMetadata() {
   // Crear una categoría por defecto si no existe ninguna
   async function createDefaultCategory() {
     console.log("Creating default category...");
-    
-    const { data, error } = await supabase
-      .from("categorias")
-      .insert([{ nombre: "General" }])
-      .select("id");
+    try {
+      const { data, error } = await supabase
+        .from("categorias")
+        .insert([{ nombre: "General" }])
+        .select("id");
+        
+      if (error) {
+        console.error("Error creating default category:", error);
+        return null;
+      }
       
-    if (error) {
-      console.error("Error creating default category:", error);
+      console.log("Default category created:", data);
+      return data?.[0]?.id || null;
+    } catch (err) {
+      console.error("Exception creating default category:", err);
       return null;
     }
-    
-    console.log("Default category created:", data);
-    return data?.[0]?.id || null;
   }
   
   // Crear una unidad por defecto si no existe ninguna
   async function createDefaultUnit() {
     console.log("Creating default unit...");
-    
-    const { data, error } = await supabase
-      .from("unidades")
-      .insert([{ 
-        nombre: "Unidad", 
-        abreviatura: "u" 
-      }])
-      .select("id");
+    try {
+      const { data, error } = await supabase
+        .from("unidades")
+        .insert([{ 
+          nombre: "Unidad", 
+          abreviatura: "u" 
+        }])
+        .select("id");
+        
+      if (error) {
+        console.error("Error creating default unit:", error);
+        return null;
+      }
       
-    if (error) {
-      console.error("Error creating default unit:", error);
+      console.log("Default unit created:", data);
+      return data?.[0]?.id || null;
+    } catch (err) {
+      console.error("Exception creating default unit:", err);
       return null;
     }
-    
-    console.log("Default unit created:", data);
-    return data?.[0]?.id || null;
   }
 
   const isLoading = categoriesLoading || unitsLoading;
