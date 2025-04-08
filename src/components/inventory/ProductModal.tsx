@@ -1,10 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ProductForm } from "./ProductForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Loader } from "lucide-react";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -22,10 +23,57 @@ export function ProductModal({
   isEditing = false,
 }: ProductModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { isLoading: metadataLoading } = useProductMetadata();
+  const { 
+    categories, 
+    units, 
+    isLoading: metadataLoading, 
+    hasMetadata, 
+    refetch: refetchMetadata, 
+    error: metadataError 
+  } = useProductMetadata();
+  
+  // Intentar cargar los metadatos cuando se abre el modal
+  useEffect(() => {
+    if (isOpen && (!hasMetadata || categories.length === 0 || units.length === 0)) {
+      console.log("ProductModal - Cargando metadatos...");
+      refetchMetadata().catch(error => {
+        console.error("Error al cargar metadatos:", error);
+        toast.error("Error al cargar datos de categorías y unidades", {
+          description: "Por favor, intente nuevamente"
+        });
+      });
+    }
+  }, [isOpen, hasMetadata, categories.length, units.length, refetchMetadata]);
+
+  // Mostrar errores de metadatos
+  useEffect(() => {
+    if (metadataError) {
+      console.error("Error de metadatos:", metadataError);
+      toast.error("Error al cargar datos necesarios", {
+        description: "No se pudieron cargar categorías o unidades"
+      });
+    }
+  }, [metadataError]);
 
   const handleSubmit = async (data: any) => {
     console.log("ProductModal handleSubmit:", data);
+    
+    // Validar que tenemos los metadatos necesarios
+    if (!categories.length || !units.length) {
+      toast.error("Datos incompletos", {
+        description: "No se pueden cargar categorías o unidades. Por favor, intente nuevamente."
+      });
+      return;
+    }
+    
+    // Validar que el formulario tiene los campos obligatorios
+    if (!data.name || !data.category || !data.unit) {
+      toast.error("Datos incompletos", {
+        description: "Por favor complete todos los campos obligatorios"
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       // Asegurarse de que el ID del producto se pase cuando estamos editando
@@ -47,6 +95,15 @@ export function ProductModal({
     }
   };
 
+  const handleRetryLoadMetadata = () => {
+    refetchMetadata().then(() => {
+      toast.success("Datos actualizados correctamente");
+    }).catch(error => {
+      console.error("Error al recargar metadatos:", error);
+      toast.error("Error al recargar datos");
+    });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-2xl">
@@ -65,6 +122,21 @@ export function ProductModal({
           <div className="flex items-center justify-center py-8">
             <Loader className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-2">Cargando datos...</span>
+          </div>
+        ) : !hasMetadata || categories.length === 0 || units.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <div className="text-center text-destructive font-medium">
+              No se pudieron cargar los datos necesarios
+            </div>
+            <p className="text-sm text-center text-muted-foreground max-w-md">
+              Faltan categorías o unidades en el sistema. Se intentará crear valores por defecto.
+            </p>
+            <Button 
+              variant="default" 
+              onClick={handleRetryLoadMetadata}
+            >
+              Reintentar carga de datos
+            </Button>
           </div>
         ) : (
           <ProductForm

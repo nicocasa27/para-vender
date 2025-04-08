@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -23,6 +24,7 @@ import {
 import { Loader } from "lucide-react";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
 import { useStores } from "@/hooks/useStores";
+import { toast } from "sonner";
 
 const productFormSchema = z.object({
   name: z.string().min(2, {
@@ -67,11 +69,52 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   isSubmitting = false,
   isEditing = false,
 }) => {
-  const { toast } = useToast();
-  const { categories, units, isLoading: metadataLoading, hasMetadata } = useProductMetadata();
-  const { stores: warehouses, isLoading: warehousesLoading } = useStores();
+  const { toast: uiToast } = useToast();
+  
+  // Cargar categorías, unidades y almacenes directamente en el componente
+  const { 
+    categories, 
+    units, 
+    isLoading: metadataLoading, 
+    hasMetadata, 
+    refetch: refetchMetadata 
+  } = useProductMetadata();
+  
+  const { 
+    stores: warehouses, 
+    isLoading: warehousesLoading, 
+    refetch: refetchWarehouses 
+  } = useStores();
   
   const isLoading = metadataLoading || warehousesLoading;
+
+  // Intentar recargar los datos cuando se monta el componente
+  useEffect(() => {
+    if (!hasMetadata || categories.length === 0 || units.length === 0) {
+      console.log("ProductForm - Recargando metadatos...");
+      refetchMetadata().catch(error => {
+        console.error("Error al recargar metadatos:", error);
+      });
+    }
+    
+    if (warehouses.length === 0 && !isEditing) {
+      console.log("ProductForm - Recargando almacenes...");
+      refetchWarehouses().catch(error => {
+        console.error("Error al recargar almacenes:", error);
+      });
+    }
+  }, [hasMetadata, categories.length, units.length, warehouses.length, isEditing, refetchMetadata, refetchWarehouses]);
+
+  // Log para debugging
+  useEffect(() => {
+    console.log("ProductForm - Estado actual:", { 
+      categoriesCount: categories.length, 
+      unitsCount: units.length,
+      warehousesCount: warehouses.length,
+      hasMetadata,
+      isLoading
+    });
+  }, [categories.length, units.length, warehouses.length, hasMetadata, isLoading]);
 
   const defaultValues: Partial<ProductFormValues> = initialData || {
     name: "",
@@ -90,40 +133,88 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     defaultValues,
   });
 
+  // Reset form when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      form.reset(initialData);
+    }
+  }, [form, initialData]);
+
   const handleSubmit = (data: ProductFormValues) => {
     console.log("Form data being submitted:", data);
+    
+    // Validar que hay categorías y unidades antes de enviar
+    if (categories.length === 0 || units.length === 0) {
+      toast.error("Datos incompletos", {
+        description: "No hay categorías o unidades disponibles. Por favor, crea primero estos valores."
+      });
+      return;
+    }
+    
+    // Validar que se seleccionó un almacén si es necesario
+    if (!isEditing && !data.warehouse && warehouses.length > 0) {
+      toast.error("Por favor seleccione un almacén");
+      return;
+    }
+    
     onSubmit(data);
   };
 
+  // Mostrar indicador de carga durante la carga inicial
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Cargando datos necesarios...</span>
       </div>
     );
   }
 
-  // Check if we have required data
-  if (!hasMetadata && (!isEditing && warehouses.length === 0)) {
-    console.warn("Missing required data:", {
-      categories: categories.length,
-      units: units.length,
-      warehouses: warehouses.length
-    });
-    
+  // Verificar datos requeridos antes de mostrar el formulario
+  if (!hasMetadata && (categories.length === 0 || units.length === 0)) {
     return (
       <div className="flex flex-col items-center justify-center p-8 space-y-4">
         <div className="text-center text-destructive font-medium">
           No se pudieron cargar los datos necesarios
         </div>
         <p className="text-sm text-center text-muted-foreground max-w-md">
-          Asegúrese de que existan categorías, unidades y sucursales en el sistema antes de continuar.
+          {categories.length === 0 ? "Faltan categorías. " : ""}
+          {units.length === 0 ? "Faltan unidades. " : ""}
+          Se intentará crear valores por defecto.
         </p>
         <Button 
           variant="outline" 
-          onClick={() => window.location.reload()}
+          onClick={() => {
+            refetchMetadata().then(() => {
+              toast.success("Datos actualizados");
+            });
+          }}
         >
-          Intentar nuevamente
+          Reintentar carga
+        </Button>
+      </div>
+    );
+  }
+
+  // Si estamos editando y faltan almacenes, no es un problema crítico
+  if (!isEditing && warehouses.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 space-y-4">
+        <div className="text-center text-destructive font-medium">
+          No se pudieron cargar los almacenes
+        </div>
+        <p className="text-sm text-center text-muted-foreground max-w-md">
+          Se necesitan almacenes para agregar inventario inicial.
+        </p>
+        <Button 
+          variant="outline" 
+          onClick={() => {
+            refetchWarehouses().then(() => {
+              toast.success("Almacenes actualizados");
+            });
+          }}
+        >
+          Reintentar carga
         </Button>
       </div>
     );
@@ -159,6 +250,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value || undefined}
+                  value={field.value || undefined}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -187,6 +279,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value || undefined}
+                  value={field.value || undefined}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -317,6 +410,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value || undefined}
+                      value={field.value || undefined}
                     >
                       <FormControl>
                         <SelectTrigger>

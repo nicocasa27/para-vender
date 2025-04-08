@@ -8,11 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Plus, RefreshCw, Search, Edit, Trash2, History } from "lucide-react";
+import { ProductHistorySheet } from "@/components/ProductHistorySheet";
+import { toast } from "sonner";
 import { ProductModal } from "@/components/inventory/ProductModal";
 import { DeleteProductDialog } from "@/components/inventory/DeleteProductDialog";
-import { Plus, RefreshCw, Search, Edit, Trash2, History } from "lucide-react";
-import { ProductHistorySheet } from "../inventory/ProductHistorySheet";
-import { toast } from "sonner";
 
 interface ProductsViewProps {
   onRefresh?: () => void;
@@ -51,17 +51,32 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
   }, [hasMetadata, metadataLoading]);
 
   const handleAddProduct = async (productData: any) => {
-    await addProduct(productData);
-    setIsAddModalOpen(false);
-    if (onRefresh) onRefresh();
+    try {
+      await addProduct(productData);
+      setIsAddModalOpen(false);
+      if (onRefresh) onRefresh();
+    } catch (error) {
+      console.error("Error al añadir producto:", error);
+      toast.error("Error al añadir producto");
+    }
   };
 
   const handleEditProduct = async (productData: any) => {
     if (!currentProduct) return;
-    await editProduct(currentProduct.id, productData);
-    setIsEditModalOpen(false);
-    setCurrentProduct(null);
-    if (onRefresh) onRefresh();
+    
+    try {
+      await editProduct({
+        ...productData,
+        id: currentProduct.id
+      });
+      
+      setIsEditModalOpen(false);
+      setCurrentProduct(null);
+      if (onRefresh) onRefresh();
+    } catch (error) {
+      console.error("Error al editar producto:", error);
+      toast.error("Error al editar producto");
+    }
   };
 
   const handleDeleteConfirm = async () => {

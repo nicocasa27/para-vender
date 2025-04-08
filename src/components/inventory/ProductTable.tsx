@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import { ProductTableHeader } from "./ProductTableHeader";
@@ -39,7 +40,10 @@ const ProductTable = () => {
 
   const handleEditProduct = async (productData: any) => {
     if (!currentProduct) return;
-    await editProduct(currentProduct.id, productData);
+    await editProduct({
+      ...productData,
+      id: currentProduct.id
+    });
     setIsEditModalOpen(false);
     setCurrentProduct(null);
   };
@@ -109,6 +113,7 @@ const ProductTable = () => {
           }}
           onSubmit={handleEditProduct}
           initialData={{
+            id: currentProduct.id,
             name: currentProduct.nombre,
             purchasePrice: currentProduct.precio_compra,
             salePrice: currentProduct.precio_venta,
