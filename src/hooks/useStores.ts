@@ -5,13 +5,13 @@ import { toast } from "sonner";
 import { Store } from "@/types/inventory";
 
 export function useStores() {
-  const { data: stores = [], isLoading, error } = useQuery({
+  const { data: stores = [], isLoading, error, refetch } = useQuery({
     queryKey: ['stores'],
     queryFn: async () => {
       try {
         const { data, error } = await supabase
           .from("almacenes")
-          .select("id, nombre")
+          .select("id, nombre, direccion")
           .order("nombre");
 
         if (error) {
@@ -23,7 +23,7 @@ export function useStores() {
         }
 
         console.log("Sucursales cargadas:", data);
-        return data || [];
+        return data as Store[] || [];
       } catch (e) {
         console.error("Error en useStores:", e);
         return [];
@@ -38,5 +38,6 @@ export function useStores() {
     isLoading,
     hasStores: stores.length > 0,
     error,
+    refetch
   };
 }

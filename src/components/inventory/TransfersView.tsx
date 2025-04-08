@@ -1,9 +1,10 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { RefreshCw, Plus } from "lucide-react";
+import { useStores } from "@/hooks/useStores";
 
 interface TransfersViewProps {
   onRefresh?: () => void;
@@ -11,6 +12,7 @@ interface TransfersViewProps {
 
 export function TransfersView({ onRefresh }: TransfersViewProps) {
   const [loading, setLoading] = useState(false);
+  const { stores, isLoading: storesLoading } = useStores();
   
   const handleRefresh = () => {
     setLoading(true);
@@ -47,7 +49,13 @@ export function TransfersView({ onRefresh }: TransfersViewProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center py-8 text-muted-foreground">
-          La funcionalidad de transferencias está en desarrollo.
+          {storesLoading ? (
+            "Cargando sucursales..."
+          ) : stores.length < 2 ? (
+            "Se necesitan al menos dos sucursales para realizar transferencias."
+          ) : (
+            "La funcionalidad de transferencias está en desarrollo."
+          )}
         </CardContent>
       </Card>
     </div>

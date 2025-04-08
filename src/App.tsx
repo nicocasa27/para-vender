@@ -1,3 +1,4 @@
+
 import React from 'react'
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -17,6 +18,7 @@ import Auth from "./pages/Auth";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
+import InventoryPage from "./pages/Inventory"; // Importamos la página de inventario
 
 // Create a client with default options
 const queryClient = new QueryClient({
@@ -47,6 +49,7 @@ const App = () => {
                 <Route element={<MainLayout />}>
                   <Route path="/" element={<Index />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/inventory" element={<InventoryPage />} /> {/* Agregamos la ruta de inventario */}
                   <Route path="/pos" element={<PointOfSale />} />
                   <Route path="/analytics" element={<Analytics />} />
                   

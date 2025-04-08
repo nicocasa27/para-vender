@@ -9,7 +9,8 @@ export function useProductMetadata() {
   const { 
     data: categories = [], 
     isLoading: categoriesLoading,
-    error: categoriesError 
+    error: categoriesError,
+    refetch: refetchCategories 
   } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
@@ -49,7 +50,8 @@ export function useProductMetadata() {
   const { 
     data: units = [], 
     isLoading: unitsLoading,
-    error: unitsError 
+    error: unitsError,
+    refetch: refetchUnits
   } = useQuery({
     queryKey: ['units'],
     queryFn: async () => {
@@ -136,11 +138,21 @@ export function useProductMetadata() {
   const isLoading = categoriesLoading || unitsLoading;
   const error = categoriesError || unitsError;
 
+  // Función combinada para refrescar todos los datos
+  const refetch = async () => {
+    const results = await Promise.all([
+      refetchCategories(),
+      refetchUnits()
+    ]);
+    return results;
+  };
+
   return {
     categories,
     units,
     isLoading,
     error,
-    hasMetadata: categories.length > 0 && units.length > 0
+    hasMetadata: categories.length > 0 && units.length > 0,
+    refetch
   };
 }

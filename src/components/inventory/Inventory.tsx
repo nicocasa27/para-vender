@@ -9,19 +9,28 @@ import { StoresView } from "@/components/inventory/StoresView";
 import { TransfersView } from "@/components/inventory/TransfersView";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
 import { useStores } from "@/hooks/useStores";
+import { toast } from "sonner";
 
 export const Inventory = () => {
   const [activeTab, setActiveTab] = useState("products");
-  const { hasMetadata } = useProductMetadata();
-  const { stores } = useStores();
+  const { hasMetadata, refetch: refetchMetadata } = useProductMetadata();
+  const { stores, refetch: refetchStores } = useStores();
   const [loading, setLoading] = useState(false);
 
   const handleRefresh = () => {
     setLoading(true);
-    // Simulamos una pequeña espera para mostrar el loader
-    setTimeout(() => {
+    
+    // Refrescar datos de todas las fuentes
+    Promise.all([
+      refetchStores(),
+      refetchMetadata()
+    ]).catch(error => {
+      console.error("Error al refrescar datos:", error);
+      toast.error("Error al refrescar datos");
+    }).finally(() => {
       setLoading(false);
-    }, 500);
+      toast.success("Datos actualizados correctamente");
+    });
   };
 
   return (
