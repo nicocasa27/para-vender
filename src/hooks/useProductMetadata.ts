@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Category } from "@/types/inventory";
+import { PostgrestError } from "@supabase/supabase-js";
 
 // Esta función obtiene categorías y unidades para formularios de productos
 export function useProductMetadata() {
@@ -23,17 +24,29 @@ export function useProductMetadata() {
 
         if (error) {
           console.error("Error fetching categories:", error);
+          
+          // Verificar si es un error de permisos
+          if (isPermissionError(error)) {
+            toast.error("Error de permisos", {
+              description: "No tienes permisos para acceder a las categorías",
+            });
+            return [];
+          }
+          
           toast.error("Error al cargar categorías", {
             description: error.message,
           });
-          // Si no hay categorías, crear una por defecto
-          await createDefaultCategory();
+          
+          // Solo intentar crear categoría por defecto si no es un error de permisos
+          if (!isPermissionError(error)) {
+            await createDefaultCategory();
+          }
           return [];
         }
 
         console.log("Categories loaded:", data?.length || 0);
         
-        // Si no hay categorías, crear una por defecto
+        // Si no hay categorías, crear una por defecto solo si tenemos permisos
         if (!data || data.length === 0) {
           const defaultCategoryId = await createDefaultCategory();
           if (defaultCategoryId) {
@@ -75,17 +88,29 @@ export function useProductMetadata() {
 
         if (error) {
           console.error("Error fetching units:", error);
+          
+          // Verificar si es un error de permisos
+          if (isPermissionError(error)) {
+            toast.error("Error de permisos", {
+              description: "No tienes permisos para acceder a las unidades",
+            });
+            return [];
+          }
+          
           toast.error("Error al cargar unidades", {
             description: error.message,
           });
-          // Si no hay unidades, crear una por defecto
-          await createDefaultUnit();
+          
+          // Solo intentar crear unidad por defecto si no es un error de permisos
+          if (!isPermissionError(error)) {
+            await createDefaultUnit();
+          }
           return [];
         }
 
         console.log("Units loaded:", data?.length || 0);
         
-        // Si no hay unidades, crear una por defecto
+        // Si no hay unidades, crear una por defecto solo si tenemos permisos
         if (!data || data.length === 0) {
           const defaultUnitId = await createDefaultUnit();
           if (defaultUnitId) {
@@ -110,10 +135,37 @@ export function useProductMetadata() {
     refetchOnWindowFocus: false,
   });
 
+  // Función para determinar si un error es de permisos
+  function isPermissionError(error: PostgrestError): boolean {
+    // Códigos de error relacionados con permisos en PostgreSQL/Supabase
+    return (
+      error.code === '42501' || // Insufficient privilege
+      error.code === 'PGRST116' || // No permission to view rows
+      error.message.toLowerCase().includes('permission') ||
+      error.message.toLowerCase().includes('privilege') ||
+      error.code === '403' || 
+      error.status === 403
+    );
+  }
+
   // Crear una categoría por defecto si no existe ninguna
   async function createDefaultCategory() {
     console.log("Creating default category...");
     try {
+      // Verificar primero si tenemos permisos para insertar
+      const { error: permCheckError } = await supabase
+        .from("categorias")
+        .select("id")
+        .limit(1);
+      
+      if (permCheckError && isPermissionError(permCheckError)) {
+        console.error("No permission to insert categories:", permCheckError);
+        toast.error("Sin permisos para crear categoría", {
+          description: "No tienes permisos para crear categorías en el sistema"
+        });
+        return null;
+      }
+
       const { data, error } = await supabase
         .from("categorias")
         .insert([{ nombre: "General" }])
@@ -121,7 +173,16 @@ export function useProductMetadata() {
         
       if (error) {
         console.error("Error creating default category:", error);
-        toast.error("Error al crear categoría por defecto");
+        
+        if (isPermissionError(error)) {
+          toast.error("Sin permisos para crear categoría", {
+            description: "No tienes permisos suficientes"
+          });
+        } else {
+          toast.error("Error al crear categoría por defecto", {
+            description: error.message
+          });
+        }
         return null;
       }
       
@@ -139,6 +200,20 @@ export function useProductMetadata() {
   async function createDefaultUnit() {
     console.log("Creating default unit...");
     try {
+      // Verificar primero si tenemos permisos para insertar
+      const { error: permCheckError } = await supabase
+        .from("unidades")
+        .select("id")
+        .limit(1);
+      
+      if (permCheckError && isPermissionError(permCheckError)) {
+        console.error("No permission to insert units:", permCheckError);
+        toast.error("Sin permisos para crear unidad", {
+          description: "No tienes permisos para crear unidades en el sistema"
+        });
+        return null;
+      }
+
       const { data, error } = await supabase
         .from("unidades")
         .insert([{ 
@@ -149,7 +224,16 @@ export function useProductMetadata() {
         
       if (error) {
         console.error("Error creating default unit:", error);
-        toast.error("Error al crear unidad por defecto");
+        
+        if (isPermissionError(error)) {
+          toast.error("Sin permisos para crear unidad", {
+            description: "No tienes permisos suficientes"
+          });
+        } else {
+          toast.error("Error al crear unidad por defecto", {
+            description: error.message
+          });
+        }
         return null;
       }
       
@@ -176,12 +260,16 @@ export function useProductMetadata() {
     return results;
   };
 
+  // Determinar si hay un error de permisos
+  const hasPermissionError = error ? isPermissionError(error as PostgrestError) : false;
+
   return {
     categories,
     units,
     isLoading,
     error,
     hasMetadata: categories.length > 0 && units.length > 0,
+    hasPermissionError,
     refetch
   };
 }

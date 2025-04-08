@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { ProductForm } from "./ProductForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Loader } from "lucide-react";
+import { Loader, AlertTriangle } from "lucide-react";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,8 @@ export function ProductModal({
     isLoading: metadataLoading, 
     hasMetadata, 
     refetch: refetchMetadata, 
-    error: metadataError 
+    error: metadataError,
+    hasPermissionError 
   } = useProductMetadata();
   
   // Intentar cargar los metadatos cuando se abre el modal
@@ -123,13 +124,31 @@ export function ProductModal({
             <Loader className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-2">Cargando datos...</span>
           </div>
+        ) : hasPermissionError ? (
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <AlertTriangle className="h-12 w-12 text-destructive" />
+            <div className="text-center text-destructive font-medium">
+              Error de permisos
+            </div>
+            <p className="text-sm text-center text-muted-foreground max-w-md">
+              No tienes permisos para acceder a categorías o unidades. 
+              Contacta al administrador del sistema para obtener acceso.
+            </p>
+            <Button 
+              variant="outline" 
+              onClick={onClose}
+            >
+              Cerrar
+            </Button>
+          </div>
         ) : !hasMetadata || categories.length === 0 || units.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 space-y-4">
             <div className="text-center text-destructive font-medium">
               No se pudieron cargar los datos necesarios
             </div>
             <p className="text-sm text-center text-muted-foreground max-w-md">
-              Faltan categorías o unidades en el sistema. Se intentará crear valores por defecto.
+              Faltan categorías o unidades en el sistema. Contacta al administrador para verificar 
+              si tienes los permisos necesarios.
             </p>
             <Button 
               variant="default" 
