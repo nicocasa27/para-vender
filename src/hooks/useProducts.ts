@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Product, Category, Store } from '@/types/inventory';
@@ -137,11 +138,10 @@ export function useProducts() {
 
   const handleEditProduct = async (productData: any) => {
     try {
-      const productId = productData.id;
-      console.log("✅ handleEditProduct ejecutado con ID:", productId);
-      console.log("📩 Datos a enviar a updateProduct:", productData);
+      console.log("✅ handleEditProduct ejecutado con datos completos:", productData);
+      console.log("🔍 Verificando ID de producto:", productData.id);
       
-      if (!productId) {
+      if (!productData.id) {
         toast.error("Error al actualizar", {
           description: "Identificador de producto no válido"
         });
@@ -154,6 +154,9 @@ export function useProducts() {
         });
         return;
       }
+      
+      console.log("📩 Antes de enviar a updateProduct - ID:", productData.id);
+      console.log("📩 Antes de enviar a updateProduct - Datos completos:", JSON.stringify(productData, null, 2));
       
       const result = await inventoryService.updateProduct(productData);
       console.log("🧠 Resultado de Supabase:", result);

@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Product, Category, Store } from "@/types/inventory";
 
@@ -130,7 +131,7 @@ export async function addProduct(productData: any) {
 
 export async function updateProduct(productData: any) {
   console.log("🔄 updateProduct: Iniciando actualización de producto con ID:", productData.id);
-  console.log("🔄 updateProduct: Datos recibidos para actualización:", productData);
+  console.log("🔄 updateProduct: Datos completos recibidos:", JSON.stringify(productData, null, 2));
   
   // Verificar que existe el ID del producto
   if (!productData.id) {
@@ -153,12 +154,15 @@ export async function updateProduct(productData: any) {
     };
     
     console.log("🔄 updateProduct: Datos preparados para Supabase:", updateData);
+    console.log("🔄 updateProduct: Usando ID para condición:", productId);
     
     const { data, error } = await supabase
       .from('productos')
       .update(updateData)
       .eq('id', productId)
       .select();
+
+    console.log("🔄 updateProduct: Respuesta de Supabase:", { data, error });
 
     if (error) {
       console.error("❌ updateProduct: Error en Supabase:", error);

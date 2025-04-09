@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ProductForm } from "./ProductForm";
 import {
@@ -72,6 +73,8 @@ export function ProductModal({
 
   const handleSubmit = async (data: any) => {
     console.log("✅ ProductModal handleSubmit ejecutado con:", data);
+    console.log("📌 ProductModal isEditing:", isEditing);
+    console.log("📌 ProductModal initialData:", initialData);
 
     if (!categories.length || !units.length) {
       toast.error("Datos incompletos", {
@@ -88,6 +91,10 @@ export function ProductModal({
       return;
     }
 
+    // Asegurarnos que el ID se incluya explícitamente si estamos editando
+    const productId = isEditing && initialData?.id ? initialData.id : null;
+    console.log("🔑 ID extraído de initialData:", productId);
+    
     const transformedData = {
       nombre: data.name,
       categoria_id: data.category,
@@ -96,10 +103,12 @@ export function ProductModal({
       precio_venta: data.salePrice,
       stock_minimo: data.minStock,
       stock_maximo: data.maxStock,
-      ...(isEditing && initialData?.id ? { id: initialData.id } : {}),
+      // Asegurarnos de incluir el ID siempre que sea un caso de edición
+      ...(isEditing && productId ? { id: productId } : {}),
     };
 
     console.log("📩 Enviando datos transformados a onSubmit:", transformedData);
+    console.log("🔑 Verificando presencia de ID en datos transformados:", transformedData.id);
 
     setIsSubmitting(true);
     try {

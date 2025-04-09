@@ -96,6 +96,8 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
   };
 
   const openEditModal = (product: Product) => {
+    console.log("🔍 openEditModal - Producto seleccionado:", product);
+    console.log("🔑 openEditModal - ID del producto:", product.id);
     setCurrentProduct(product);
     setIsEditModalOpen(true);
   };
@@ -246,7 +248,11 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
             setIsEditModalOpen(false);
             setCurrentProduct(null);
           }}
-          onSubmit={handleEditProduct}
+          onSubmit={(productData) => {
+            console.log("📊 ProductsView - onSubmit ejecutado con:", productData);
+            console.log("🔑 ProductsView - Verificando ID antes de handleEditProduct:", productData.id);
+            return handleEditProduct(productData);
+          }}
           initialData={{
             id: currentProduct.id,
             name: currentProduct.nombre,
