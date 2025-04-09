@@ -130,8 +130,8 @@ export async function addProduct(productData: any) {
 }
 
 export async function updateProduct(productId: string, productData: any) {
-  console.log("Updating product with ID:", productId);
-  console.log("Product data to update:", productData);
+  console.log("🧠 Actualizando producto con ID:", productId);
+  console.log("🧠 Datos recibidos para actualización:", productData);
   
   try {
     // Crear objeto de actualización con los datos
@@ -145,7 +145,7 @@ export async function updateProduct(productId: string, productData: any) {
       stock_maximo: productData.maxStock || 0
     };
     
-    console.log("Update data:", updateData);
+    console.log("🧠 Datos para enviar a Supabase:", updateData);
     
     const { data, error } = await supabase
       .from('productos')
@@ -158,7 +158,7 @@ export async function updateProduct(productId: string, productData: any) {
       throw error;
     }
     
-    console.log("Product updated successfully:", data);
+    console.log("🧠 Producto actualizado correctamente:", data);
     return { success: true, data };
   } catch (error) {
     console.error("Exception updating product:", error);

@@ -141,8 +141,8 @@ export function useProducts() {
   const handleEditProduct = async (productData: any) => {
     try {
       const productId = productData.id;
-      console.log("Editing product with ID:", productId);
-      console.log("Product data:", productData);
+      console.log("✅ handleEditProduct ejecutado con ID:", productId);
+      console.log("📩 Datos a enviar a updateProduct:", productData);
       
       if (!productId) {
         toast.error("Error al actualizar", {
@@ -159,7 +159,7 @@ export function useProducts() {
       }
       
       const result = await inventoryService.updateProduct(productId, productData);
-      console.log("Update result:", result);
+      console.log("🧠 Resultado de Supabase:", result);
       
       toast.success("Producto actualizado", {
         description: `${productData.name} ha sido actualizado correctamente`

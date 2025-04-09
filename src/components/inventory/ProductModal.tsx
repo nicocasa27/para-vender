@@ -33,6 +33,14 @@ export function ProductModal({
     hasPermissionError 
   } = useProductMetadata();
   
+  // Log para debugging al abrir el modal
+  useEffect(() => {
+    if (isOpen) {
+      console.log("ProductModal abierto - isEditing:", isEditing);
+      console.log("ProductModal - initialData:", initialData);
+    }
+  }, [isOpen, isEditing, initialData]);
+  
   // Intentar cargar los metadatos cuando se abre el modal
   useEffect(() => {
     if (isOpen && (!hasMetadata || categories.length === 0 || units.length === 0)) {
@@ -57,7 +65,7 @@ export function ProductModal({
   }, [metadataError]);
 
   const handleSubmit = async (data: any) => {
-    console.log("ProductModal handleSubmit:", data);
+    console.log("✅ ProductModal handleSubmit ejecutado con:", data);
     
     // Validar que tenemos los metadatos necesarios
     if (!categories.length || !units.length) {
@@ -79,12 +87,14 @@ export function ProductModal({
     try {
       // Asegurarse de que el ID del producto se pase cuando estamos editando
       if (isEditing && initialData?.id) {
-        console.log("Editing product with ID:", initialData.id);
-        await onSubmit({
+        const productDataWithId = {
           ...data,
           id: initialData.id
-        });
+        };
+        console.log("📩 Enviando datos al updateProduct:", productDataWithId);
+        await onSubmit(productDataWithId);
       } else {
+        console.log("📩 Enviando datos al addProduct:", data);
         await onSubmit(data);
       }
       toast.success(isEditing ? "Producto actualizado correctamente" : "Producto agregado correctamente");

@@ -88,6 +88,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   
   const isLoading = metadataLoading || warehousesLoading;
 
+  // Log inicial para debuggear
+  useEffect(() => {
+    console.log("ProductForm montado - isEditing:", isEditing);
+    console.log("ProductForm - initialData:", initialData);
+  }, [isEditing, initialData]);
+
   // Intentar recargar los datos cuando se monta el componente
   useEffect(() => {
     if (!hasMetadata || categories.length === 0 || units.length === 0) {
@@ -144,7 +150,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   }, [form, initialData]);
 
   const handleFormSubmit = (data: ProductFormValues) => {
-    console.log("Form submitted with data:", data);
+    console.log("✅ handleFormSubmit ejecutado con:", data);
     
     // Validar que hay categorías y unidades antes de enviar
     if (categories.length === 0 || units.length === 0) {
@@ -160,6 +166,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       return;
     }
     
+    // Llamar al onSubmit pasado como prop (que eventualmente debería llegar a updateProduct)
     onSubmit(data);
   };
 
