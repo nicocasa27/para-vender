@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Product, Category, Store } from '@/types/inventory';
@@ -33,13 +32,11 @@ export function useProducts() {
           }
         });
         
-        // Corregir acceso a la información de categoría
         let categoryName = "Sin categoría";
         let categoryId = product.categoria_id || "";
         
         if (product.categorias) {
           if (typeof product.categorias === 'object' && product.categorias !== null) {
-            // Acceder directamente al nombre de la categoría
             categoryName = product.categorias.nombre || "Sin categoría";
           }
         }
@@ -116,7 +113,7 @@ export function useProducts() {
 
   const handleAddProduct = async (productData: any) => {
     try {
-      if (!productData.name || !productData.category || !productData.unit) {
+      if (!productData.nombre || !productData.categoria_id || !productData.unidad_id) {
         toast.error("Datos incompletos", {
           description: "Por favor complete todos los campos obligatorios"
         });
@@ -126,7 +123,7 @@ export function useProducts() {
       await inventoryService.addProduct(productData);
       
       toast.success("Producto agregado", {
-        description: `${productData.name} ha sido agregado correctamente`
+        description: `${productData.nombre} ha sido agregado correctamente`
       });
       
       loadProducts();
@@ -151,18 +148,18 @@ export function useProducts() {
         return;
       }
       
-      if (!productData.name || !productData.category || !productData.unit) {
+      if (!productData.nombre || !productData.categoria_id || !productData.unidad_id) {
         toast.error("Datos incompletos", {
           description: "Por favor complete todos los campos obligatorios"
         });
         return;
       }
       
-      const result = await inventoryService.updateProduct(productId, productData);
+      const result = await inventoryService.updateProduct(productData);
       console.log("🧠 Resultado de Supabase:", result);
       
       toast.success("Producto actualizado", {
-        description: `${productData.name} ha sido actualizado correctamente`
+        description: `${productData.nombre} ha sido actualizado correctamente`
       });
       
       await loadProducts();

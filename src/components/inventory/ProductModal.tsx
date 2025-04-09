@@ -39,7 +39,6 @@ export function ProductModal({
     hasPermissionError,
   } = useProductMetadata();
 
-  // Debug inicial
   useEffect(() => {
     if (isOpen) {
       console.log("ProductModal abierto - isEditing:", isEditing);
@@ -89,7 +88,6 @@ export function ProductModal({
       return;
     }
 
-    // 🔄 Transformar datos para Supabase
     const transformedData = {
       nombre: data.name,
       categoria_id: data.category,

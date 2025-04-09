@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Product, Category, Store } from "@/types/inventory";
 
@@ -129,23 +128,31 @@ export async function addProduct(productData: any) {
   return newProduct;
 }
 
-export async function updateProduct(productId: string, productData: any) {
-  console.log("🧠 Actualizando producto con ID:", productId);
-  console.log("🧠 Datos recibidos para actualización:", productData);
+export async function updateProduct(productData: any) {
+  console.log("🔄 updateProduct: Iniciando actualización de producto con ID:", productData.id);
+  console.log("🔄 updateProduct: Datos recibidos para actualización:", productData);
+  
+  // Verificar que existe el ID del producto
+  if (!productData.id) {
+    console.error("❌ updateProduct: Error - ID de producto no proporcionado");
+    throw new Error("ID de producto es requerido para actualizar");
+  }
+  
+  const productId = productData.id;
   
   try {
     // Crear objeto de actualización con los datos
     const updateData = {
-      nombre: productData.name,
-      precio_compra: productData.purchasePrice || 0,
-      precio_venta: productData.salePrice || 0,
-      categoria_id: productData.category,
-      unidad_id: productData.unit,
-      stock_minimo: productData.minStock || 0,
-      stock_maximo: productData.maxStock || 0
+      nombre: productData.nombre,
+      precio_compra: productData.precio_compra || 0,
+      precio_venta: productData.precio_venta || 0,
+      categoria_id: productData.categoria_id,
+      unidad_id: productData.unidad_id,
+      stock_minimo: productData.stock_minimo || 0,
+      stock_maximo: productData.stock_maximo || 0
     };
     
-    console.log("🧠 Datos para enviar a Supabase:", updateData);
+    console.log("🔄 updateProduct: Datos preparados para Supabase:", updateData);
     
     const { data, error } = await supabase
       .from('productos')
@@ -154,14 +161,14 @@ export async function updateProduct(productId: string, productData: any) {
       .select();
 
     if (error) {
-      console.error("Error updating product:", error);
+      console.error("❌ updateProduct: Error en Supabase:", error);
       throw error;
     }
     
-    console.log("🧠 Producto actualizado correctamente:", data);
+    console.log("✅ updateProduct: Producto actualizado correctamente:", data);
     return { success: true, data };
   } catch (error) {
-    console.error("Exception updating product:", error);
+    console.error("❌ updateProduct: Excepción durante actualización:", error);
     throw error;
   }
 }
