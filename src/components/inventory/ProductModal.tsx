@@ -1,7 +1,12 @@
-
 import { useState, useEffect } from "react";
 import { ProductForm } from "./ProductForm";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Loader, AlertTriangle } from "lucide-react";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
 import { toast } from "sonner";
@@ -23,97 +28,109 @@ export function ProductModal({
   isEditing = false,
 }: ProductModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { 
-    categories, 
-    units, 
-    isLoading: metadataLoading, 
-    hasMetadata, 
-    refetch: refetchMetadata, 
+
+  const {
+    categories,
+    units,
+    isLoading: metadataLoading,
+    hasMetadata,
+    refetch: refetchMetadata,
     error: metadataError,
-    hasPermissionError 
+    hasPermissionError,
   } = useProductMetadata();
-  
-  // Log para debugging al abrir el modal
+
+  // Debug inicial
   useEffect(() => {
     if (isOpen) {
       console.log("ProductModal abierto - isEditing:", isEditing);
       console.log("ProductModal - initialData:", initialData);
     }
   }, [isOpen, isEditing, initialData]);
-  
-  // Intentar cargar los metadatos cuando se abre el modal
+
   useEffect(() => {
-    if (isOpen && (!hasMetadata || categories.length === 0 || units.length === 0)) {
+    if (
+      isOpen &&
+      (!hasMetadata || categories.length === 0 || units.length === 0)
+    ) {
       console.log("ProductModal - Cargando metadatos...");
-      refetchMetadata().catch(error => {
+      refetchMetadata().catch((error) => {
         console.error("Error al cargar metadatos:", error);
         toast.error("Error al cargar datos de categorías y unidades", {
-          description: "Por favor, intente nuevamente"
+          description: "Por favor, intente nuevamente",
         });
       });
     }
   }, [isOpen, hasMetadata, categories.length, units.length, refetchMetadata]);
 
-  // Mostrar errores de metadatos
   useEffect(() => {
     if (metadataError) {
       console.error("Error de metadatos:", metadataError);
       toast.error("Error al cargar datos necesarios", {
-        description: "No se pudieron cargar categorías o unidades"
+        description: "No se pudieron cargar categorías o unidades",
       });
     }
   }, [metadataError]);
 
   const handleSubmit = async (data: any) => {
     console.log("✅ ProductModal handleSubmit ejecutado con:", data);
-    
-    // Validar que tenemos los metadatos necesarios
+
     if (!categories.length || !units.length) {
       toast.error("Datos incompletos", {
-        description: "No se pueden cargar categorías o unidades. Por favor, intente nuevamente."
+        description:
+          "No se pueden cargar categorías o unidades. Por favor, intente nuevamente.",
       });
       return;
     }
-    
-    // Validar que el formulario tiene los campos obligatorios
+
     if (!data.name || !data.category || !data.unit) {
       toast.error("Datos incompletos", {
-        description: "Por favor complete todos los campos obligatorios"
+        description: "Por favor complete todos los campos obligatorios",
       });
       return;
     }
-    
+
+    // 🔄 Transformar datos para Supabase
+    const transformedData = {
+      nombre: data.name,
+      categoria_id: data.category,
+      unidad_id: data.unit,
+      precio_compra: data.purchasePrice,
+      precio_venta: data.salePrice,
+      stock_minimo: data.minStock,
+      stock_maximo: data.maxStock,
+      ...(isEditing && initialData?.id ? { id: initialData.id } : {}),
+    };
+
+    console.log("📩 Enviando datos transformados a onSubmit:", transformedData);
+
     setIsSubmitting(true);
     try {
-      // Asegurarse de que el ID del producto se pase cuando estamos editando
-      if (isEditing && initialData?.id) {
-        const productDataWithId = {
-          ...data,
-          id: initialData.id
-        };
-        console.log("📩 Enviando datos al updateProduct:", productDataWithId);
-        await onSubmit(productDataWithId);
-      } else {
-        console.log("📩 Enviando datos al addProduct:", data);
-        await onSubmit(data);
-      }
-      toast.success(isEditing ? "Producto actualizado correctamente" : "Producto agregado correctamente");
-      onClose(); // Cerrar el modal después de una actualización exitosa
+      await onSubmit(transformedData);
+      toast.success(
+        isEditing
+          ? "Producto actualizado correctamente"
+          : "Producto agregado correctamente"
+      );
+      onClose();
     } catch (error) {
       console.error("Error submitting product:", error);
-      toast.error(isEditing ? "Error al actualizar producto" : "Error al agregar producto");
+      toast.error(
+        isEditing ? "Error al actualizar producto" : "Error al agregar producto"
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleRetryLoadMetadata = () => {
-    refetchMetadata().then(() => {
-      toast.success("Datos actualizados correctamente");
-    }).catch(error => {
-      console.error("Error al recargar metadatos:", error);
-      toast.error("Error al recargar datos");
-    });
+    refetchMetadata()
+      .then(() => {
+        toast.success("Datos actualizados correctamente");
+      })
+      .catch((error) => {
+        console.error("Error al recargar metadatos:", error);
+        toast.error("Error al recargar datos");
+      });
   };
 
   return (
@@ -124,8 +141,8 @@ export function ProductModal({
             {isEditing ? "Editar Producto" : "Agregar Nuevo Producto"}
           </DialogTitle>
           <DialogDescription>
-            {isEditing 
-              ? "Actualice los datos del producto seleccionado." 
+            {isEditing
+              ? "Actualice los datos del producto seleccionado."
               : "Complete el formulario para crear un nuevo producto."}
           </DialogDescription>
         </DialogHeader>
@@ -142,29 +159,25 @@ export function ProductModal({
               Error de permisos
             </div>
             <p className="text-sm text-center text-muted-foreground max-w-md">
-              No tienes permisos para acceder a categorías o unidades. 
-              Contacta al administrador del sistema para obtener acceso.
+              No tienes permisos para acceder a categorías o unidades. Contacta
+              al administrador del sistema para obtener acceso.
             </p>
-            <Button 
-              variant="outline" 
-              onClick={onClose}
-            >
+            <Button variant="outline" onClick={onClose}>
               Cerrar
             </Button>
           </div>
-        ) : !hasMetadata || categories.length === 0 || units.length === 0 ? (
+        ) : !hasMetadata ||
+          categories.length === 0 ||
+          units.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 space-y-4">
             <div className="text-center text-destructive font-medium">
               No se pudieron cargar los datos necesarios
             </div>
             <p className="text-sm text-center text-muted-foreground max-w-md">
-              Faltan categorías o unidades en el sistema. Contacta al administrador para verificar 
-              si tienes los permisos necesarios.
+              Faltan categorías o unidades en el sistema. Contacta al
+              administrador para verificar si tienes los permisos necesarios.
             </p>
-            <Button 
-              variant="default" 
-              onClick={handleRetryLoadMetadata}
-            >
+            <Button variant="default" onClick={handleRetryLoadMetadata}>
               Reintentar carga de datos
             </Button>
           </div>
