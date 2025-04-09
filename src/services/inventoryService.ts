@@ -1,5 +1,7 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Product, Category, Store } from "@/types/inventory";
+import { toast } from "sonner";
 
 export async function fetchProducts() {
   console.log("Fetching products from Supabase...");
