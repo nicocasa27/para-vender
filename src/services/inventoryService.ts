@@ -142,6 +142,31 @@ export async function updateProduct(productData: any) {
   const productId = productData.id;
   
   try {
+    // Primero verificar si el producto existe y es accesible
+    const { data: existingProduct, error: checkError } = await supabase
+      .from('productos')
+      .select('id')
+      .eq('id', productId)
+      .single();
+    
+    if (checkError) {
+      console.error("❌ updateProduct: Error al verificar existencia del producto:", checkError);
+      
+      if (checkError.code === 'PGRST116') {
+        console.error("⚠️ Ningún producto coincide con el ID recibido:", productId);
+        throw new Error(`No se encontró ningún producto con el ID: ${productId}. Posiblemente por permisos insuficientes o ID incorrecto.`);
+      }
+      
+      throw checkError;
+    }
+    
+    if (!existingProduct) {
+      console.error("⚠️ Ningún producto coincide con el ID recibido:", productId);
+      throw new Error(`No se encontró ningún producto con el ID: ${productId}`);
+    }
+    
+    console.log("✅ updateProduct: Producto verificado, existe en la base de datos:", existingProduct);
+    
     // Crear objeto de actualización con los datos
     const updateData = {
       nombre: productData.nombre,
@@ -167,6 +192,11 @@ export async function updateProduct(productData: any) {
     if (error) {
       console.error("❌ updateProduct: Error en Supabase:", error);
       throw error;
+    }
+    
+    if (!data || data.length === 0) {
+      console.error("⚠️ updateProduct: La actualización no afectó ninguna fila. ID:", productId);
+      throw new Error("La actualización no modificó ningún registro. Posiblemente debido a restricciones de permisos (RLS).");
     }
     
     console.log("✅ updateProduct: Producto actualizado correctamente:", data);

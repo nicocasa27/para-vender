@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Product, Category, Store } from '@/types/inventory';
@@ -158,16 +157,35 @@ export function useProducts() {
       console.log("📩 Antes de enviar a updateProduct - ID:", productData.id);
       console.log("📩 Antes de enviar a updateProduct - Datos completos:", JSON.stringify(productData, null, 2));
       
-      const result = await inventoryService.updateProduct(productData);
-      console.log("🧠 Resultado de Supabase:", result);
+      try {
+        const result = await inventoryService.updateProduct(productData);
+        console.log("🧠 Resultado de Supabase:", result);
+        
+        toast.success("Producto actualizado", {
+          description: `${productData.nombre} ha sido actualizado correctamente`
+        });
+        
+        await loadProducts();
+      } catch (error: any) {
+        console.error("Error específico al actualizar producto:", error);
+        
+        if (error.message?.includes("No se encontró ningún producto con el ID")) {
+          toast.error("Producto no encontrado", {
+            description: "El ID del producto no existe o no tienes permisos para editarlo"
+          });
+        } else if (error.message?.includes("La actualización no modificó ningún registro")) {
+          toast.error("Sin permisos para actualizar", {
+            description: "No tienes permisos para editar este producto (restricción RLS)"
+          });
+        } else {
+          toast.error("Error al actualizar producto", {
+            description: error.message || "No se pudo actualizar el producto"
+          });
+        }
+      }
       
-      toast.success("Producto actualizado", {
-        description: `${productData.nombre} ha sido actualizado correctamente`
-      });
-      
-      await loadProducts();
     } catch (error) {
-      console.error("Error updating product:", error);
+      console.error("Error general al actualizar producto:", error);
       toast.error("Error al actualizar producto", {
         description: "No se pudo actualizar el producto"
       });
