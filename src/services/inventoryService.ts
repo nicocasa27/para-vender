@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Product, Category, Store } from "@/types/inventory";
 
@@ -130,12 +129,18 @@ export async function addProduct(productData: any) {
 }
 
 export async function updateProduct(productData: any) {
+  console.log("%c🚀 updateProduct ejecutado con:", "color: blue; font-weight: bold", productData);
+  toast.info("✅ updateProduct recibido", {
+    description: `ID: ${productData.id}`
+  });
+
   console.log("🔄 updateProduct: Iniciando actualización de producto con ID:", productData.id);
   console.log("🔄 updateProduct: Datos completos recibidos:", JSON.stringify(productData, null, 2));
   
   // Verificar que existe el ID del producto
   if (!productData.id) {
     console.error("❌ updateProduct: Error - ID de producto no proporcionado");
+    toast.error("❌ Falló updateProduct: ID faltante");
     throw new Error("ID de producto es requerido para actualizar");
   }
   
@@ -143,6 +148,9 @@ export async function updateProduct(productData: any) {
   
   try {
     // Primero verificar si el producto existe y es accesible
+    console.log("🔍 updateProduct: Verificando existencia del producto:", productId);
+    toast.info("✅ Verificando existencia del producto");
+    
     const { data: existingProduct, error: checkError } = await supabase
       .from('productos')
       .select('id')
@@ -151,9 +159,13 @@ export async function updateProduct(productData: any) {
     
     if (checkError) {
       console.error("❌ updateProduct: Error al verificar existencia del producto:", checkError);
+      toast.error("❌ Falló verificación: Error de Supabase");
       
       if (checkError.code === 'PGRST116') {
         console.error("⚠️ Ningún producto coincide con el ID recibido:", productId);
+        toast.error("❌ ID no encontrado", {
+          description: "El producto no existe o no tienes permisos"
+        });
         throw new Error(`No se encontró ningún producto con el ID: ${productId}. Posiblemente por permisos insuficientes o ID incorrecto.`);
       }
       
@@ -162,10 +174,16 @@ export async function updateProduct(productData: any) {
     
     if (!existingProduct) {
       console.error("⚠️ Ningún producto coincide con el ID recibido:", productId);
+      toast.error("❌ Producto no encontrado", {
+        description: "El ID proporcionado no existe en la base de datos"
+      });
       throw new Error(`No se encontró ningún producto con el ID: ${productId}`);
     }
     
     console.log("✅ updateProduct: Producto verificado, existe en la base de datos:", existingProduct);
+    toast.success("✅ Producto verificado", {
+      description: "Encontrado en la base de datos"
+    });
     
     // Crear objeto de actualización con los datos
     const updateData = {
@@ -181,6 +199,10 @@ export async function updateProduct(productData: any) {
     console.log("🔄 updateProduct: Datos preparados para Supabase:", updateData);
     console.log("🔄 updateProduct: Usando ID para condición:", productId);
     
+    toast.info("✅ Enviando update a Supabase", {
+      description: "Actualizando con datos preparados"
+    });
+    
     const { data, error } = await supabase
       .from('productos')
       .update(updateData)
@@ -191,18 +213,30 @@ export async function updateProduct(productData: any) {
 
     if (error) {
       console.error("❌ updateProduct: Error en Supabase:", error);
+      toast.error("❌ Error en Supabase", {
+        description: error.message
+      });
       throw error;
     }
     
     if (!data || data.length === 0) {
       console.error("⚠️ updateProduct: La actualización no afectó ninguna fila. ID:", productId);
+      toast.error("❌ Actualización sin efecto", {
+        description: "La operación no modificó ningún registro"
+      });
       throw new Error("La actualización no modificó ningún registro. Posiblemente debido a restricciones de permisos (RLS).");
     }
     
     console.log("✅ updateProduct: Producto actualizado correctamente:", data);
+    toast.success("✅ Producto actualizado en Supabase", {
+      description: "Operación completada correctamente"
+    });
     return { success: true, data };
   } catch (error) {
     console.error("❌ updateProduct: Excepción durante actualización:", error);
+    toast.error("❌ Error en updateProduct", {
+      description: error.message || "Error durante la actualización"
+    });
     throw error;
   }
 }

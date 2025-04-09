@@ -29,6 +29,7 @@ export function ProductModal({
   isEditing = false,
 }: ProductModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [transformedData, setTransformedData] = useState<any>(null);
 
   const {
     categories,
@@ -72,12 +73,17 @@ export function ProductModal({
   }, [metadataError]);
 
   const handleSubmit = async (data: any) => {
+    console.log("%c🧠 handleSubmit recibió:", "color: purple; font-weight: bold", data);
+    toast.success("✅ ProductModal: handleSubmit ejecutado", {
+      description: "Datos recibidos del formulario",
+    });
+    
     console.log("✅ ProductModal handleSubmit ejecutado con:", data);
     console.log("📌 ProductModal isEditing:", isEditing);
     console.log("📌 ProductModal initialData:", initialData);
 
     if (!categories.length || !units.length) {
-      toast.error("Datos incompletos", {
+      toast.error("❌ Falló en ProductModal: datos incompletos", {
         description:
           "No se pueden cargar categorías o unidades. Por favor, intente nuevamente.",
       });
@@ -85,7 +91,7 @@ export function ProductModal({
     }
 
     if (!data.name || !data.category || !data.unit) {
-      toast.error("Datos incompletos", {
+      toast.error("❌ Falló en ProductModal: campos obligatorios", {
         description: "Por favor complete todos los campos obligatorios",
       });
       return;
@@ -95,7 +101,7 @@ export function ProductModal({
     const productId = isEditing && initialData?.id ? initialData.id : null;
     console.log("🔑 ID extraído de initialData:", productId);
     
-    const transformedData = {
+    const productData = {
       nombre: data.name,
       categoria_id: data.category,
       unidad_id: data.unit,
@@ -106,23 +112,25 @@ export function ProductModal({
       // Asegurarnos de incluir el ID siempre que sea un caso de edición
       ...(isEditing && productId ? { id: productId } : {}),
     };
+    
+    setTransformedData(productData);
 
-    console.log("📩 Enviando datos transformados a onSubmit:", transformedData);
-    console.log("🔑 Verificando presencia de ID en datos transformados:", transformedData.id);
+    console.log("📩 Enviando datos transformados a onSubmit:", productData);
+    console.log("🔑 Verificando presencia de ID en datos transformados:", productData.id);
 
     setIsSubmitting(true);
     try {
-      await onSubmit(transformedData);
+      await onSubmit(productData);
       toast.success(
         isEditing
-          ? "Producto actualizado correctamente"
-          : "Producto agregado correctamente"
+          ? "✅ Producto actualizado correctamente"
+          : "✅ Producto agregado correctamente"
       );
       onClose();
     } catch (error) {
-      console.error("Error submitting product:", error);
+      console.error("❌ Error en ProductModal.handleSubmit:", error);
       toast.error(
-        isEditing ? "Error al actualizar producto" : "Error al agregar producto"
+        isEditing ? "❌ Falló en ProductModal: error al actualizar" : "❌ Falló en ProductModal: error al agregar"
       );
     } finally {
       setIsSubmitting(false);
@@ -189,12 +197,23 @@ export function ProductModal({
             </Button>
           </div>
         ) : (
-          <ProductForm
-            initialData={initialData}
-            onSubmit={handleSubmit}
-            isSubmitting={isSubmitting}
-            isEditing={isEditing}
-          />
+          <>
+            <ProductForm
+              initialData={initialData}
+              onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
+              isEditing={isEditing}
+            />
+            
+            {transformedData && (
+              <div className="mt-4 p-4 bg-gray-100 rounded-md">
+                <h3 className="font-semibold mb-2">Datos transformados que se enviarán a Supabase:</h3>
+                <pre className="text-xs overflow-auto max-h-40 p-2 bg-black text-green-400 rounded">
+                  {JSON.stringify(transformedData, null, 2)}
+                </pre>
+              </div>
+            )}
+          </>
         )}
       </DialogContent>
     </Dialog>

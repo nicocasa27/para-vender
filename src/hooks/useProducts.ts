@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Product, Category, Store } from '@/types/inventory';
@@ -137,18 +138,24 @@ export function useProducts() {
 
   const handleEditProduct = async (productData: any) => {
     try {
-      console.log("✅ handleEditProduct ejecutado con datos completos:", productData);
+      toast.info("✅ handleEditProduct llamado", {
+        description: "Iniciando proceso de actualización"
+      });
+      
+      console.log("%c✅ handleEditProduct ejecutado con datos:", "color: blue; font-weight: bold", productData);
       console.log("🔍 Verificando ID de producto:", productData.id);
       
       if (!productData.id) {
-        toast.error("Error al actualizar", {
+        console.error("❌ handleEditProduct: Error - ID de producto no proporcionado");
+        toast.error("❌ Falló en handleEditProduct: ID faltante", {
           description: "Identificador de producto no válido"
         });
         return;
       }
       
       if (!productData.nombre || !productData.categoria_id || !productData.unidad_id) {
-        toast.error("Datos incompletos", {
+        console.error("❌ handleEditProduct: Error - Datos incompletos", productData);
+        toast.error("❌ Falló en handleEditProduct: Datos incompletos", {
           description: "Por favor complete todos los campos obligatorios"
         });
         return;
@@ -157,38 +164,49 @@ export function useProducts() {
       console.log("📩 Antes de enviar a updateProduct - ID:", productData.id);
       console.log("📩 Antes de enviar a updateProduct - Datos completos:", JSON.stringify(productData, null, 2));
       
+      toast.info("✅ updateProduct enviado a Supabase", {
+        description: `ID: ${productData.id}`
+      });
+      
       try {
         const result = await inventoryService.updateProduct(productData);
-        console.log("🧠 Resultado de Supabase:", result);
+        console.log("%c🧠 Resultado de Supabase:", "color: green; font-weight: bold", result);
         
-        toast.success("Producto actualizado", {
+        toast.success("✅ Producto actualizado", {
           description: `${productData.nombre} ha sido actualizado correctamente`
         });
         
         await loadProducts();
       } catch (error: any) {
-        console.error("Error específico al actualizar producto:", error);
+        console.error("%c❌ Error específico al actualizar producto:", "color: red; font-weight: bold", error);
+        
+        toast.error("❌ updateProduct falló", {
+          description: error.message || "No se pudo actualizar el producto"
+        });
         
         if (error.message?.includes("No se encontró ningún producto con el ID")) {
-          toast.error("Producto no encontrado", {
+          toast.error("❌ Producto no encontrado", {
             description: "El ID del producto no existe o no tienes permisos para editarlo"
           });
         } else if (error.message?.includes("La actualización no modificó ningún registro")) {
-          toast.error("Sin permisos para actualizar", {
+          toast.error("❌ Sin permisos para actualizar", {
             description: "No tienes permisos para editar este producto (restricción RLS)"
           });
         } else {
-          toast.error("Error al actualizar producto", {
+          toast.error("❌ Error al actualizar producto", {
             description: error.message || "No se pudo actualizar el producto"
           });
         }
+        
+        throw error; // Re-lanzar para que el modal lo capture
       }
       
     } catch (error) {
-      console.error("Error general al actualizar producto:", error);
-      toast.error("Error al actualizar producto", {
-        description: "No se pudo actualizar el producto"
+      console.error("%c❌ Error general al actualizar producto:", "color: red; font-weight: bold", error);
+      toast.error("❌ Error general en handleEditProduct", {
+        description: "No se pudo completar la actualización del producto"
       });
+      throw error; // Re-lanzar para que el modal lo capture
     }
   };
 
