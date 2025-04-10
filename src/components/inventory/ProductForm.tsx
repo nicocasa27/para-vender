@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -72,7 +71,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const { toast: uiToast } = useToast();
   const [formData, setFormData] = useState<ProductFormValues | null>(null);
   
-  // Cargar categorías, unidades y almacenes directamente en el componente
   const { 
     categories, 
     units, 
@@ -89,13 +87,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   
   const isLoading = metadataLoading || warehousesLoading;
 
-  // Log inicial para debuggear
   useEffect(() => {
     console.log("ProductForm montado - isEditing:", isEditing);
     console.log("ProductForm - initialData:", initialData);
   }, [isEditing, initialData]);
 
-  // Intentar recargar los datos cuando se monta el componente
   useEffect(() => {
     if (!hasMetadata || categories.length === 0 || units.length === 0) {
       console.log("ProductForm - Recargando metadatos...");
@@ -112,7 +108,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     }
   }, [hasMetadata, categories.length, units.length, warehouses.length, isEditing, refetchMetadata, refetchWarehouses]);
 
-  // Log para debugging
   useEffect(() => {
     console.log("ProductForm - Estado actual:", { 
       categoriesCount: categories.length, 
@@ -123,7 +118,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     });
   }, [categories.length, units.length, warehouses.length, hasMetadata, isLoading]);
 
-  // Crear defaultValues con valores iniciales o valores por defecto
   const defaultValues: Partial<ProductFormValues> = {
     name: "",
     category: "",
@@ -134,7 +128,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     maxStock: 0,
     initialStock: 0,
     warehouse: "",
-    ...initialData // Sobrescribir con datos iniciales si existen
+    ...initialData
   };
 
   const form = useForm<ProductFormValues>({
@@ -142,7 +136,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     defaultValues,
   });
 
-  // Reset form when initialData changes
   useEffect(() => {
     if (initialData) {
       console.log("Resetting form with initial data:", initialData);
@@ -158,7 +151,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     
     setFormData(data);
     
-    // Validar que hay categorías y unidades antes de enviar
     if (categories.length === 0 || units.length === 0) {
       toast.error("❌ Datos incompletos", {
         description: "No hay categorías o unidades disponibles. Por favor, crea primero estos valores."
@@ -166,17 +158,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       return;
     }
     
-    // Validar que se seleccionó un almacén si es necesario
     if (!isEditing && !data.warehouse && warehouses.length > 0) {
       toast.error("❌ Por favor seleccione un almacén");
       return;
     }
     
-    // Llamar al onSubmit pasado como prop (que eventualmente debería llegar a updateProduct)
     onSubmit(data);
   };
 
-  // Mostrar indicador de carga durante la carga inicial
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -186,7 +175,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     );
   }
 
-  // Verificar datos requeridos antes de mostrar el formulario
   if (!hasMetadata && (categories.length === 0 || units.length === 0)) {
     return (
       <div className="flex flex-col items-center justify-center p-8 space-y-4">
@@ -212,7 +200,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     );
   }
 
-  // Si estamos editando y faltan almacenes, no es un problema crítico
   if (!isEditing && warehouses.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-8 space-y-4">
