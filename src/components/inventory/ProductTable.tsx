@@ -7,7 +7,6 @@ import { ProductModal } from "./ProductModal";
 import { DeleteProductDialog } from "./DeleteProductDialog";
 import { ProductHistorySheet } from "./ProductHistorySheet";
 import { Product } from "@/types/inventory";
-import { StoreSelector } from "./StoreSelector";
 
 const ProductTable = () => {
   const {
@@ -89,14 +88,6 @@ const ProductTable = () => {
         categories={categories}
         stores={stores}
       />
-
-      <div className="flex justify-end mb-4">
-        <StoreSelector
-          selectedStore={storeFilter}
-          onStoreChange={setStoreFilter}
-          className="w-64"
-        />
-      </div>
 
       <ProductTableBody
         products={products}

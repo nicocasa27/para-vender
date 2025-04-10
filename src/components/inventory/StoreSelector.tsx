@@ -30,15 +30,16 @@ export function StoreSelector({
 
   return (
     <div className={className}>
+      <div className="flex items-center gap-2 mb-1">
+        <Building className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-medium">{label}</span>
+      </div>
       <Select 
         value={selectedStore || "all"} 
         onValueChange={(value) => onStoreChange(value === "all" ? null : value)}
       >
         <SelectTrigger className="w-full">
-          <div className="flex items-center">
-            <Building className="mr-2 h-4 w-4 text-muted-foreground" />
-            <SelectValue placeholder={label} />
-          </div>
+          <SelectValue placeholder={label} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todas las sucursales</SelectItem>

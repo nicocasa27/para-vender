@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
@@ -28,6 +27,7 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
     loading,
     searchTerm,
     setSearchTerm,
+    storeFilter,
     refreshProducts,
     addProduct,
     editProduct,
@@ -133,6 +133,19 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
     return metadataCategory ? metadataCategory.nombre : "Sin categoría";
   };
 
+  const getDisplayStock = (product: Product) => {
+    if (storeFilter && product.stock_by_store && product.stock_by_store[storeFilter] !== undefined) {
+      return formatQuantityWithUnit(product.stock_by_store[storeFilter], product.unidad);
+    }
+    return formatQuantityWithUnit(product.stock_total, product.unidad);
+  };
+
+  const getStoreName = () => {
+    if (!storeFilter) return "Todas las sucursales";
+    const store = stores.find(s => s.id === storeFilter);
+    return store ? store.nombre : "Sucursal";
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between gap-4">
@@ -158,6 +171,14 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
         </div>
       </div>
 
+      {storeFilter && (
+        <div className="bg-muted/30 rounded-lg p-2 px-4 flex items-center">
+          <p className="text-sm">
+            Mostrando productos en: <span className="font-medium">{getStoreName()}</span>
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {products.length === 0 ? (
           <div className="col-span-full text-center py-12 text-muted-foreground">
@@ -170,7 +191,7 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg font-medium line-clamp-2">{product.nombre}</CardTitle>
                   <Badge variant="outline" className={getStockStatusColor(product)}>
-                    {formatQuantityWithUnit(product.stock_total, product.unidad)}
+                    {getDisplayStock(product)}
                   </Badge>
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">

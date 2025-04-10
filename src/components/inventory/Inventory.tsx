@@ -1,72 +1,52 @@
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader, RefreshCcw } from "lucide-react";
-import { ProductsView } from "@/components/ProductsView";
-import { CategoriesView } from "@/components/inventory/CategoriesView";
-import { StoresView } from "@/components/inventory/StoresView";
-import { TransfersView } from "@/components/inventory/TransfersView";
-import { useProductMetadata } from "@/hooks/useProductMetadata";
-import { useStores } from "@/hooks/useStores";
-import { toast } from "sonner";
+import ProductTable from "./ProductTable";
+import { CategoriesView } from "./CategoriesView";
+import { StoresView } from "./StoresView";
+import { TransfersView } from "./TransfersView";
+import { ProductsView } from "@/components/inventory/ProductsView";
+import { StoreSelector } from "./StoreSelector";
+import { useProducts } from "@/hooks/useProducts";
 
-export const Inventory = () => {
-  const [activeTab, setActiveTab] = useState("products");
-  const { hasMetadata, refetch: refetchMetadata } = useProductMetadata();
-  const { stores, refetch: refetchStores } = useStores();
-  const [loading, setLoading] = useState(false);
-
-  const handleRefresh = () => {
-    setLoading(true);
-    
-    // Refrescar datos de todas las fuentes
-    Promise.all([
-      refetchStores(),
-      refetchMetadata()
-    ]).catch(error => {
-      console.error("Error al refrescar datos:", error);
-      toast.error("Error al refrescar datos");
-    }).finally(() => {
-      setLoading(false);
-      toast.success("Datos actualizados correctamente");
-    });
-  };
-
+export function Inventory() {
+  const { storeFilter, setStoreFilter } = useProducts();
+  
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Inventario</h1>
-        <Button size="sm" variant="outline" disabled={loading} onClick={handleRefresh}>
-          {loading ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
-          Refrescar
-        </Button>
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h1 className="text-3xl font-bold tracking-tight">Inventario</h1>
+        <StoreSelector 
+          selectedStore={storeFilter} 
+          onStoreChange={setStoreFilter}
+          className="w-full md:w-64" 
+        />
       </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="products">Productos</TabsTrigger>
-          <TabsTrigger value="categories">Categorías</TabsTrigger>
-          <TabsTrigger value="stores">Sucursales</TabsTrigger>
-          <TabsTrigger value="transfers">Transferencias</TabsTrigger>
+      
+      <Tabs defaultValue="products">
+        <TabsList className="w-full bg-white border">
+          <TabsTrigger value="products" className="flex-1">Productos</TabsTrigger>
+          <TabsTrigger value="categories" className="flex-1">Categorías</TabsTrigger>
+          <TabsTrigger value="stores" className="flex-1">Sucursales</TabsTrigger>
+          <TabsTrigger value="transfers" className="flex-1">Transferencias</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="products" className="pt-4">
-          <ProductsView onRefresh={handleRefresh} />
+        <TabsContent value="products" className="mt-6">
+          <ProductsView />
         </TabsContent>
         
-        <TabsContent value="categories" className="pt-4">
-          <CategoriesView onRefresh={handleRefresh} />
+        <TabsContent value="categories" className="mt-6">
+          <CategoriesView />
         </TabsContent>
         
-        <TabsContent value="stores" className="pt-4">
-          <StoresView onRefresh={handleRefresh} />
+        <TabsContent value="stores" className="mt-6">
+          <StoresView />
         </TabsContent>
         
-        <TabsContent value="transfers" className="pt-4">
-          <TransfersView onRefresh={handleRefresh} />
+        <TabsContent value="transfers" className="mt-6">
+          <TransfersView />
         </TabsContent>
       </Tabs>
     </div>
   );
-};
+}
