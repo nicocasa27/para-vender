@@ -1,6 +1,112 @@
 import { supabase } from "@/integrations/supabase/client";
 import { UserWithRoles, UserRoleWithStore } from "@/types/auth";
 
+/**
+ * Fetch all users with their roles
+ */
+export async function fetchAllUsers(): Promise<UserWithRoles[]> {
+  try {
+    // Fetch all profiles
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*');
+      
+    if (profilesError) throw profilesError;
+    
+    if (!profiles || profiles.length === 0) {
+      return [];
+    }
+    
+    // Fetch all roles in a single query
+    const { data: rolesData, error: rolesError } = await supabase
+      .from('user_roles')
+      .select(`
+        *,
+        profiles(*),
+        almacenes(*)
+      `);
+      
+    if (rolesError) throw rolesError;
+    
+    // Create a map of user_id -> roles for efficient access
+    const userRolesMap = new Map<string, UserRoleWithStore[]>();
+    
+    if (rolesData && rolesData.length > 0) {
+      rolesData.forEach(role => {
+        const userId = role.user_id;
+        
+        if (!userRolesMap.has(userId)) {
+          userRolesMap.set(userId, []);
+        }
+        
+        // Safely handle nested properties
+        const profilesData = role.profiles;
+        let email = '';
+        let fullName = '';
+        
+        if (profilesData) {
+          if (Array.isArray(profilesData)) {
+            if (profilesData.length > 0) {
+              // Access properties safely from the first item in the array
+              email = profilesData[0]?.email || '';
+              fullName = profilesData[0]?.full_name || '';
+            }
+          } else {
+            // Handle object case
+            email = profilesData.email || '';
+            fullName = profilesData.full_name || '';
+          }
+        }
+        
+        // Safely handle almacenes data
+        const almacenesData = role.almacenes;
+        let almacenNombre = '';
+        
+        if (almacenesData) {
+          if (Array.isArray(almacenesData)) {
+            if (almacenesData.length > 0) {
+              // Access nombre safely from the first item in the array
+              almacenNombre = almacenesData[0]?.nombre || '';
+            }
+          } else {
+            // Handle object case
+            almacenNombre = almacenesData.nombre || '';
+          }
+        }
+        
+        const userRole: UserRoleWithStore = {
+          id: role.id,
+          user_id: role.user_id,
+          role: role.role,
+          almacen_id: role.almacen_id,
+          almacen_nombre: almacenNombre,
+          created_at: role.created_at
+        };
+        
+        userRolesMap.get(userId)?.push(userRole);
+      });
+    }
+    
+    // Map profiles to UserWithRoles objects
+    const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
+      const roles = userRolesMap.get(profile.id) || [];
+      
+      return {
+        id: profile.id,
+        email: profile.email,
+        full_name: profile.full_name,
+        created_at: profile.created_at,
+        roles
+      };
+    });
+    
+    return usersWithRoles;
+  } catch (error) {
+    console.error("Error in fetchAllUsers:", error);
+    throw error;
+  }
+}
+
 export async function addUserRole(userId: string, role: string, storeId?: string) {
   try {
     // Check if user exists
@@ -143,133 +249,3 @@ export async function getUserById(userId: string): Promise<UserWithRoles> {
     throw error;
   }
 }
-
-/**
- * Obtiene todos los usuarios con sus roles
- */
-export const fetchAllUsers = async (): Promise<UserWithRoles[]> => {
-  try {
-    console.log("AuthUtils: Fetching all users with roles");
-    
-    // Fetch all users with their roles using a direct query to user_roles
-    const { data: userRolesData, error: userRolesError } = await supabase
-      .from('user_roles')
-      .select(`
-        id,
-        user_id,
-        role,
-        almacen_id,
-        created_at,
-        profiles:user_id(
-          id,
-          email,
-          full_name
-        ),
-        almacenes:almacen_id(nombre)
-      `)
-      .order('created_at', { ascending: false });
-      
-    if (userRolesError) {
-      console.error("AuthUtils: Error fetching user roles:", userRolesError);
-      throw userRolesError;
-    }
-    
-    // Get unique user IDs from the roles
-    const userIds = [...new Set(userRolesData.map(role => role.user_id))];
-    
-    if (userIds.length === 0) {
-      console.log("AuthUtils: No user roles found");
-      
-      // Fetch profiles without roles as a fallback
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (profilesError) {
-        console.error("AuthUtils: Error fetching profiles:", profilesError);
-        throw profilesError;
-      }
-      
-      if (!profiles || profiles.length === 0) {
-        console.log("AuthUtils: No profiles found");
-        return [];
-      }
-      
-      // Transform profile data to match UserWithRoles format (normalizado)
-      return profiles.map(profile => ({
-        id: profile.id,
-        email: profile.email || "",
-        full_name: profile.full_name || null,
-        created_at: profile.created_at,
-        roles: []
-      }));
-    }
-    
-    // Group roles by user
-    const usersMap = new Map<string, UserWithRoles>();
-    
-    // Process each role and group by user_id
-    userRolesData.forEach(role => {
-      const userId = role.user_id;
-      const profileData = role.profiles;
-      
-      // If this user isn't in our map yet, add them
-      if (!usersMap.has(userId)) {
-        usersMap.set(userId, {
-          id: userId,
-          email: profileData ? profileData.email || "" : "",
-          full_name: profileData ? profileData.full_name || null : null,
-          created_at: role.created_at,
-          roles: []
-        });
-      }
-      
-      // Add this role to the user's roles array
-      const userEntry = usersMap.get(userId);
-      if (userEntry) {
-        userEntry.roles.push({
-          id: role.id,
-          user_id: role.user_id,
-          role: role.role as any,
-          almacen_id: role.almacen_id,
-          created_at: role.created_at,
-          almacen_nombre: role.almacenes ? role.almacenes.nombre : null
-        });
-      }
-    });
-    
-    // Fetch any users without roles to include them too
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
-      
-    if (profilesError) {
-      console.error("AuthUtils: Error fetching profiles:", profilesError);
-      // Continue with what we have instead of throwing
-    } else if (profiles) {
-      // Add any profiles that weren't included in the roles query
-      profiles.forEach(profile => {
-        if (!usersMap.has(profile.id)) {
-          usersMap.set(profile.id, {
-            id: profile.id,
-            email: profile.email || "",
-            full_name: profile.full_name || null,
-            created_at: profile.created_at,
-            roles: []
-          });
-        }
-      });
-    }
-    
-    // Convert map values to array
-    const usersWithRoles = Array.from(usersMap.values());
-    
-    console.log(`AuthUtils: Processed ${usersWithRoles.length} users with roles`);
-    return usersWithRoles;
-  } catch (error) {
-    console.error("AuthUtils: Error in fetchAllUsers:", error);
-    throw error;
-  }
-};

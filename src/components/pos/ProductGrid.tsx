@@ -8,6 +8,7 @@ import { Search, Tag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Product } from "@/types/inventory";
+import { CartItem, productToCartItem } from "@/types/cart";
 
 interface ProductGridProps {
   onProductSelect: (product: Product) => void;
@@ -54,20 +55,40 @@ export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps
         }
 
         // Transform data to match Product type
-        const transformedProducts = data?.map(item => ({
-          id: item.id || '',
-          nombre: item.nombre || '',
-          precio_venta: Number(item.precio_venta) || 0,
-          stock_total: inventoryMap.get(item.id) || 0,
-          categoria: item.categorias?.nombre || 'Sin categoría',
-          unidad: item.unidades?.abreviatura || 'u',
-          // Add other required fields with default values
-          precio_compra: 0,
-          stock_minimo: 0,
-          stock_maximo: 0,
-          categoria_id: item.categorias?.id,
-          unidad_id: item.unidades?.id
-        } as Product));
+        const transformedProducts = data?.map(item => {
+          // Safely access nested properties
+          const categoria = Array.isArray(item.categorias) && item.categorias.length > 0 
+            ? item.categorias[0]?.nombre || 'Sin categoría'
+            : 'Sin categoría';
+          
+          const categoriaId = Array.isArray(item.categorias) && item.categorias.length > 0
+            ? item.categorias[0]?.id
+            : undefined;
+            
+          const unidad = Array.isArray(item.unidades) && item.unidades.length > 0
+            ? item.unidades[0]?.abreviatura || 'u'
+            : 'u';
+            
+          const unidadId = Array.isArray(item.unidades) && item.unidades.length > 0
+            ? item.unidades[0]?.id
+            : undefined;
+
+          return {
+            id: item.id || '',
+            nombre: item.nombre || '',
+            precio_venta: Number(item.precio_venta) || 0,
+            stock_total: inventoryMap.get(item.id) || 0,
+            categoria: categoria,
+            unidad: unidad,
+            // Add other required fields with default values
+            precio_compra: 0,
+            stock_minimo: 0,
+            stock_maximo: 0,
+            categoria_id: categoriaId,
+            unidad_id: unidadId,
+            inventario: []
+          } as Product;
+        });
 
         setProducts(transformedProducts || []);
       } catch (error: any) {

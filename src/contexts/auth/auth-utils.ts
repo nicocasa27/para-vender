@@ -1,7 +1,7 @@
 
-// Este archivo ahora sirve como punto de entrada para todas las utilidades de autenticación
+// This file now serves as a point of entry for all authentication utilities
 import { fetchUserRoles, checkHasRole } from './utils/user-roles';
 import { fetchAllUsers } from './utils/user-management';
 
-// Re-exportar las funciones para mantener compatibilidad con el código existente
+// Re-export the functions to maintain compatibility with existing code
 export { fetchUserRoles, checkHasRole, fetchAllUsers };
