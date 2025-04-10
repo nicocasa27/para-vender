@@ -12,6 +12,8 @@ export interface Product {
   unidad: string;
   unidad_id?: string;
   descripcion?: string;
+  sucursal_id?: string;  // Add the store ID field
+  sucursal_nombre?: string; // Add the store name field
   inventario: {
     almacen_id: string;
     cantidad: number;

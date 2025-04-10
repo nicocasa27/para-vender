@@ -19,7 +19,8 @@ export async function fetchProductData() {
       stock_minimo,
       stock_maximo,
       categoria_id,
-      unidad_id
+      unidad_id,
+      sucursal_id
     `);
 
   if (productsError) {
@@ -47,9 +48,20 @@ export async function fetchProductData() {
     // No lanzamos error aquí para permitir que continúe el flujo
   }
   
+  // Obtener almacenes por separado
+  const { data: almacenesData, error: almacenesError } = await supabase
+    .from('almacenes')
+    .select('id, nombre');
+    
+  if (almacenesError) {
+    console.error("Error fetching stores:", almacenesError);
+    // No lanzamos error aquí para permitir que continúe el flujo
+  }
+  
   // Crear mapas para búsqueda rápida
   const categoriasMap = new Map();
   const unidadesMap = new Map();
+  const almacenesMap = new Map();
   
   if (categoriasData) {
     categoriasData.forEach(cat => categoriasMap.set(cat.id, cat));
@@ -58,16 +70,22 @@ export async function fetchProductData() {
   if (unidadesData) {
     unidadesData.forEach(unit => unidadesMap.set(unit.id, unit));
   }
+
+  if (almacenesData) {
+    almacenesData.forEach(store => almacenesMap.set(store.id, store));
+  }
   
   // Enriquecer los datos de productos
   const enrichedProductsData = productsData?.map(product => {
     const categoria = categoriasMap.get(product.categoria_id);
     const unidad = unidadesMap.get(product.unidad_id);
+    const almacen = product.sucursal_id ? almacenesMap.get(product.sucursal_id) : null;
     
     return {
       ...product,
       categorias: categoria ? { nombre: categoria.nombre } : { nombre: "Sin categoría" },
-      unidades: unidad ? { nombre: unidad.nombre } : { nombre: "u" }
+      unidades: unidad ? { nombre: unidad.nombre } : { nombre: "u" },
+      almacenes: almacen ? { nombre: almacen.nombre } : { nombre: "Sin sucursal" }
     };
   });
   

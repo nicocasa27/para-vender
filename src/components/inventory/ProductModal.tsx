@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ProductForm } from "./ProductForm";
 import {
@@ -22,7 +21,7 @@ interface ProductData {
   precio_venta: number;
   stock_minimo?: number;
   stock_maximo?: number;
-  // Separate field for initial inventory data
+  sucursal_id?: string;
   warehouse?: string;
   initialStock?: number;
 }
@@ -108,7 +107,6 @@ export function ProductModal({
     const productId = isEditing && initialData?.id ? initialData.id : null;
     console.log("🔑 ProductModal: ID utilizado para la operación:", productId);
     
-    // Crear objeto de datos del producto
     const productData: ProductData = {
       id: productId,
       nombre: data.name,
@@ -117,10 +115,10 @@ export function ProductModal({
       precio_compra: data.purchasePrice,
       precio_venta: data.salePrice,
       stock_minimo: data.minStock,
-      stock_maximo: data.maxStock
+      stock_maximo: data.maxStock,
+      sucursal_id: data.store || null
     };
     
-    // Mantener el warehouse y initialStock como propiedades separadas
     if (!isEditing && data.warehouse && data.initialStock > 0) {
       productData.warehouse = data.warehouse;
       productData.initialStock = data.initialStock;

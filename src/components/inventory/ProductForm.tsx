@@ -51,6 +51,7 @@ const productFormSchema = z.object({
     message: "La cantidad inicial debe ser un número no negativo.",
   }),
   warehouse: z.string().optional(),
+  store: z.string().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -130,6 +131,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     maxStock: 0,
     initialStock: 0,
     warehouse: "",
+    store: "",
     ...initialData
   };
 
@@ -142,7 +144,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     if (initialData) {
       console.log("Resetting form with initial data:", initialData);
       
-      // Asegurarnos de que los valores numéricos se conviertan adecuadamente
       const formattedData = {
         ...initialData,
         purchasePrice: Number(initialData.purchasePrice) || 0,
@@ -186,7 +187,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       return;
     }
     
-    // Validar datos numéricos
     const numericData = {
       ...data,
       purchasePrice: Number(data.purchasePrice) || 0,
@@ -201,7 +201,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     });
     
     try {
-      // Enviar los datos numéricos validados
       await onSubmit(numericData);
       setSubmitSuccess(true);
       
@@ -347,6 +346,36 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                       {units.map((unit) => (
                         <SelectItem key={unit.id} value={unit.id}>
                           {unit.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="store"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sucursal del Producto</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccione una sucursal" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Sin sucursal asignada</SelectItem>
+                      {warehouses.map((warehouse) => (
+                        <SelectItem key={warehouse.id} value={warehouse.id}>
+                          {warehouse.nombre}
                         </SelectItem>
                       ))}
                     </SelectContent>

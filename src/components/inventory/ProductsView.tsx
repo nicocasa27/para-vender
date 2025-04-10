@@ -105,6 +105,10 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
     if (onRefresh) onRefresh();
   };
 
+  const getProductStoreName = (product: Product) => {
+    return product.sucursal_nombre || 'Sin sucursal';
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -194,8 +198,15 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
                     {getDisplayStock(product)}
                   </Badge>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {getCategoryName(product.categoria_id)}
+                <div className="flex justify-between items-center mt-1">
+                  <div className="text-xs text-muted-foreground">
+                    {getCategoryName(product.categoria_id)}
+                  </div>
+                  {product.sucursal_id && (
+                    <div className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                      {getProductStoreName(product)}
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="pb-2">
@@ -318,6 +329,10 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
                         <div className="grid grid-cols-2 text-sm">
                           <span className="text-muted-foreground">Unidad:</span>
                           <span>{product.unidad || "Unidad"}</span>
+                        </div>
+                        <div className="grid grid-cols-2 text-sm">
+                          <span className="text-muted-foreground">Sucursal:</span>
+                          <span>{getProductStoreName(product)}</span>
                         </div>
                         <div className="grid grid-cols-2 text-sm">
                           <span className="text-muted-foreground">Precio compra:</span>

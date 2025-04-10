@@ -49,6 +49,12 @@ export function mapInventoryData(productsData: any[], inventoryData: any[]): Pro
       map[item.almacen_id] = storeNamesMap.get(item.almacen_id) || `Almacén ${item.almacen_id}`;
       return map;
     }, {} as Record<string, string>);
+
+    // Get the store name if sucursal_id is available
+    let sucursalNombre = '';
+    if (product.sucursal_id && storeNamesMap.has(product.sucursal_id)) {
+      sucursalNombre = storeNamesMap.get(product.sucursal_id);
+    }
     
     // Crear objeto Product
     return {
@@ -64,6 +70,8 @@ export function mapInventoryData(productsData: any[], inventoryData: any[]): Pro
       stock_minimo: Number(product.stock_minimo) || 0,
       stock_maximo: Number(product.stock_maximo) || 0,
       descripcion: product.descripcion,
+      sucursal_id: product.sucursal_id || null,
+      sucursal_nombre: sucursalNombre || 'Sin sucursal',
       inventario: inventoryItems,
       stock_by_store: stockByStore,
       store_names: storeNames

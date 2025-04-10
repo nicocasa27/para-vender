@@ -201,6 +201,7 @@ export type Database = {
           precio_venta: number
           stock_maximo: number | null
           stock_minimo: number | null
+          sucursal_id: string | null
           unidad_id: string | null
         }
         Insert: {
@@ -213,6 +214,7 @@ export type Database = {
           precio_venta: number
           stock_maximo?: number | null
           stock_minimo?: number | null
+          sucursal_id?: string | null
           unidad_id?: string | null
         }
         Update: {
@@ -225,9 +227,18 @@ export type Database = {
           precio_venta?: number
           stock_maximo?: number | null
           stock_minimo?: number | null
+          sucursal_id?: string | null
           unidad_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "productos_sucursal_id_fkey"
+            columns: ["sucursal_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
