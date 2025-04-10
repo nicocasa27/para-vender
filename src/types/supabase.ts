@@ -1,5 +1,13 @@
 
-export type Database = {
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export interface Database {
   public: {
     Tables: {
       almacenes: {
@@ -138,7 +146,6 @@ export type Database = {
           stock_minimo?: number;
           stock_maximo?: number;
           created_at?: string;
-          inventario?: any; // For ProductWithInventory compatibility
         };
         Insert: {
           id?: string;
@@ -228,6 +235,8 @@ export type Database = {
           created_at?: string;
         };
       };
+    };
+    Views: {
       user_roles_with_name: {
         Row: {
           id?: string;
@@ -240,42 +249,11 @@ export type Database = {
           almacen_nombre?: string;
         };
       };
-      ventas: {
-        Row: {
-          id: string;
-          almacen_id?: string;
-          metodo_pago: string;
-          cliente?: string;
-          estado?: string;
-          total: number;
-          created_at?: string;
-          almacenes?: {
-            nombre: string;
-          };
-        };
-        Insert: {
-          id?: string;
-          almacen_id?: string;
-          metodo_pago: string;
-          cliente?: string;
-          estado?: string;
-          total: number;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          almacen_id?: string;
-          metodo_pago?: string;
-          cliente?: string;
-          estado?: string;
-          total?: number;
-          created_at?: string;
-        };
-      };
     };
-    Views: {};
     Functions: {};
-    Enums: {};
+    Enums: {
+      user_role: "admin" | "manager" | "sales" | "viewer";
+    };
     CompositeTypes: {};
   };
-};
+}

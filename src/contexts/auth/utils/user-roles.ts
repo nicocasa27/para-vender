@@ -91,9 +91,14 @@ export const fetchUserRoles = async (userId: string): Promise<UserRoleWithStore[
     }
 
     // Transform the data to match our expected format
-    const rolesWithStoreNames = data.map(role => ({
-      ...role,
-      almacen_nombre: role.almacenes?.nombre || null
+    const rolesWithStoreNames: UserRoleWithStore[] = data.map(role => ({
+      id: role.id,
+      user_id: role.user_id,
+      role: role.role as UserRole,
+      almacen_id: role.almacen_id,
+      created_at: role.created_at,
+      // Safe access to nested properties
+      almacen_nombre: role.almacenes ? role.almacenes.nombre : null
     }));
 
     console.log("AuthUtils: Processed roles with store names:", rolesWithStoreNames);
@@ -121,33 +126,24 @@ export const checkHasRole = (
     return false;
   }
   
-  // Verificación mejorada: Si el usuario tiene rol 'admin', siempre conceder acceso sin importar otros parámetros
+  // Verificación mejorada: Si el usuario tiene rol 'admin', siempre tiene acceso
   const isAdmin = userRoles.some(r => r.role === 'admin');
   if (isAdmin) {
-    console.log("AuthUtils: User is admin, granting access to all areas, including:", role);
+    console.log("AuthUtils: User is admin, granting access");
     return true;
   }
   
-  // Manager puede hacer todo excepto tareas específicas de admin
-  if (role !== 'admin' && userRoles.some(r => r.role === 'manager')) {
-    console.log("AuthUtils: User is manager, granting access to non-admin role:", role);
-    return true;
+  // Si se requiere un almacén específico, verificar que tenga el rol para ese almacén
+  if (storeId) {
+    const hasRoleForStore = userRoles.some(r => 
+      r.role === role && r.almacen_id === storeId
+    );
+    console.log(`AuthUtils: User has role ${role} for store ${storeId}: ${hasRoleForStore}`);
+    return hasRoleForStore;
   }
   
-  // Para roles específicos de almacén (como sales)
-  if (storeId && userRoles.some(r => 
-    r.role === role && r.almacen_id === storeId
-  )) {
-    console.log("AuthUtils: User has store-specific role for requested store, granting access");
-    return true;
-  }
-  
-  // Para roles generales sin especificidad de almacén (como viewer)
-  if (!storeId && userRoles.some(r => r.role === role)) {
-    console.log("AuthUtils: User has general role, granting access");
-    return true;
-  }
-  
-  console.log("AuthUtils: User does not have required role, denying access");
-  return false;
+  // Si no se requiere un almacén específico, verificar que tenga el rol en general
+  const hasRole = userRoles.some(r => r.role === role);
+  console.log(`AuthUtils: User has role ${role}: ${hasRole}`);
+  return hasRole;
 };

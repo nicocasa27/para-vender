@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/auth";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
@@ -6,14 +5,7 @@ import { ProductGrid } from "@/components/pos/ProductGrid";
 import { Cart } from "@/components/pos/Cart";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-
-interface Product {
-  id: string;
-  nombre: string;
-  precio_venta: number;
-  stock_total?: number;
-  almacen_id?: string;
-}
+import { Product } from "@/types/inventory";
 
 interface CartItem {
   id: string;
@@ -31,21 +23,18 @@ export default function PointOfSale() {
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // Actualizar tienda seleccionada cuando se carguen las tiendas
   useEffect(() => {
     if (!isLoading && stores.length > 0 && !selectedStore) {
       setSelectedStore(stores[0].id);
     }
   }, [stores, isLoading, selectedStore]);
 
-  // Cargar productos cuando se seleccione una tienda
   useEffect(() => {
     if (!selectedStore) return;
 
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        // Intentamos obtener productos con su stock en la tienda seleccionada
         const { data, error } = await supabase
           .from('productos')
           .select(`
@@ -56,7 +45,6 @@ export default function PointOfSale() {
 
         if (error) throw error;
 
-        // Ahora obtenemos el inventario para la tienda seleccionada
         const { data: inventoryData, error: inventoryError } = await supabase
           .from('inventario')
           .select(`
@@ -67,7 +55,6 @@ export default function PointOfSale() {
 
         if (inventoryError) throw inventoryError;
 
-        // Crear un mapa de producto_id -> cantidad
         const inventoryMap = new Map();
         if (inventoryData) {
           inventoryData.forEach((item) => {
@@ -75,7 +62,6 @@ export default function PointOfSale() {
           });
         }
 
-        // Convertir los datos al formato esperado por la interfaz
         const productsWithStock = data.map((p: any) => ({
           id: p.id,
           nombre: p.nombre,
@@ -97,9 +83,7 @@ export default function PointOfSale() {
     fetchProducts();
   }, [selectedStore]);
 
-  // Funciones para manipular el carrito
   const handleAddToCart = (product: Product) => {
-    // Verificar si hay stock disponible
     if (product.stock_total && product.stock_total <= 0) {
       toast.error(`${product.nombre} no tiene stock disponible`);
       return;
@@ -107,13 +91,11 @@ export default function PointOfSale() {
 
     const existingItem = cart.find((item) => item.id === product.id);
     if (existingItem) {
-      // Verificar si se puede incrementar (stock disponible)
       if (existingItem.cantidad >= (product.stock_total || 0)) {
         toast.error(`No hay más stock disponible de ${product.nombre}`);
         return;
       }
       
-      // Incrementar cantidad si ya existe
       setCart(
         cart.map((item) =>
           item.id === product.id
@@ -122,7 +104,6 @@ export default function PointOfSale() {
         )
       );
     } else {
-      // Añadir nuevo producto al carrito
       setCart([
         ...cart,
         {
@@ -176,12 +157,10 @@ export default function PointOfSale() {
 
       console.log("Iniciando venta con método de pago:", paymentMethod);
       
-      // Calcular subtotal e impuestos
       const subtotal = cart.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
-      const taxes = subtotal * 0.16; // IVA 16%
+      const taxes = subtotal * 0.16;
       const total = subtotal + taxes;
       
-      // Crear la venta en Supabase
       const { data: ventaData, error: ventaError } = await supabase
         .from('ventas')
         .insert({
@@ -200,9 +179,6 @@ export default function PointOfSale() {
         return false;
       }
       
-      console.log("Venta creada con ID:", ventaData.id);
-      
-      // Crear los detalles de la venta
       const detallesVenta = cart.map(item => ({
         venta_id: ventaData.id,
         producto_id: item.id,
@@ -221,9 +197,7 @@ export default function PointOfSale() {
         return false;
       }
       
-      // Actualizar el inventario (reducir stock)
       const inventarioPromises = cart.map(async (item) => {
-        // Buscar el registro actual de inventario
         const { data: inventarioActual, error: inventarioError } = await supabase
           .from('inventario')
           .select('id, cantidad')
@@ -241,7 +215,6 @@ export default function PointOfSale() {
           throw new Error(`No existe registro de inventario para ${item.nombre} en esta sucursal`);
         }
         
-        // Actualizar el inventario
         const nuevaCantidad = Number(inventarioActual.cantidad) - item.cantidad;
         
         if (nuevaCantidad < 0) {
@@ -258,7 +231,6 @@ export default function PointOfSale() {
           throw updateError;
         }
         
-        // Registrar el movimiento de salida
         const { error: movimientoError } = await supabase
           .from('movimientos')
           .insert({
@@ -275,10 +247,8 @@ export default function PointOfSale() {
         }
       });
       
-      // Esperar a que se completen todas las actualizaciones de inventario
       await Promise.all(inventarioPromises);
       
-      // Limpiar el carrito después de la venta exitosa
       setCart([]);
       
       console.log("✅ Venta completada correctamente");
@@ -303,7 +273,6 @@ export default function PointOfSale() {
     }
   };
 
-  // Para desarrollo/demo
   if (!hasRole("sales") && !hasRole("admin")) {
     return (
       <div className="flex flex-col items-center justify-center h-full">

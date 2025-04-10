@@ -2,7 +2,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { UserWithRoles } from "@/types/auth";
+import { UserWithRoles, UserRoleWithStore } from "@/types/auth";
 
 export function useNewUserManagement(user: any, hasAdminRole: boolean) {
   const queryClient = useQueryClient();
@@ -43,16 +43,27 @@ export function useNewUserManagement(user: any, hasAdminRole: boolean) {
         if (rolesError) throw rolesError;
 
         // Combinar los datos
-        const usersWithRoles: UserWithRoles[] = profiles.map(profile => ({
-          id: profile.id,
-          email: profile.email || "",
-          full_name: profile.full_name || null,
-          created_at: profile.created_at,
-          roles: roles?.filter(r => r.user_id === profile.id).map(role => ({
-            ...role,
-            almacen_nombre: role.almacenes?.nombre || null
-          })) || []
-        }));
+        const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
+          // Find all roles for this user
+          const userRoles: UserRoleWithStore[] = (roles || [])
+            .filter(r => r.user_id === profile.id)
+            .map(role => ({
+              id: role.id,
+              user_id: role.user_id,
+              role: role.role as any,
+              almacen_id: role.almacen_id,
+              created_at: role.created_at,
+              almacen_nombre: role.almacenes ? role.almacenes.nombre : null
+            }));
+            
+          return {
+            id: profile.id,
+            email: profile.email || "",
+            full_name: profile.full_name || null,
+            created_at: profile.created_at,
+            roles: userRoles
+          };
+        });
 
         return usersWithRoles;
       } catch (error: any) {

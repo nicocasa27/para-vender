@@ -1,8 +1,8 @@
 
-import { Database } from "@/integrations/supabase/types";
+import { Database } from "@/types/supabase";
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-export type UserRole = Database["public"]["Enums"]["user_role"];
+export type UserRole = "admin" | "manager" | "sales" | "viewer";
 export type Role = "admin" | "manager" | "sales" | "viewer";
 
 export interface UserRoleWithStore {
@@ -12,7 +12,9 @@ export interface UserRoleWithStore {
   almacen_id: string | null;
   almacen_nombre?: string | null;
   created_at?: string;
-  almacenes?: { nombre: string } | null;
+  almacenes?: { 
+    nombre: string 
+  } | null;
 }
 
 export interface UserWithRoles {

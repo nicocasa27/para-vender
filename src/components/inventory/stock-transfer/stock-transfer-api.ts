@@ -50,7 +50,7 @@ export const getProductsInStore = async (storeId: string): Promise<ProductStock[
     }
 
     // Transform the data to match our ProductStock interface
-    return (data || []).map(item => ({
+    return (data || []).map((item: any) => ({
       id: item.productos.id,
       nombre: item.productos.nombre,
       unidad: item.productos.unidades?.abreviatura || "u",
@@ -90,7 +90,7 @@ export const getRecentTransfers = async (limit = 10): Promise<TransferRecord[]> 
     }
 
     // Transform the data to match our TransferRecord interface
-    return (data || []).map(item => ({
+    return (data || []).map((item: any) => ({
       id: item.id,
       fecha: new Date(item.created_at).toLocaleDateString(),
       origen: item.origen?.nombre || "N/A",
@@ -129,6 +129,12 @@ export const executeStockTransfer = async (
         description: sourceError.message
       });
       throw sourceError;
+    }
+    
+    // Null check for sourceInventory
+    if (!sourceInventory) {
+      toast.error("No se encontró inventario en el almacén de origen");
+      throw new Error("No se encontró inventario");
     }
     
     // 2. Update source inventory (decrement)

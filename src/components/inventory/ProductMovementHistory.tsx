@@ -60,7 +60,19 @@ export const ProductMovementHistory: React.FC<ProductMovementHistoryProps> = ({ 
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setMovements(data || []);
+      
+      // Map the data to the Movement interface
+      const formattedData: Movement[] = (data || []).map((item: any) => ({
+        id: item.id,
+        tipo: item.tipo,
+        cantidad: Number(item.cantidad),
+        created_at: item.created_at,
+        notas: item.notas,
+        origen: item.origen ? { nombre: item.origen.nombre } : undefined,
+        destino: item.destino ? { nombre: item.destino.nombre } : undefined
+      }));
+      
+      setMovements(formattedData);
     } catch (error) {
       console.error("Error al cargar el historial de movimientos:", error);
     } finally {

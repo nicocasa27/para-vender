@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,7 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { StoreData, ProductStock } from "./types";
+import { supabase } from "@/integrations/supabase/client";
+import { StoreData, ProductStock, StockTransferFormProps } from "./types";
 import { getStores, getProductsInStore, executeStockTransfer } from "./stock-transfer-api";
 import { toast } from "sonner";
 
@@ -32,11 +34,7 @@ const transferSchema = z.object({
   notes: z.string().optional(),
 });
 
-interface StockTransferFormProps {
-  onTransferComplete: () => void;
-}
-
-export function StockTransferForm({ onTransferComplete }: StockTransferFormProps) {
+export function StockTransferForm({ onTransferComplete, onTransferSuccess }: StockTransferFormProps) {
   const [stores, setStores] = useState<StoreData[]>([]);
   const [products, setProducts] = useState<ProductStock[]>([]);
   const [sourceData, setSourceData] = useState<{ cantidad: number } | null>(null);
@@ -80,6 +78,7 @@ export function StockTransferForm({ onTransferComplete }: StockTransferFormProps
 
   useEffect(() => {
     const loadSourceData = async () => {
+      const { sourceStoreId, productId } = form.getValues();
       if (sourceStoreId && productId) {
         // Fetch the source inventory data
         try {
@@ -107,9 +106,10 @@ export function StockTransferForm({ onTransferComplete }: StockTransferFormProps
       }
     };
     loadSourceData();
-  }, [sourceStoreId, productId]);
+  }, [form]);
 
   const handleUpdateInventory = async () => {
+    const { sourceStoreId, productId, quantity } = form.getValues();
     if (!sourceStoreId || !productId) return;
 
     if (!sourceData) {
@@ -117,7 +117,7 @@ export function StockTransferForm({ onTransferComplete }: StockTransferFormProps
       return;
     }
 
-    const quantity = form.getValues("quantity");
+    // Check if sourceData is null before accessing its properties
     if (sourceData) {
       const newSourceAmount = Math.max(0, sourceData.cantidad - Number(quantity));
 
@@ -152,7 +152,10 @@ export function StockTransferForm({ onTransferComplete }: StockTransferFormProps
         data.notes
       );
       form.reset();
-      onTransferComplete();
+      
+      // Support both callback props for backward compatibility
+      if (onTransferComplete) onTransferComplete();
+      if (onTransferSuccess) onTransferSuccess();
     } catch (error) {
       console.error("Error al procesar la transferencia:", error);
     } finally {

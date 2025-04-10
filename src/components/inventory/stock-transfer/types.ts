@@ -28,3 +28,8 @@ export interface StockTransferFormData {
   quantity: number;
   notes?: string;
 }
+
+export interface StockTransferFormProps {
+  onTransferComplete: () => void;
+  onTransferSuccess?: () => void; // Adding backward compatibility
+}

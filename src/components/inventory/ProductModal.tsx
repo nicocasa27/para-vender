@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ProductForm } from "./ProductForm";
 import {
@@ -11,6 +12,20 @@ import { Loader, AlertTriangle } from "lucide-react";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+
+interface ProductData {
+  id?: string;
+  nombre: string;
+  categoria_id: string;
+  unidad_id: string;
+  precio_compra?: number;
+  precio_venta: number;
+  stock_minimo?: number;
+  stock_maximo?: number;
+  // Separate field for initial inventory data
+  warehouse?: string;
+  initialStock?: number;
+}
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -94,7 +109,7 @@ export function ProductModal({
     console.log("🔑 ProductModal: ID utilizado para la operación:", productId);
     
     // Crear objeto de datos del producto
-    const productData = {
+    const productData: ProductData = {
       id: productId,
       nombre: data.name,
       categoria_id: data.category,
@@ -105,12 +120,10 @@ export function ProductModal({
       stock_maximo: data.maxStock
     };
     
-    // Agregar datos del inventario inicial si es un producto nuevo
+    // Mantener el warehouse y initialStock como propiedades separadas
     if (!isEditing && data.warehouse && data.initialStock > 0) {
-      productData.inventario = {
-        almacen_id: data.warehouse,
-        cantidad: data.initialStock
-      };
+      productData.warehouse = data.warehouse;
+      productData.initialStock = data.initialStock;
     }
     
     setTransformedData(productData);

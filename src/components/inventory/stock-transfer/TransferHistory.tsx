@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,21 +11,7 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { ArrowRight, RefreshCw } from "lucide-react";
-
-interface TransferRecord {
-  id: string;
-  created_at: string;
-  cantidad: number;
-  producto: {
-    nombre: string;
-  };
-  almacen_origen: {
-    nombre: string;
-  };
-  almacen_destino: {
-    nombre: string;
-  };
-}
+import { TransferRecord } from "./types";
 
 export function TransferHistory() {
   const [transfers, setTransfers] = useState<TransferRecord[]>([]);
@@ -54,7 +39,18 @@ export function TransferHistory() {
         .limit(10);
 
       if (error) throw error;
-      setTransfers(data || []);
+      
+      const formattedTransfers: TransferRecord[] = (data || []).map((item: any) => ({
+        id: item.id,
+        fecha: format(new Date(item.created_at), 'dd/MM/yyyy HH:mm'),
+        origen: item.almacen_origen?.nombre || "N/A",
+        destino: item.almacen_destino?.nombre || "N/A",
+        producto: item.producto?.nombre || "N/A",
+        cantidad: Number(item.cantidad),
+        notas: null
+      }));
+      
+      setTransfers(formattedTransfers);
     } catch (error) {
       console.error("Error al cargar transferencias:", error);
     } finally {
@@ -99,14 +95,14 @@ export function TransferHistory() {
               {transfers.map((transfer) => (
                 <TableRow key={transfer.id}>
                   <TableCell className="whitespace-nowrap">
-                    {format(new Date(transfer.created_at), 'dd/MM/yyyy HH:mm')}
+                    {transfer.fecha}
                   </TableCell>
-                  <TableCell>{transfer.producto.nombre}</TableCell>
+                  <TableCell>{transfer.producto}</TableCell>
                   <TableCell>
                     <div className="flex flex-col xs:flex-row items-start xs:items-center text-sm">
-                      <span className="font-medium">{transfer.almacen_origen.nombre}</span>
+                      <span className="font-medium">{transfer.origen}</span>
                       <ArrowRight className="h-3 w-3 mx-1 hidden xs:block" />
-                      <span className="font-medium">{transfer.almacen_destino.nombre}</span>
+                      <span className="font-medium">{transfer.destino}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-right">{transfer.cantidad}</TableCell>

@@ -14,7 +14,7 @@ import { TransferHistory } from "./TransferHistory";
 export function StockTransferManager() {
   const [refreshHistoryToggle, setRefreshHistoryToggle] = useState(false);
 
-  const handleTransferSuccess = () => {
+  const handleTransferComplete = () => {
     setRefreshHistoryToggle(!refreshHistoryToggle);
   };
 
@@ -28,7 +28,7 @@ export function StockTransferManager() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <StockTransferForm onTransferSuccess={handleTransferSuccess} />
+          <StockTransferForm onTransferComplete={handleTransferComplete} />
         </CardContent>
       </Card>
 

@@ -14,6 +14,10 @@ export interface Product {
   stock_maximo?: number;
   stock_by_store?: {[key: string]: number};
   store_names?: {[key: string]: string};
+  inventario?: {
+    almacen_id: string;
+    cantidad: number;
+  };
 }
 
 export interface Category {

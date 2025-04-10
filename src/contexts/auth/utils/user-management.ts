@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { UserWithRoles } from "@/types/auth";
+import { UserWithRoles, UserRoleWithStore } from "@/types/auth";
 
 /**
  * Obtiene todos los usuarios con sus roles
@@ -70,14 +70,14 @@ export const fetchAllUsers = async (): Promise<UserWithRoles[]> => {
     // Process each role and group by user_id
     userRolesData.forEach(role => {
       const userId = role.user_id;
-      const profile = role.profiles || { id: userId, email: "Unknown", full_name: null };
+      const profileData = role.profiles;
       
       // If this user isn't in our map yet, add them
       if (!usersMap.has(userId)) {
         usersMap.set(userId, {
           id: userId,
-          email: profile.email || "",
-          full_name: profile.full_name || null,
+          email: profileData ? profileData.email || "" : "",
+          full_name: profileData ? profileData.full_name || null : null,
           created_at: role.created_at,
           roles: []
         });
@@ -87,8 +87,12 @@ export const fetchAllUsers = async (): Promise<UserWithRoles[]> => {
       const userEntry = usersMap.get(userId);
       if (userEntry) {
         userEntry.roles.push({
-          ...role,
-          almacen_nombre: role.almacenes?.nombre || null
+          id: role.id,
+          user_id: role.user_id,
+          role: role.role as any,
+          almacen_id: role.almacen_id,
+          created_at: role.created_at,
+          almacen_nombre: role.almacenes ? role.almacenes.nombre : null
         });
       }
     });
