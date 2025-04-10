@@ -1,55 +1,16 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Product, Category, Store } from "@/types/inventory";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { fetchProducts, fetchCategories, fetchStores, addProduct as addProductService, updateProduct, deleteProduct as deleteProductService } from "@/services/inventoryService";
-
-// Safe mapping function for nested properties
-function mapInventoryData(products: any[], inventoryData: any[]) {
-  return products.map(product => {
-    const inventoryItems = inventoryData?.filter(
-      item => item.producto_id === product.id
-    ) || [];
-
-    const stockByStore: {[key: string]: number} = {};
-    const storeNames: {[key: string]: string} = {};
-
-    let stockTotal = 0;
-    
-    inventoryItems.forEach(item => {
-      const cantidad = Number(item.cantidad);
-      const almacenId = item.almacen_id;
-      stockByStore[almacenId] = cantidad;
-      stockTotal += cantidad;
-      
-      if (item.almacenes) {
-        storeNames[almacenId] = item.almacenes.nombre || '';
-      }
-    });
-
-    // Ahora extraemos los valores de los objetos "categorias" y "unidades" 
-    // que fueron modificados en el servicio
-    const catName = product.categorias ? product.categorias.nombre || "Sin categoría" : "Sin categoría";
-    const unitAbbr = product.unidades ? product.unidades.nombre || "u" : "u";
-
-    return {
-      id: product.id || '',
-      nombre: product.nombre || '',
-      precio_venta: Number(product.precio_venta) || 0,
-      precio_compra: Number(product.precio_compra || 0),
-      stock_total: stockTotal,
-      categoria: catName,
-      categoria_id: product.categoria_id,
-      unidad: unitAbbr,
-      unidad_id: product.unidad_id,
-      stock_minimo: Number(product.stock_minimo || 0),
-      stock_maximo: Number(product.stock_maximo || 0),
-      stock_by_store: stockByStore,
-      store_names: storeNames
-    } as Product;
-  });
-}
+import { 
+  fetchProducts, 
+  fetchCategories, 
+  fetchStores, 
+  addProduct as addProductService, 
+  updateProduct, 
+  deleteProduct as deleteProductService 
+} from "@/services/inventoryService";
+import { mapInventoryData } from "@/utils/inventory/mappers";
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
