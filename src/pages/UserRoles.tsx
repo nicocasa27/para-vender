@@ -2,7 +2,7 @@
 import { UserRolesTable } from "@/components/users/UserRolesTable";
 import { useUsersAndRoles } from "@/hooks/useUsersAndRoles";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Shield, Trash2 } from "lucide-react";
+import { RefreshCw, Shield, Trash2, UsersRound, SyncIcon } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 import { useEffect } from "react";
@@ -15,10 +15,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { UserWithRoles } from "@/types/auth";
+import { useSyncUsers } from "@/hooks/users/useSyncUsers";
 
 const UserRoles = () => {
   const { hasRole } = useAuth();
@@ -34,6 +34,8 @@ const UserRoles = () => {
     addRole,
     deleteUser
   } = useUsersAndRoles(isAdmin);
+
+  const { syncUsers, syncing } = useSyncUsers();
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -53,18 +55,6 @@ const UserRoles = () => {
     }
   };
 
-  // Handle role deletion
-  const handleDeleteRole = async (roleId: string) => {
-    try {
-      console.log("Deleting role:", roleId);
-      await deleteRole(roleId);
-      // No need to call fetchUsers since deleteRole internally refreshes the data
-    } catch (error) {
-      console.error("Error al eliminar rol:", error);
-      toast.error("Error al eliminar rol");
-    }
-  };
-
   // Handle user deletion
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
@@ -76,6 +66,16 @@ const UserRoles = () => {
     } catch (error) {
       console.error("Error al eliminar usuario:", error);
       toast.error("Error al eliminar usuario");
+    }
+  };
+
+  // Handle user synchronization
+  const handleSyncUsers = async () => {
+    try {
+      await syncUsers();
+      await fetchUsers(); // Refresh the list after sync
+    } catch (error) {
+      console.error("Error en sincronización:", error);
     }
   };
 
@@ -102,16 +102,28 @@ const UserRoles = () => {
             Gestione los permisos y roles de los usuarios del sistema.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={loading}
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          {loading ? "Cargando..." : "Actualizar"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSyncUsers}
+            disabled={syncing || loading}
+            className="flex items-center gap-2"
+          >
+            <SyncIcon className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Sincronizando..." : "Sincronizar usuarios"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={loading}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            {loading ? "Cargando..." : "Actualizar"}
+          </Button>
+        </div>
       </div>
 
       {error ? (
@@ -131,7 +143,7 @@ const UserRoles = () => {
         <UserRolesTable
           users={users} 
           loading={loading}
-          onDeleteRole={handleDeleteRole}
+          onDeleteRole={deleteRole}
           onRefresh={handleRefresh}
           onDeleteUser={(user) => setUserToDelete(user)}
         />
