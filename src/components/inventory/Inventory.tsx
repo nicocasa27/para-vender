@@ -1,8 +1,9 @@
+
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductsView } from "@/components/ProductsView";
-import { CategoriesView } from "@/components/CategoriesView";
-import { StoresView } from "@/components/StoresView";
+import { CategoriesView } from "@/components/inventory/CategoriesView";
+import { StoresView } from "@/components/inventory/StoresView";
 import { StockTransfer } from "./StockTransfer";
 
 export function Inventory() {
