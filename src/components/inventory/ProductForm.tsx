@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -20,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader } from "lucide-react";
+import { Loader, Save } from "lucide-react";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
 import { useStores } from "@/hooks/useStores";
 import { toast } from "sonner";
@@ -437,7 +438,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             )}
           </div>
 
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-between space-x-2">
             <Button
               variant="outline"
               type="button"
@@ -445,6 +446,43 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             >
               Restablecer
             </Button>
+            
+            {isEditing && (
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="min-w-[150px] bg-blue-600 hover:bg-blue-700"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                    Actualizando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Guardar Cambios
+                  </>
+                )}
+              </Button>
+            )}
+            
+            {!isEditing && (
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="min-w-[150px]"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                    Agregando...
+                  </>
+                ) : (
+                  "Agregar Producto"
+                )}
+              </Button>
+            )}
           </div>
         </form>
       </Form>
