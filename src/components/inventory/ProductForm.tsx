@@ -458,11 +458,19 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             >
               Restablecer
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && (
-                <Loader className="mr-2 h-4 w-4 animate-spin" />
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="min-w-[150px]"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  {isEditing ? "Actualizando..." : "Agregando..."}
+                </>
+              ) : (
+                isEditing ? "Actualizar Producto" : "Agregar Producto"
               )}
-              {isEditing ? "Actualizar Producto" : "Agregar Producto"}
             </Button>
           </div>
         </form>
