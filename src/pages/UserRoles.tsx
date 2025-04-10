@@ -1,9 +1,7 @@
-
 import { UserRolesTable } from "@/components/users/UserRolesTable";
 import { useUsersAndRoles } from "@/hooks/useUsersAndRoles";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Shield, Trash2, UsersRound, SyncIcon as SyncIconInvalid } from "lucide-react";
-import { Loader2 } from "lucide-react"; // Replacing SyncIcon with Loader2
+import { RefreshCw, Shield, Trash2, UsersRound, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 import { useEffect } from "react";
@@ -38,13 +36,11 @@ const UserRoles = () => {
 
   const { syncUsers, syncing } = useSyncUsers();
 
-  // Cargar datos al montar el componente
   useEffect(() => {
     fetchUsers();
     console.log("UserRoles component mounted, fetching users...");
   }, [fetchUsers]);
 
-  // Handle refresh button click
   const handleRefresh = async () => {
     try {
       console.log("Manual refresh triggered");
@@ -56,7 +52,6 @@ const UserRoles = () => {
     }
   };
 
-  // Handle user deletion
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
     
@@ -70,11 +65,10 @@ const UserRoles = () => {
     }
   };
 
-  // Handle user synchronization
   const handleSyncUsers = async () => {
     try {
       await syncUsers();
-      await fetchUsers(); // Refresh the list after sync
+      await fetchUsers();
     } catch (error) {
       console.error("Error en sincronización:", error);
     }
@@ -154,7 +148,6 @@ const UserRoles = () => {
         Total de usuarios cargados: {users.length}
       </div>
 
-      {/* Diálogo de confirmación para eliminar usuario */}
       <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
