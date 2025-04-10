@@ -11,6 +11,8 @@ import {
   deleteProduct as deleteProductService 
 } from "@/services/inventoryService";
 import { mapInventoryData } from "@/utils/inventory/mappers";
+import { useAuth } from "@/contexts/auth";
+import { useCurrentStores } from "@/hooks/useCurrentStores";
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -20,6 +22,27 @@ export function useProducts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [storeFilter, setStoreFilter] = useState<string | null>(null);
+  
+  // Obtener información del usuario y sus sucursales asignadas
+  const { user, userRoles } = useAuth();
+  const { stores: userStores, hasStores } = useCurrentStores();
+  
+  // Función para obtener los IDs de las sucursales asignadas al usuario
+  const getUserStoreIds = useMemo(() => {
+    const isAdmin = userRoles.some(role => role.role === 'admin');
+    
+    // Si es admin, no filtramos por sucursal (puede ver todo)
+    if (isAdmin) {
+      return null;
+    }
+    
+    // Si tiene sucursales asignadas, obtenemos sus IDs
+    if (hasStores) {
+      return userStores.map(store => store.id);
+    }
+    
+    return [];
+  }, [userRoles, userStores, hasStores]);
 
   // Function to get a product by ID
   const getProductById = (id: string) => {
@@ -39,6 +62,7 @@ export function useProducts() {
       setStores(storeData || []);
       
       console.log(`Loaded ${mappedProducts.length} products, ${categoryData?.length} categories, ${storeData?.length} stores`);
+      console.log('User store IDs:', getUserStoreIds);
     } catch (error) {
       console.error("Error fetching products:", error);
       toast.error("Error al cargar productos");
@@ -97,17 +121,34 @@ export function useProducts() {
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
-      // Apply search filter
+      // Primero filtramos por las sucursales asignadas al usuario
+      if (getUserStoreIds) {
+        // Si el usuario tiene sucursales asignadas pero el producto no tiene stock en ninguna
+        if (getUserStoreIds.length > 0) {
+          // Verificar si el producto tiene stock en alguna de las sucursales del usuario
+          const hasStockInUserStore = getUserStoreIds.some(storeId => 
+            product.stock_by_store && 
+            product.stock_by_store[storeId] !== undefined
+          );
+          
+          // Si no tiene stock en ninguna sucursal del usuario, no mostrar
+          if (!hasStockInUserStore) {
+            return false;
+          }
+        }
+      }
+      
+      // Aplicar filtro de búsqueda
       const matchesSearch = searchTerm 
         ? product.nombre.toLowerCase().includes(searchTerm.toLowerCase())
         : true;
       
-      // Apply category filter
+      // Aplicar filtro de categoría
       const matchesCategory = categoryFilter 
         ? product.categoria_id === categoryFilter
         : true;
       
-      // Apply store filter
+      // Aplicar filtro de sucursal seleccionada por el usuario en la UI
       const matchesStore = storeFilter
         ? (product.stock_by_store && 
            product.stock_by_store[storeFilter] !== undefined && 
@@ -116,7 +157,7 @@ export function useProducts() {
       
       return matchesSearch && matchesCategory && matchesStore;
     });
-  }, [products, searchTerm, categoryFilter, storeFilter]);
+  }, [products, searchTerm, categoryFilter, storeFilter, getUserStoreIds]);
   
   return {
     products: filteredProducts,

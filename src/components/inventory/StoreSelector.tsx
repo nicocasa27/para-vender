@@ -1,5 +1,7 @@
 
 import { useStores } from "@/hooks/useStores";
+import { useCurrentStores } from "@/hooks/useCurrentStores";
+import { useAuth } from "@/contexts/auth";
 import { 
   Select,
   SelectContent,
@@ -26,12 +28,20 @@ export function StoreSelector({
   disabled = false,
   excludeStoreId = null
 }: StoreSelectorProps) {
-  const { stores, isLoading } = useStores();
-
-  // Filter out the excluded store if provided
+  const { stores: allStores, isLoading } = useStores();
+  const { stores: userStores, hasStores } = useCurrentStores();
+  const { userRoles } = useAuth();
+  
+  // Determinar si el usuario es administrador
+  const isAdmin = userRoles.some(role => role.role === 'admin');
+  
+  // Determinar qué tiendas mostrar basado en el rol del usuario
+  const storesToShow = isAdmin ? allStores : userStores;
+  
+  // Filtrar la sucursal excluida si se proporciona
   const filteredStores = excludeStoreId 
-    ? stores.filter(store => store.id !== excludeStoreId)
-    : stores;
+    ? storesToShow.filter(store => store.id !== excludeStoreId)
+    : storesToShow;
 
   if (isLoading) {
     return <div className="text-sm text-muted-foreground">Cargando sucursales...</div>;
