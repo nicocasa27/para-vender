@@ -2,7 +2,8 @@
 import { UserRolesTable } from "@/components/users/UserRolesTable";
 import { useUsersAndRoles } from "@/hooks/useUsersAndRoles";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Shield, Trash2, UsersRound, SyncIcon } from "lucide-react";
+import { RefreshCw, Shield, Trash2, UsersRound, SyncIcon as SyncIconInvalid } from "lucide-react";
+import { Loader2 } from "lucide-react"; // Replacing SyncIcon with Loader2
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 import { useEffect } from "react";
@@ -110,7 +111,7 @@ const UserRoles = () => {
             disabled={syncing || loading}
             className="flex items-center gap-2"
           >
-            <SyncIcon className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+            <Loader2 className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
             {syncing ? "Sincronizando..." : "Sincronizar usuarios"}
           </Button>
           <Button
