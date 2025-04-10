@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Product, Category, Store } from '@/types/inventory';
@@ -114,99 +113,53 @@ export function useProducts() {
 
   const handleAddProduct = async (productData: any) => {
     try {
-      if (!productData.nombre || !productData.categoria_id || !productData.unidad_id) {
-        toast.error("Datos incompletos", {
-          description: "Por favor complete todos los campos obligatorios"
-        });
-        return;
+      console.log("🚀 handleAddProduct: Datos recibidos:", productData);
+      
+      if (!productData.nombre && !productData.name) {
+        throw new Error("El nombre del producto es requerido");
+      }
+      
+      if (!productData.categoria_id && !productData.category) {
+        throw new Error("La categoría del producto es requerida");
+      }
+      
+      if (!productData.unidad_id && !productData.unit) {
+        throw new Error("La unidad del producto es requerida");
       }
       
       await inventoryService.addProduct(productData);
       
-      toast.success("Producto agregado", {
-        description: `${productData.nombre} ha sido agregado correctamente`
-      });
-      
-      loadProducts();
+      await loadProducts();
+      return true;
     } catch (error) {
       console.error("Error adding product:", error);
-      toast.error("Error al agregar producto", {
-        description: "No se pudo guardar el producto"
-      });
+      throw error; // Propagamos el error para manejarlo en el componente
     }
   };
 
   const handleEditProduct = async (productData: any) => {
     try {
-      toast.info("✅ handleEditProduct llamado", {
-        description: "Iniciando proceso de actualización"
-      });
-      
-      console.log("%c✅ handleEditProduct ejecutado con datos:", "color: blue; font-weight: bold", productData);
-      console.log("🔍 Verificando ID de producto:", productData.id);
+      console.log("🔄 handleEditProduct: Datos recibidos:", productData);
       
       if (!productData.id) {
         console.error("❌ handleEditProduct: Error - ID de producto no proporcionado");
-        toast.error("❌ Falló en handleEditProduct: ID faltante", {
-          description: "Identificador de producto no válido"
-        });
-        return;
+        throw new Error("El ID del producto es requerido para la actualización");
       }
       
-      if (!productData.nombre || !productData.categoria_id || !productData.unidad_id) {
-        console.error("❌ handleEditProduct: Error - Datos incompletos", productData);
-        toast.error("❌ Falló en handleEditProduct: Datos incompletos", {
-          description: "Por favor complete todos los campos obligatorios"
-        });
-        return;
+      if ((!productData.nombre && !productData.name) || 
+          (!productData.categoria_id && !productData.category) || 
+          (!productData.unidad_id && !productData.unit)) {
+        throw new Error("Todos los campos obligatorios deben estar completos");
       }
       
-      console.log("📩 Antes de enviar a updateProduct - ID:", productData.id);
-      console.log("📩 Antes de enviar a updateProduct - Datos completos:", JSON.stringify(productData, null, 2));
+      const result = await inventoryService.updateProduct(productData);
       
-      toast.info("✅ updateProduct enviado a Supabase", {
-        description: `ID: ${productData.id}`
-      });
-      
-      try {
-        const result = await inventoryService.updateProduct(productData);
-        console.log("%c🧠 Resultado de Supabase:", "color: green; font-weight: bold", result);
-        
-        toast.success("✅ Producto actualizado", {
-          description: `${productData.nombre} ha sido actualizado correctamente`
-        });
-        
-        await loadProducts();
-      } catch (error: any) {
-        console.error("%c❌ Error específico al actualizar producto:", "color: red; font-weight: bold", error);
-        
-        toast.error("❌ updateProduct falló", {
-          description: error.message || "No se pudo actualizar el producto"
-        });
-        
-        if (error.message?.includes("No se encontró ningún producto con el ID")) {
-          toast.error("❌ Producto no encontrado", {
-            description: "El ID del producto no existe o no tienes permisos para editarlo"
-          });
-        } else if (error.message?.includes("La actualización no modificó ningún registro")) {
-          toast.error("❌ Sin permisos para actualizar", {
-            description: "No tienes permisos para editar este producto (restricción RLS)"
-          });
-        } else {
-          toast.error("❌ Error al actualizar producto", {
-            description: error.message || "No se pudo actualizar el producto"
-          });
-        }
-        
-        throw error; // Re-lanzar para que el modal lo capture
-      }
-      
+      console.log("✅ handleEditProduct: Resultado de la actualización:", result);
+      await loadProducts();
+      return result;
     } catch (error) {
-      console.error("%c❌ Error general al actualizar producto:", "color: red; font-weight: bold", error);
-      toast.error("❌ Error general en handleEditProduct", {
-        description: "No se pudo completar la actualización del producto"
-      });
-      throw error; // Re-lanzar para que el modal lo capture
+      console.error("❌ Error en handleEditProduct:", error);
+      throw error; // Propagamos el error para manejarlo en el componente
     }
   };
 

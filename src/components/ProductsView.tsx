@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
@@ -53,30 +52,45 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
 
   const handleAddProduct = async (productData: any) => {
     try {
+      toast.info("Iniciando proceso de agregar producto...");
       await addProduct(productData);
+      toast.success("Producto agregado exitosamente");
       setIsAddModalOpen(false);
       if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Error al añadir producto:", error);
-      toast.error("Error al añadir producto");
+      toast.error("Error al añadir producto", {
+        description: error instanceof Error ? error.message : "Error desconocido"
+      });
     }
   };
 
   const handleEditProduct = async (productData: any) => {
-    if (!currentProduct) return;
+    if (!currentProduct) {
+      toast.error("No hay producto seleccionado para editar");
+      return;
+    }
     
     try {
-      await editProduct({
+      const dataWithId = {
         ...productData,
         id: currentProduct.id
-      });
+      };
       
+      console.log("🔄 ProductsView.handleEditProduct: Datos enviados:", dataWithId);
+      toast.info("Iniciando proceso de actualización...");
+      
+      await editProduct(dataWithId);
+      
+      toast.success("Producto actualizado exitosamente");
       setIsEditModalOpen(false);
       setCurrentProduct(null);
       if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Error al editar producto:", error);
-      toast.error("Error al editar producto");
+      toast.error("Error al editar producto", {
+        description: error instanceof Error ? error.message : "Error desconocido"
+      });
     }
   };
 
@@ -248,11 +262,7 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
             setIsEditModalOpen(false);
             setCurrentProduct(null);
           }}
-          onSubmit={(productData) => {
-            console.log("📊 ProductsView - onSubmit ejecutado con:", productData);
-            console.log("🔑 ProductsView - Verificando ID antes de handleEditProduct:", productData.id);
-            return handleEditProduct(productData);
-          }}
+          onSubmit={handleEditProduct}
           initialData={{
             id: currentProduct.id,
             name: currentProduct.nombre,
@@ -263,7 +273,7 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
             minStock: currentProduct.stock_minimo,
             maxStock: currentProduct.stock_maximo
           }}
-          isEditing
+          isEditing={true}
         />
       )}
 

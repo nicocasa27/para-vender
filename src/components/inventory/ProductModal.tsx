@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ProductForm } from "./ProductForm";
 import {
@@ -16,7 +15,7 @@ import { Button } from "@/components/ui/button";
 interface ProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => Promise<void>; // Cambiado a Promise<void>
+  onSubmit: (data: any) => Promise<void>;
   initialData?: any;
   isEditing?: boolean;
 }
@@ -73,35 +72,25 @@ export function ProductModal({
   }, [metadataError]);
 
   const handleSubmit = async (data: any) => {
-    console.log("%c🧠 handleSubmit recibió:", "color: purple; font-weight: bold", data);
-    toast.success("✅ ProductModal: handleSubmit ejecutado", {
-      description: "Datos recibidos del formulario",
-    });
+    console.log("🧠 ProductModal.handleSubmit: Datos recibidos:", data);
     
-    console.log("✅ ProductModal handleSubmit ejecutado con:", data);
-    console.log("📌 ProductModal isEditing:", isEditing);
-    console.log("📌 ProductModal initialData:", initialData);
-
     if (!categories.length || !units.length) {
-      toast.error("❌ Falló en ProductModal: datos incompletos", {
-        description:
-          "No se pueden cargar categorías o unidades. Por favor, intente nuevamente.",
-      });
-      throw new Error("No se pueden cargar categorías o unidades");
+      const errorMsg = "No se pueden cargar categorías o unidades";
+      toast.error("❌ Error:", { description: errorMsg });
+      throw new Error(errorMsg);
     }
 
     if (!data.name || !data.category || !data.unit) {
-      toast.error("❌ Falló en ProductModal: campos obligatorios", {
-        description: "Por favor complete todos los campos obligatorios",
-      });
-      throw new Error("Por favor complete todos los campos obligatorios");
+      const errorMsg = "Por favor complete todos los campos obligatorios";
+      toast.error("❌ Error:", { description: errorMsg });
+      throw new Error(errorMsg);
     }
 
-    // Asegurarnos que el ID se incluya explícitamente si estamos editando
     const productId = isEditing && initialData?.id ? initialData.id : null;
-    console.log("🔑 ID extraído de initialData:", productId);
+    console.log("🔑 ProductModal: ID utilizado para la operación:", productId);
     
     const productData = {
+      id: productId,
       nombre: data.name,
       categoria_id: data.category,
       unidad_id: data.unit,
@@ -109,17 +98,14 @@ export function ProductModal({
       precio_venta: data.salePrice,
       stock_minimo: data.minStock,
       stock_maximo: data.maxStock,
-      // Asegurarnos de incluir el ID siempre que sea un caso de edición
-      ...(isEditing && productId ? { id: productId } : {}),
     };
     
     setTransformedData(productData);
-
-    console.log("📩 Enviando datos transformados a onSubmit:", productData);
-    console.log("🔑 Verificando presencia de ID en datos transformados:", productData.id);
+    console.log("📩 ProductModal: Datos transformados:", productData);
 
     setIsSubmitting(true);
     try {
+      toast.info("⏳ Enviando datos a Supabase...");
       await onSubmit(productData);
       toast.success(
         isEditing
@@ -130,12 +116,12 @@ export function ProductModal({
     } catch (error) {
       console.error("❌ Error en ProductModal.handleSubmit:", error);
       toast.error(
-        isEditing ? "❌ Falló en ProductModal: error al actualizar" : "❌ Falló en ProductModal: error al agregar",
+        isEditing ? "❌ Error al actualizar producto" : "❌ Error al agregar producto",
         {
           description: error instanceof Error ? error.message : "Error desconocido"
         }
       );
-      throw error; // Re-lanzar para que ProductForm.tsx pueda manejarlo
+      throw error;
     } finally {
       setIsSubmitting(false);
     }
