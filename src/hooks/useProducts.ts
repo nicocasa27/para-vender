@@ -22,27 +22,39 @@ export function useProducts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [storeFilter, setStoreFilter] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   // Obtener información del usuario y sus sucursales asignadas
-  const { user, userRoles } = useAuth();
-  const { stores: userStores, hasStores } = useCurrentStores();
+  const { user, userRoles, hasRole } = useAuth();
+  const { stores: userStores, hasStores, loading: storesLoading } = useCurrentStores();
   
   // Función para obtener los IDs de las sucursales asignadas al usuario
   const getUserStoreIds = useMemo(() => {
     const isAdmin = userRoles.some(role => role.role === 'admin');
+    const isManager = userRoles.some(role => role.role === 'manager');
     
-    // Si es admin, no filtramos por sucursal (puede ver todo)
-    if (isAdmin) {
+    // Administradores y gerentes pueden ver todo
+    if (isAdmin || isManager) {
+      console.log("Usuario es admin o gerente, puede ver todas las sucursales");
       return null;
     }
     
-    // Si tiene sucursales asignadas, obtenemos sus IDs
+    // Si tiene sucursales asignadas como vendedor, obtenemos sus IDs
     if (hasStores) {
-      return userStores.map(store => store.id);
+      const storeIds = userStores.map(store => store.id);
+      console.log("Usuario tiene sucursales asignadas:", storeIds);
+      return storeIds;
     }
     
+    // Si es viewer sin sucursales asignadas, puede ver todo
+    if (hasRole('viewer')) {
+      console.log("Usuario es viewer sin sucursales específicas, muestra todo");
+      return null;
+    }
+    
+    console.log("Usuario sin roles específicos o sucursales asignadas");
     return [];
-  }, [userRoles, userStores, hasStores]);
+  }, [userRoles, userStores, hasStores, hasRole]);
 
   // Function to get a product by ID
   const getProductById = (id: string) => {
@@ -51,10 +63,16 @@ export function useProducts() {
 
   const refreshProducts = async () => {
     setLoading(true);
+    setError(null);
+    
     try {
       const { productsData, inventoryData } = await fetchProducts();
       const categoryData = await fetchCategories();
       const storeData = await fetchStores();
+      
+      if (!productsData) {
+        throw new Error("No se pudieron cargar los productos");
+      }
       
       const mappedProducts = mapInventoryData(productsData || [], inventoryData || []);
       setProducts(mappedProducts);
@@ -63,8 +81,9 @@ export function useProducts() {
       
       console.log(`Loaded ${mappedProducts.length} products, ${categoryData?.length} categories, ${storeData?.length} stores`);
       console.log('User store IDs:', getUserStoreIds);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching products:", error);
+      setError(error.message || "Error al cargar productos");
       toast.error("Error al cargar productos");
     } finally {
       setLoading(false);
@@ -115,26 +134,33 @@ export function useProducts() {
     }
   };
 
+  // Cargar productos al montar el componente o cuando cambien los roles/tiendas
   useEffect(() => {
-    refreshProducts();
-  }, []);
+    if (!storesLoading) {
+      refreshProducts();
+    }
+  }, [storesLoading, userRoles.length, getUserStoreIds]);
 
   const filteredProducts = useMemo(() => {
+    if (!products.length) return [];
+    
     return products.filter((product) => {
       // Primero filtramos por las sucursales asignadas al usuario
-      if (getUserStoreIds) {
-        // Si el usuario tiene sucursales asignadas pero el producto no tiene stock en ninguna
-        if (getUserStoreIds.length > 0) {
-          // Verificar si el producto tiene stock en alguna de las sucursales del usuario
-          const hasStockInUserStore = getUserStoreIds.some(storeId => 
-            product.stock_by_store && 
-            product.stock_by_store[storeId] !== undefined
-          );
-          
-          // Si no tiene stock en ninguna sucursal del usuario, no mostrar
-          if (!hasStockInUserStore) {
-            return false;
-          }
+      if (getUserStoreIds && getUserStoreIds.length > 0) {
+        // Si el producto no tiene stock en ninguna sucursal, saltarlo
+        if (!product.stock_by_store || Object.keys(product.stock_by_store).length === 0) {
+          return false;
+        }
+        
+        // Verificar si el producto tiene stock en alguna de las sucursales del usuario
+        const hasStockInUserStore = getUserStoreIds.some(storeId => 
+          product.stock_by_store && 
+          product.stock_by_store[storeId] !== undefined
+        );
+        
+        // Si no tiene stock en ninguna sucursal del usuario, no mostrar
+        if (!hasStockInUserStore) {
+          return false;
         }
       }
       
@@ -161,9 +187,11 @@ export function useProducts() {
   
   return {
     products: filteredProducts,
+    allProducts: products,
     categories,
     stores,
     loading,
+    error,
     searchTerm,
     setSearchTerm,
     categoryFilter,
@@ -174,6 +202,7 @@ export function useProducts() {
     addProduct,
     editProduct,
     deleteProduct,
-    getProductById
+    getProductById,
+    userStoreIds: getUserStoreIds
   };
 }

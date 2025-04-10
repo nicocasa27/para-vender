@@ -3,6 +3,8 @@ import { useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRoleWithStore } from '@/types/auth';
+import { toast } from 'sonner';
+import { createDefaultRole } from '@/contexts/auth/utils/user-roles';
 
 /**
  * Hook para escuchar cambios en el estado de autenticación
@@ -26,9 +28,49 @@ export function useAuthListener(
           setSession(currentSession);
           setUser(currentSession.user);
           
+          // Verificar perfil cuando el usuario inicia sesión
           if (event === 'SIGNED_IN') {
-            console.log("Auth: User signed in, force refreshing roles");
-            await loadUserRoles(currentSession.user.id, true);
+            console.log("Auth: User signed in, checking profile and roles");
+            
+            try {
+              // Verificar si existe el perfil
+              const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('id', currentSession.user.id)
+                .single();
+                
+              if (profileError || !profile) {
+                console.log("Auth: Profile not found, creating it");
+                
+                // Crear perfil si no existe
+                const { error: insertError } = await supabase
+                  .from('profiles')
+                  .insert({
+                    id: currentSession.user.id,
+                    email: currentSession.user.email,
+                    full_name: currentSession.user.user_metadata.full_name || 
+                              currentSession.user.email?.split('@')[0] || 
+                              "Usuario"
+                  });
+                  
+                if (insertError) {
+                  console.error("Auth: Error creating profile:", insertError);
+                  toast.error("Error al crear perfil de usuario");
+                } else {
+                  console.log("Auth: Profile created successfully");
+                  
+                  // Crear rol por defecto para nuevos usuarios
+                  await createDefaultRole(currentSession.user.id);
+                }
+              }
+              
+              // Cargar roles en cualquier caso
+              await loadUserRoles(currentSession.user.id, true);
+              
+            } catch (error) {
+              console.error("Auth: Error during profile verification:", error);
+            }
           } else if (event === 'TOKEN_REFRESHED') {
             console.log("Auth: Token refreshed, checking if roles need refresh");
           } else {
@@ -63,7 +105,43 @@ export function useAuthListener(
           setSession(currentSession);
           setUser(currentSession.user);
           
-          await loadUserRoles(currentSession.user.id, true);
+          // Verificar si el perfil existe y crearlo si no existe
+          try {
+            const { data: existingProfile, error: profileError } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('id', currentSession.user.id)
+              .single();
+              
+            if (profileError || !existingProfile) {
+              console.log("Auth: Profile not found during init, creating it");
+              
+              const { error: insertError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: currentSession.user.id,
+                  email: currentSession.user.email,
+                  full_name: currentSession.user.user_metadata.full_name || 
+                             currentSession.user.email?.split('@')[0] || 
+                             "Usuario"
+                });
+                
+              if (insertError) {
+                console.error("Auth: Error creating profile during init:", insertError);
+              } else {
+                console.log("Auth: Profile created successfully during init");
+                
+                // Crear rol por defecto
+                await createDefaultRole(currentSession.user.id);
+              }
+            }
+            
+            // Cargar roles
+            await loadUserRoles(currentSession.user.id, true);
+            
+          } catch (error) {
+            console.error("Auth: Error during profile check/creation at init:", error);
+          }
         } else {
           console.log("Auth: No existing session found");
           setSession(null);

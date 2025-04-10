@@ -1,76 +1,107 @@
 
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ProductsView } from "@/components/ProductsView";
+import { ProductsView } from "@/components/inventory/ProductsView";
 import { CategoriesView } from "@/components/inventory/CategoriesView";
 import { StoresView } from "@/components/inventory/StoresView";
-import { StockTransfer } from "./StockTransfer";
-import { useCurrentStores } from "@/hooks/useCurrentStores";
+import { TransfersView } from "@/components/inventory/TransfersView";
+import { AlertCircle, Info } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info } from "lucide-react";
+import { useProducts } from "@/hooks/useProducts";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function Inventory() {
-  const [activeView, setActiveView] = useState<
-    "products" | "categories" | "stores" | "transfers"
-  >("products");
-
-  const { hasStores, stores: userStores } = useCurrentStores();
-  const { userRoles } = useAuth();
+  const [activeTab, setActiveTab] = useState("products");
+  const { userRoles, hasRole } = useAuth();
+  const { userStoreIds, loading: productsLoading } = useProducts();
   
-  // Determinar si el usuario es administrador
   const isAdmin = userRoles.some(role => role.role === 'admin');
+  const isManager = userRoles.some(role => role.role === 'manager');
+  const isSales = userRoles.some(role => role.role === 'sales');
+  const isViewer = userRoles.some(role => role.role === 'viewer');
+  
+  const handleRefresh = () => {
+    // El componente hijo maneja su propia actualización
+    console.log("Refresh triggered from parent");
+  };
 
   return (
-    <div className="container py-6 max-w-7xl mx-auto space-y-6">
-      {!isAdmin && !hasStores && (
-        <Alert className="mb-4">
-          <Info className="h-4 w-4" />
-          <AlertTitle>Sin sucursales asignadas</AlertTitle>
-          <AlertDescription>
-            No tienes sucursales asignadas a tu cuenta. Contacta a un administrador para que te asigne una sucursal.
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {!isAdmin && hasStores && (
-        <Alert variant="default" className="mb-4 bg-blue-50 border-blue-200">
-          <Info className="h-4 w-4 text-blue-600" />
-          <AlertTitle className="text-blue-800">Sucursales asignadas</AlertTitle>
-          <AlertDescription className="text-blue-700">
-            Solo puedes ver inventario de las siguientes sucursales: {userStores.map(s => s.nombre).join(", ")}
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      <Tabs
-        defaultValue="products"
-        value={activeView}
-        onValueChange={(value) => setActiveView(value as any)}
-      >
-        <TabsList className="mb-4">
-          <TabsTrigger value="products">Productos</TabsTrigger>
-          <TabsTrigger value="categories">Categorías</TabsTrigger>
-          <TabsTrigger value="stores">Sucursales</TabsTrigger>
-          <TabsTrigger value="transfers">Transferencias</TabsTrigger>
-        </TabsList>
+    <div className="container py-6 space-y-4">
+      <div className="flex flex-col space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Inventario</h1>
+        <p className="text-muted-foreground">
+          Gestione el inventario de su negocio.
+        </p>
+      </div>
 
-        <TabsContent value="products">
-          <ProductsView />
-        </TabsContent>
-        
-        <TabsContent value="categories">
-          <CategoriesView />
-        </TabsContent>
-        
-        <TabsContent value="stores">
-          <StoresView />
-        </TabsContent>
-        
-        <TabsContent value="transfers">
-          <StockTransfer />
-        </TabsContent>
-      </Tabs>
+      {productsLoading ? (
+        <div className="w-full space-y-2">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      ) : (
+        <>
+          {!isAdmin && !isManager && (
+            <Alert variant={isSales ? "default" : "warning"}>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>
+                {isSales 
+                  ? "Acceso limitado a sucursales" 
+                  : isViewer 
+                    ? "Modo visualización" 
+                    : "Sin permisos específicos"}
+              </AlertTitle>
+              <AlertDescription>
+                {isSales && userStoreIds && userStoreIds.length > 0 && (
+                  <>Usted tiene acceso a {userStoreIds.length} sucursal(es) asignada(s).</>
+                )}
+                {isSales && (!userStoreIds || userStoreIds.length === 0) && (
+                  <>No tiene sucursales asignadas. Contacte a un administrador.</>
+                )}
+                {isViewer && (
+                  <>Tiene permisos de solo lectura. No podrá realizar cambios.</>
+                )}
+                {!isSales && !isViewer && (
+                  <>Su cuenta no tiene permisos asignados. Contacte a un administrador.</>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <Tabs 
+            defaultValue="products" 
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="products">Productos</TabsTrigger>
+              <TabsTrigger value="categories">Categorías</TabsTrigger>
+              <TabsTrigger value="stores">Sucursales</TabsTrigger>
+              <TabsTrigger value="transfers">Transferencias</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="products" className="mt-6">
+              <ProductsView onRefresh={handleRefresh} />
+            </TabsContent>
+
+            <TabsContent value="categories" className="mt-6">
+              <CategoriesView onRefresh={handleRefresh} />
+            </TabsContent>
+
+            <TabsContent value="stores" className="mt-6">
+              <StoresView onRefresh={handleRefresh} />
+            </TabsContent>
+
+            <TabsContent value="transfers" className="mt-6">
+              <TransfersView onRefresh={handleRefresh} />
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
     </div>
   );
 }
+
+export default Inventory;
