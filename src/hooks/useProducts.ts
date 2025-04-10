@@ -28,6 +28,8 @@ function mapInventoryData(products: any[], inventoryData: any[]) {
       }
     });
 
+    // Ahora extraemos los valores de los objetos "categorias" y "unidades" 
+    // que fueron modificados en el servicio
     const catName = product.categorias ? product.categorias.nombre || "Sin categoría" : "Sin categoría";
     const unitAbbr = product.unidades ? product.unidades.nombre || "u" : "u";
 
