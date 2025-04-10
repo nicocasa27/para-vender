@@ -44,8 +44,8 @@ export function StoreSelector({
         <SelectContent>
           <SelectItem value="all">Todas las sucursales</SelectItem>
           {stores.map((store) => (
-            <SelectItem key={store.id} value={store.id}>
-              {store.nombre}
+            <SelectItem key={store.id} value={store.id || "store-without-id"}>
+              {store.nombre || "Sin nombre"}
             </SelectItem>
           ))}
         </SelectContent>

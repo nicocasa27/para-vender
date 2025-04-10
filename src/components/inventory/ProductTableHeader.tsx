@@ -63,7 +63,7 @@ export function ProductTableHeader({
           />
         </div>
         
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+        <Select value={categoryFilter || "all-categories"} onValueChange={setCategoryFilter}>
           <SelectTrigger>
             <SelectValue placeholder="Filtrar por categoría" />
           </SelectTrigger>
@@ -71,19 +71,17 @@ export function ProductTableHeader({
             <SelectItem value="all-categories">Todas las categorías</SelectItem>
             {categories.length > 0 ? (
               categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.nombre}
+                <SelectItem key={category.id} value={category.id || "category-sin-id"}>
+                  {category.nombre || "Sin nombre"}
                 </SelectItem>
               ))
             ) : (
-              <SelectItem value="no-categories" disabled>
-                No hay categorías disponibles
-              </SelectItem>
+              <SelectItem value="no-categories">No hay categorías disponibles</SelectItem>
             )}
           </SelectContent>
         </Select>
 
-        <Select value={storeFilter} onValueChange={setStoreFilter}>
+        <Select value={storeFilter || "all-stores"} onValueChange={setStoreFilter}>
           <SelectTrigger>
             <SelectValue placeholder="Filtrar por sucursal" />
           </SelectTrigger>
@@ -91,14 +89,12 @@ export function ProductTableHeader({
             <SelectItem value="all-stores">Todas las sucursales</SelectItem>
             {stores.length > 0 ? (
               stores.map((store) => (
-                <SelectItem key={store.id} value={store.id}>
-                  {store.nombre}
+                <SelectItem key={store.id} value={store.id || "store-sin-id"}>
+                  {store.nombre || "Sin nombre"}
                 </SelectItem>
               ))
             ) : (
-              <SelectItem value="no-stores" disabled>
-                No hay sucursales disponibles
-              </SelectItem>
+              <SelectItem value="no-stores">No hay sucursales disponibles</SelectItem>
             )}
           </SelectContent>
         </Select>

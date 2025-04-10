@@ -344,7 +344,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     </FormControl>
                     <SelectContent>
                       {units.map((unit) => (
-                        <SelectItem key={unit.id} value={unit.id}>
+                        <SelectItem key={unit.id} value={unit.id || "unit-sin-id"}>
                           {unit.nombre}
                         </SelectItem>
                       ))}
@@ -372,10 +372,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Sin sucursal asignada</SelectItem>
+                      <SelectItem value="no-store">Sin sucursal asignada</SelectItem>
                       {warehouses.map((warehouse) => (
-                        <SelectItem key={warehouse.id} value={warehouse.id}>
-                          {warehouse.nombre}
+                        <SelectItem key={warehouse.id} value={warehouse.id || "store-sin-id"}>
+                          {warehouse.nombre || "Sin nombre"}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -505,8 +505,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                         </FormControl>
                         <SelectContent>
                           {warehouses.map((warehouse) => (
-                            <SelectItem key={warehouse.id} value={warehouse.id}>
-                              {warehouse.nombre}
+                            <SelectItem key={warehouse.id} value={warehouse.id || "warehouse-sin-id"}>
+                              {warehouse.nombre || "Sin nombre"}
                             </SelectItem>
                           ))}
                         </SelectContent>
