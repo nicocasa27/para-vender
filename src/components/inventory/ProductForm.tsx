@@ -148,9 +148,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
   const handleFormSubmit = async (data: ProductFormValues) => {
     console.log("%c📤 Formulario enviado con datos:", "color: green; font-weight: bold", data);
-    toast.success("✅ ProductForm: onSubmit ejecutado", {
-      description: "Verifica consola para ver los datos",
-    });
+    console.log("✅ handleFormSubmit ejecutado con:", data);
     
     setFormData(data);
     setSubmitError(null);
@@ -168,22 +166,31 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     if (!isEditing && !data.warehouse && warehouses.length > 0) {
       const errorMsg = "Por favor seleccione un almacén";
       setSubmitError(errorMsg);
-      toast.error("❌ Error de validación", {
-        description: errorMsg
+      toast.error("❌ Almacén requerido", {
+        description: "Debes seleccionar un almacén para productos nuevos"
       });
       return;
     }
     
+    if (isEditing && !data.name) {
+      toast.error("❌ Nombre requerido para editar");
+      return;
+    }
+    
+    toast("📨 Enviando...", { 
+      description: isEditing ? "Actualizando producto..." : "Agregando producto..." 
+    });
+    
     try {
-      // IMPORTANTE: Ahora esperamos a que la promesa de onSubmit se resuelva
+      // Siempre llamamos a onSubmit con los datos
       await onSubmit(data);
       setSubmitSuccess(true);
       
-      if (isEditing) {
-        toast.success("✅ Cambios guardados", {
-          description: "El producto se ha actualizado correctamente"
-        });
-      }
+      // Mostramos notificación de éxito
+      toast.success(isEditing ? "✅ Producto actualizado correctamente" : "✅ Producto agregado correctamente", {
+        description: isEditing ? "Los cambios han sido guardados" : "El producto ha sido agregado al inventario"
+      });
+      
     } catch (error) {
       console.error("Error al enviar el formulario:", error);
       const errorMsg = error instanceof Error ? error.message : "Ocurrió un error desconocido";
@@ -528,11 +535,20 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         </form>
       </Form>
       
-      {formData && (
+      {process.env.NODE_ENV === "development" && formData && (
         <div className="mt-4 p-4 bg-gray-100 rounded-md">
           <h3 className="font-semibold mb-2">Datos que se enviarán a Supabase:</h3>
           <pre className="text-xs overflow-auto max-h-40 p-2 bg-black text-green-400 rounded">
             {JSON.stringify(formData, null, 2)}
+          </pre>
+        </div>
+      )}
+      
+      {process.env.NODE_ENV === "development" && (
+        <div className="mt-4 p-4 bg-gray-100 rounded-md">
+          <h3 className="font-semibold mb-2">Valores actuales del formulario:</h3>
+          <pre className="text-xs overflow-auto max-h-40 p-2 bg-black text-green-400 rounded">
+            {JSON.stringify(form.watch(), null, 2)}
           </pre>
         </div>
       )}
