@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 interface ProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => Promise<void>; // Cambiado a Promise<void>
   initialData?: any;
   isEditing?: boolean;
 }
@@ -87,14 +87,14 @@ export function ProductModal({
         description:
           "No se pueden cargar categorías o unidades. Por favor, intente nuevamente.",
       });
-      return;
+      throw new Error("No se pueden cargar categorías o unidades");
     }
 
     if (!data.name || !data.category || !data.unit) {
       toast.error("❌ Falló en ProductModal: campos obligatorios", {
         description: "Por favor complete todos los campos obligatorios",
       });
-      return;
+      throw new Error("Por favor complete todos los campos obligatorios");
     }
 
     // Asegurarnos que el ID se incluya explícitamente si estamos editando
@@ -130,8 +130,12 @@ export function ProductModal({
     } catch (error) {
       console.error("❌ Error en ProductModal.handleSubmit:", error);
       toast.error(
-        isEditing ? "❌ Falló en ProductModal: error al actualizar" : "❌ Falló en ProductModal: error al agregar"
+        isEditing ? "❌ Falló en ProductModal: error al actualizar" : "❌ Falló en ProductModal: error al agregar",
+        {
+          description: error instanceof Error ? error.message : "Error desconocido"
+        }
       );
+      throw error; // Re-lanzar para que ProductForm.tsx pueda manejarlo
     } finally {
       setIsSubmitting(false);
     }

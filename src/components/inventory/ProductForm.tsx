@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -145,7 +146,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     }
   }, [form, initialData]);
 
-  const handleFormSubmit = (data: ProductFormValues) => {
+  const handleFormSubmit = async (data: ProductFormValues) => {
     console.log("%c📤 Formulario enviado con datos:", "color: green; font-weight: bold", data);
     toast.success("✅ ProductForm: onSubmit ejecutado", {
       description: "Verifica consola para ver los datos",
@@ -174,7 +175,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     }
     
     try {
-      onSubmit(data);
+      // IMPORTANTE: Ahora esperamos a que la promesa de onSubmit se resuelva
+      await onSubmit(data);
       setSubmitSuccess(true);
       
       if (isEditing) {

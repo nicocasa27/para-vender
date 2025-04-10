@@ -187,15 +187,17 @@ export async function updateProduct(productData: any) {
       description: "Encontrado en la base de datos"
     });
     
-    // Crear objeto de actualización con los datos
+    // Crear objeto de actualización con los datos - CORREGIDO PARA ACEPTAR AMBOS FORMATOS
+    // Ahora acepta tanto el formato desde ProductModal.tsx (nombre, categoria_id) como
+    // el formato desde ProductForm.tsx (name, category)
     const updateData = {
-      nombre: productData.nombre,
-      precio_compra: productData.precio_compra || 0,
-      precio_venta: productData.precio_venta || 0,
-      categoria_id: productData.categoria_id,
-      unidad_id: productData.unidad_id,
-      stock_minimo: productData.stock_minimo || 0,
-      stock_maximo: productData.stock_maximo || 0
+      nombre: productData.nombre || productData.name,
+      precio_compra: productData.precio_compra || productData.purchasePrice || 0,
+      precio_venta: productData.precio_venta || productData.salePrice || 0,
+      categoria_id: productData.categoria_id || productData.category,
+      unidad_id: productData.unidad_id || productData.unit,
+      stock_minimo: productData.stock_minimo || productData.minStock || 0,
+      stock_maximo: productData.stock_maximo || productData.maxStock || 0
     };
     
     console.log("🔄 updateProduct: Datos preparados para Supabase:", updateData);
