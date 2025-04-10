@@ -22,7 +22,9 @@ export function useSyncUsers() {
       console.log("Calling sync-users edge function");
       
       // Llamar a la función sync-users (ahora sin requerir autenticación)
-      const { data, error } = await supabase.functions.invoke("sync-users");
+      const { data, error } = await supabase.functions.invoke("sync-users", {
+        body: { forceUpdate: true }, // Agregar opción para forzar actualización de todos los usuarios
+      });
 
       if (error) {
         console.error("Error llamando a la función sync-users:", error);
@@ -49,6 +51,12 @@ export function useSyncUsers() {
         });
       }
       
+      if (data.updated_profiles > 0) {
+        toast.success(`Se han actualizado ${data.updated_profiles} perfiles existentes`, {
+          description: "Perfiles existentes han sido actualizados"
+        });
+      }
+      
       if (data.orphaned_profiles > 0) {
         toast.warning(`Se detectaron ${data.orphaned_profiles} perfiles sin usuario en Auth`, {
           description: "Estos perfiles podrían necesitar ser eliminados"
@@ -60,7 +68,8 @@ export function useSyncUsers() {
         }
       }
       
-      if (data.created_profiles === 0 && data.created_roles === 0 && data.orphaned_profiles === 0) {
+      if (data.created_profiles === 0 && data.created_roles === 0 && 
+          data.updated_profiles === 0 && data.orphaned_profiles === 0) {
         toast.success("Usuarios sincronizados correctamente", {
           description: "No se requirieron cambios"
         });
@@ -70,7 +79,7 @@ export function useSyncUsers() {
     } catch (error: any) {
       console.error("Error al sincronizar usuarios:", error);
       toast.error("Error al sincronizar usuarios", {
-        description: error.message
+        description: error.message || "Intenta nuevamente en unos momentos"
       });
       return null;
     } finally {
