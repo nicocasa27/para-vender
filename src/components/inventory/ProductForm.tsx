@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -146,10 +145,24 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     }
   }, [form, initialData]);
 
-  const handleFormSubmit = async (data: ProductFormValues) => {
-    console.log("%c📤 Formulario enviado con datos:", "color: green; font-weight: bold", data);
-    toast.success("✅ ProductForm: onSubmit ejecutado", {
-      description: "Verifica consola para ver los datos",
+  const handleFormSubmit = (data: ProductFormValues) => {
+    console.log("✅ handleFormSubmit ejecutado con:", data);
+    
+    // Mostramos este mensaje en la página para debuggear
+    document.body.insertAdjacentHTML(
+      "beforeend", 
+      `<div id="debug-message" style="position:fixed;top:10px;right:10px;background:white;border:1px solid black;padding:5px;z-index:9999;">
+        FormSubmit ejecutado ✅
+      </div>`
+    );
+    
+    setTimeout(() => {
+      const debugElement = document.getElementById('debug-message');
+      if (debugElement) debugElement.remove();
+    }, 3000);
+    
+    toast.success("✅ ProductForm: handleFormSubmit ejecutado", {
+      description: "Verificando datos...",
     });
     
     setFormData(data);
@@ -174,21 +187,24 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       return;
     }
     
+    if (isEditing && !data.name) {
+      toast.error("❌ Nombre requerido para editar");
+      return;
+    }
+    
+    toast("📨 Enviando...", { 
+      description: isEditing ? "Actualizando producto..." : "Agregando producto..." 
+    });
+    
+    // Siempre llamamos a onSubmit
     try {
-      // IMPORTANTE: Ahora esperamos a que la promesa de onSubmit se resuelva
-      await onSubmit(data);
+      onSubmit(data);
       setSubmitSuccess(true);
-      
-      if (isEditing) {
-        toast.success("✅ Cambios guardados", {
-          description: "El producto se ha actualizado correctamente"
-        });
-      }
     } catch (error) {
-      console.error("Error al enviar el formulario:", error);
-      const errorMsg = error instanceof Error ? error.message : "Ocurrió un error desconocido";
+      console.error("Error en handleFormSubmit:", error);
+      const errorMsg = error instanceof Error ? error.message : "Error desconocido";
       setSubmitError(errorMsg);
-      toast.error("❌ Error al guardar", {
+      toast.error("❌ Error", {
         description: errorMsg
       });
     }
@@ -527,6 +543,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           )}
         </form>
       </Form>
+      
+      <pre className="bg-muted text-xs p-2 mt-4 rounded">
+        {JSON.stringify(form.watch(), null, 2)}
+      </pre>
       
       {formData && (
         <div className="mt-4 p-4 bg-gray-100 rounded-md">

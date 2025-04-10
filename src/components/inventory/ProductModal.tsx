@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ProductForm } from "./ProductForm";
 import {
@@ -74,6 +75,19 @@ export function ProductModal({
   const handleSubmit = async (data: any) => {
     console.log("🧠 ProductModal.handleSubmit: Datos recibidos:", data);
     
+    // Mensaje de depuración visible en la página
+    document.body.insertAdjacentHTML(
+      "beforeend", 
+      `<div id="modal-debug" style="position:fixed;top:50px;right:10px;background:white;border:1px solid black;padding:5px;z-index:9999;">
+        🧾 handleSubmit recibió datos
+      </div>`
+    );
+    
+    setTimeout(() => {
+      const debugElement = document.getElementById('modal-debug');
+      if (debugElement) debugElement.remove();
+    }, 3000);
+    
     if (!categories.length || !units.length) {
       const errorMsg = "No se pueden cargar categorías o unidades";
       toast.error("❌ Error:", { description: errorMsg });
@@ -121,7 +135,6 @@ export function ProductModal({
           description: error instanceof Error ? error.message : "Error desconocido"
         }
       );
-      throw error;
     } finally {
       setIsSubmitting(false);
     }

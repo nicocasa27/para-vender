@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Product, Category, Store } from '@/types/inventory';
@@ -138,27 +139,42 @@ export function useProducts() {
   };
 
   const handleEditProduct = async (productData: any) => {
+    console.log("🔄 handleEditProduct: INICIO - Datos recibidos:", productData);
+    toast.info("Procesando edición de producto...");
+    
     try {
-      console.log("🔄 handleEditProduct: Datos recibidos:", productData);
-      
       if (!productData.id) {
         console.error("❌ handleEditProduct: Error - ID de producto no proporcionado");
-        throw new Error("El ID del producto es requerido para la actualización");
+        const errorMsg = "El ID del producto es requerido para la actualización";
+        toast.error("Error de validación", { description: errorMsg });
+        throw new Error(errorMsg);
       }
       
+      // Verificar campos obligatorios
       if ((!productData.nombre && !productData.name) || 
           (!productData.categoria_id && !productData.category) || 
           (!productData.unidad_id && !productData.unit)) {
-        throw new Error("Todos los campos obligatorios deben estar completos");
+        const errorMsg = "Todos los campos obligatorios deben estar completos";
+        toast.error("Error de validación", { description: errorMsg });
+        throw new Error(errorMsg);
       }
       
+      console.log("✅ handleEditProduct: Validaciones pasadas, enviando a updateProduct");
+      
+      // Aquí esperamos explícitamente la respuesta de updateProduct
       const result = await inventoryService.updateProduct(productData);
       
       console.log("✅ handleEditProduct: Resultado de la actualización:", result);
+      toast.success("Producto actualizado correctamente");
+      
+      // Recargar productos
       await loadProducts();
       return result;
     } catch (error) {
       console.error("❌ Error en handleEditProduct:", error);
+      toast.error("Error al editar producto", {
+        description: error instanceof Error ? error.message : "Error desconocido"
+      });
       throw error; // Propagamos el error para manejarlo en el componente
     }
   };
