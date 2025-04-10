@@ -1,3 +1,4 @@
+
 import { Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -9,6 +10,7 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Product } from "@/types/inventory";
+import { formatQuantityWithUnit } from "@/utils/inventory/formatters";
 
 interface ProductTableBodyProps {
   products: Product[];
@@ -50,8 +52,8 @@ export function ProductTableBody({
               <TableCell>{product.nombre}</TableCell>
               <TableCell>{product.categoria}</TableCell>
               <TableCell>${product.precio_venta.toFixed(2)}</TableCell>
-              <TableCell>{product.stock_total}</TableCell>
-              <TableCell>{product.stock_minimo}</TableCell>
+              <TableCell>{formatQuantityWithUnit(product.stock_total, product.unidad)}</TableCell>
+              <TableCell>{formatQuantityWithUnit(product.stock_minimo, product.unidad)}</TableCell>
               <TableCell className="text-right space-x-1">
                 <Button 
                   variant="ghost" 

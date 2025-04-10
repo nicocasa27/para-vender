@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
@@ -13,6 +14,7 @@ import { ProductHistorySheet } from "@/components/ProductHistorySheet";
 import { toast } from "sonner";
 import { ProductModal } from "@/components/inventory/ProductModal";
 import { DeleteProductDialog } from "@/components/inventory/DeleteProductDialog";
+import { formatQuantityWithUnit } from "@/utils/inventory/formatters";
 
 interface ProductsViewProps {
   onRefresh?: () => void;
@@ -168,7 +170,7 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg font-medium line-clamp-2">{product.nombre}</CardTitle>
                   <Badge variant="outline" className={getStockStatusColor(product)}>
-                    {product.stock_total} unidades
+                    {formatQuantityWithUnit(product.stock_total, product.unidad)}
                   </Badge>
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
@@ -312,15 +314,15 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
                       <div className="space-y-2">
                         <div className="grid grid-cols-2 text-sm">
                           <span className="text-muted-foreground">Stock total:</span>
-                          <span>{product.stock_total}</span>
+                          <span>{formatQuantityWithUnit(product.stock_total, product.unidad)}</span>
                         </div>
                         <div className="grid grid-cols-2 text-sm">
                           <span className="text-muted-foreground">Stock mínimo:</span>
-                          <span>{product.stock_minimo}</span>
+                          <span>{formatQuantityWithUnit(product.stock_minimo, product.unidad)}</span>
                         </div>
                         <div className="grid grid-cols-2 text-sm">
                           <span className="text-muted-foreground">Stock máximo:</span>
-                          <span>{product.stock_maximo}</span>
+                          <span>{formatQuantityWithUnit(product.stock_maximo, product.unidad)}</span>
                         </div>
                       </div>
                     </div>
@@ -336,7 +338,7 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
                               <span className="text-muted-foreground">
                                 {product.store_names?.[storeId] || storeId}:
                               </span>
-                              <span>{quantity}</span>
+                              <span>{formatQuantityWithUnit(quantity, product.unidad)}</span>
                             </div>
                           ))
                         ) : (

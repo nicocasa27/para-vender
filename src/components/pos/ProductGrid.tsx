@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Product } from "@/types/inventory";
 import { CartItem, productToCartItem } from "@/types/cart";
+import { formatQuantityWithUnit } from "@/utils/inventory/formatters";
 
 interface ProductGridProps {
   onProductSelect: (product: Product) => void;
@@ -142,7 +143,7 @@ export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps
                 {product.categoria || "Sin categoría"}
               </div>
               <div className="text-xs text-muted-foreground">
-                {product.unidad || "u"}
+                Stock: {formatQuantityWithUnit(product.stock_total, product.unidad)}
               </div>
               <div className="text-lg font-bold">${product.precio_venta}</div>
               <Button size="sm" onClick={() => handleProductSelect(product)}>
