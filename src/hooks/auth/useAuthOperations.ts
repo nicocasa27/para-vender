@@ -26,6 +26,14 @@ export function useAuthOperations({
   const signIn = useCallback(async (email: string, password: string) => {
     try {
       console.log("Auth: Attempting to sign in with email:", email);
+      
+      // Limpiar sesión existente para evitar problemas
+      await supabase.auth.signOut();
+      
+      // Limpiar datos almacenados localmente para evitar conflictos
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.removeItem('supabase.auth.token');
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -37,6 +45,19 @@ export function useAuthOperations({
 
       if (data.user) {
         console.log("Auth: Sign in successful for user:", data.user.id);
+        
+        // Verificar que el usuario exista en profiles
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', data.user.id)
+          .single();
+          
+        if (profileError || !profile) {
+          console.error("Auth: User found in auth but not in profiles");
+          await supabase.auth.signOut();
+          throw new Error("Usuario no encontrado en el sistema. Por favor contacte al administrador.");
+        }
         
         // Asegurarse de que el usuario tenga un rol por defecto
         await createDefaultRole(data.user.id);
@@ -63,6 +84,12 @@ export function useAuthOperations({
       return data;
     } catch (error: any) {
       console.error("Auth: Sign in error:", error);
+      
+      // Asegurar que cualquier sesión parcial sea eliminada
+      await supabase.auth.signOut();
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.removeItem('supabase.auth.token');
+      
       sonnerToast.error("Error de inicio de sesión", {
         description: error.message || "Credenciales inválidas o problema de conexión"
       });
@@ -77,6 +104,11 @@ export function useAuthOperations({
   const signUp = useCallback(async (email: string, password: string, fullName: string) => {
     try {
       console.log("Auth: Attempting to sign up with email:", email);
+      
+      // Limpiar sesión existente para evitar problemas
+      await supabase.auth.signOut();
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.removeItem('supabase.auth.token');
       
       // Primero creamos el usuario en Supabase Auth
       const { data, error } = await supabase.auth.signUp({
@@ -146,6 +178,11 @@ export function useAuthOperations({
   const signOut = useCallback(async () => {
     try {
       console.log("Auth: Attempting to sign out");
+      
+      // Limpiar datos almacenados localmente antes de cerrar sesión
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.removeItem('supabase.auth.token');
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) {

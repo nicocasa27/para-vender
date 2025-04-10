@@ -12,6 +12,10 @@ export function useAuthCredentials(refreshUserRoles: () => Promise<any[]>) {
     try {
       console.log("Auth: Attempting to sign in with email:", email);
       setLoading(true);
+      
+      // Primero limpiar cualquier sesión existente para evitar problemas con sesiones antiguas
+      await supabase.auth.signOut();
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -23,6 +27,19 @@ export function useAuthCredentials(refreshUserRoles: () => Promise<any[]>) {
 
       if (data.user) {
         console.log("Auth: Sign in successful for user:", data.user.id);
+        
+        // Verificar que el usuario exista en profiles
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', data.user.id)
+          .single();
+          
+        if (profileError || !profile) {
+          console.error("Auth: User exists in auth but not in profiles:", profileError);
+          await supabase.auth.signOut();
+          throw new Error("Usuario no encontrado en el sistema. Por favor contacte al administrador.");
+        }
         
         const roles = await refreshUserRoles();
         
@@ -46,6 +63,10 @@ export function useAuthCredentials(refreshUserRoles: () => Promise<any[]>) {
       return data;
     } catch (error: any) {
       console.error("Auth: Sign in error:", error);
+      
+      // Asegurar que cualquier sesión parcial sea eliminada
+      await supabase.auth.signOut();
+      
       sonnerToast.error("Error de inicio de sesión", {
         description: error.message || "Credenciales inválidas o problema de conexión"
       });
@@ -61,6 +82,9 @@ export function useAuthCredentials(refreshUserRoles: () => Promise<any[]>) {
       try {
         setLoading(true);
         console.log("Auth: Registrando nuevo usuario:", email);
+
+        // Limpiar cualquier sesión existente para evitar conflictos
+        await supabase.auth.signOut();
 
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -79,7 +103,6 @@ export function useAuthCredentials(refreshUserRoles: () => Promise<any[]>) {
 
         console.log("Auth: Usuario registrado correctamente:", data);
         
-        // Eliminada la referencia a la confirmación de correo
         sonnerToast.success("Registro exitoso", {
           description: "Tu cuenta ha sido creada correctamente. Ya puedes iniciar sesión."
         });
@@ -99,6 +122,11 @@ export function useAuthCredentials(refreshUserRoles: () => Promise<any[]>) {
     try {
       console.log("Auth: Attempting to sign out");
       setLoading(true);
+      
+      // Limpiar el almacenamiento local antes de cerrar sesión para eliminar cualquier dato persistente
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.removeItem('supabase.auth.token');
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) {

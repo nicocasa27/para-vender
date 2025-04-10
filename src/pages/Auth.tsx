@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Store } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Auth() {
   const [activeTab, setActiveTab] = useState<string>("login");
@@ -18,7 +20,47 @@ export default function Auth() {
   const [registerFullName, setRegisterFullName] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isCleaningSession, setIsCleaningSession] = useState(true);
   const { signIn, signUp } = useAuth();
+  const navigate = useNavigate();
+
+  // Limpiar cualquier sesión existente al cargar la página de autenticación
+  useEffect(() => {
+    const cleanSession = async () => {
+      try {
+        setIsCleaningSession(true);
+        
+        // Limpiar datos de localStorage y sessionStorage
+        localStorage.removeItem('supabase.auth.token');
+        sessionStorage.removeItem('supabase.auth.token');
+        
+        // Cerrar sesión en Supabase
+        await supabase.auth.signOut();
+        
+        console.log("Auth page: Session cleaned on load");
+      } catch (error) {
+        console.error("Error cleaning session:", error);
+      } finally {
+        setIsCleaningSession(false);
+      }
+    };
+    
+    cleanSession();
+  }, []);
+  
+  // Redirigir a dashboard si ya está autenticado
+  useEffect(() => {
+    const checkSession = async () => {
+      if (isCleaningSession) return;
+      
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        navigate('/dashboard');
+      }
+    };
+    
+    checkSession();
+  }, [navigate, isCleaningSession]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,6 +111,19 @@ export default function Auth() {
       setIsRegistering(false);
     }
   };
+
+  if (isCleaningSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Store className="h-12 w-12 text-primary mx-auto animate-pulse mb-4" />
+          <p className="text-sm text-muted-foreground">
+            Preparando página de autenticación...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
