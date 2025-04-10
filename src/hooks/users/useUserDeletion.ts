@@ -16,9 +16,27 @@ export function useUserDeletion() {
         return false;
       }
       
-      console.log("Iniciando proceso de eliminación para usuario:", userId);
+      console.log("Iniciando proceso de eliminación completa para usuario:", userId);
       
-      // 1. Primero eliminamos todos los roles del usuario
+      // 1. Verificar si el usuario existe en la tabla de perfiles
+      const { data: profileData, error: profileCheckError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name')
+        .eq('id', userId)
+        .single();
+        
+      if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+        console.error("Error al verificar perfil del usuario:", profileCheckError);
+        throw profileCheckError;
+      }
+      
+      if (!profileData) {
+        console.error("No se encontró el perfil para el usuario:", userId);
+        toast.error("No se encontró el perfil del usuario");
+        return false;
+      }
+      
+      // 2. Eliminamos todos los roles del usuario
       const { error: rolesDeletionError } = await supabase
         .from('user_roles')
         .delete()
@@ -31,7 +49,7 @@ export function useUserDeletion() {
       
       console.log("Roles del usuario eliminados correctamente");
       
-      // 2. Eliminamos el perfil del usuario
+      // 3. Eliminamos el perfil del usuario
       const { error: profileDeletionError } = await supabase
         .from('profiles')
         .delete()
@@ -44,16 +62,21 @@ export function useUserDeletion() {
       
       console.log("Perfil del usuario eliminado correctamente");
       
-      // 3. Si hay una función de Edge Function para eliminar el usuario de auth, la usamos
+      // 4. Si hay una función de Edge Function para eliminar el usuario de auth, la usamos
       if (session?.access_token) {
         try {
+          console.log("Intentando eliminar usuario de auth mediante Edge Function");
           const response = await fetch(`https://oyydsjvmtzilfvdzyupw.supabase.co/functions/v1/delete-user`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${session.access_token}`,
             },
-            body: JSON.stringify({ userId }),
+            body: JSON.stringify({ 
+              userId,
+              userEmail: profileData.email,
+              userName: profileData.full_name
+            }),
           });
           
           const data = await response.json();

@@ -37,6 +37,24 @@ export function useUserManagement(
         throw new Error("No hay sesión de usuario");
       }
       
+      // Verificar si el usuario existe en la tabla de perfiles
+      const { data: profileData, error: profileCheckError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name')
+        .eq('id', userId)
+        .maybeSingle();
+        
+      if (profileCheckError) {
+        console.error("Error al verificar perfil del usuario:", profileCheckError);
+        throw profileCheckError;
+      }
+      
+      if (!profileData) {
+        console.warn("No se encontró el perfil para el usuario:", userId);
+        sonnerToast.info("El usuario ya no existe en la base de datos");
+        return true;
+      }
+      
       // 1. Primero eliminamos todos los roles del usuario
       const { error: rolesDeletionError } = await supabase
         .from('user_roles')
@@ -67,7 +85,11 @@ export function useUserManagement(
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ userId }),
+          body: JSON.stringify({ 
+            userId,
+            userEmail: profileData.email,
+            userName: profileData.full_name
+          }),
         });
         
         const data = await response.json();

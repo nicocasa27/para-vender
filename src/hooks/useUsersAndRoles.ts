@@ -82,7 +82,7 @@ export function useUsersAndRoles(isAdmin: boolean) {
         return;
       }
       
-      // Fallback: Si la vista está vacía, usamos el método original
+      // Fallback: Cargar usuarios desde las tablas originales
       console.log("La vista no devolvió datos, usando método alternativo");
       
       // 1. Obtenemos todos los perfiles primero
@@ -175,10 +175,15 @@ export function useUsersAndRoles(isAdmin: boolean) {
 
   // Wrapper para asegurar que se actualiza la lista después de eliminar usuario
   const handleDeleteUser = async (userId: string) => {
+    console.log("Eliminando usuario con ID:", userId);
     const success = await deleteUser(userId);
     if (success) {
+      console.log("Usuario eliminado, actualizando lista...");
       await fetchUsers();
       toast.success("Usuario eliminado completamente");
+    } else {
+      console.log("Error o cancelación al eliminar usuario, actualizando lista...");
+      await fetchUsers(); // Refrescar la lista de todas formas
     }
   };
 
