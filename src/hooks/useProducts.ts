@@ -109,7 +109,9 @@ export function useProducts() {
       
       // Apply store filter
       const matchesStore = storeFilter
-        ? (product.stock_by_store && product.stock_by_store[storeFilter] !== undefined)
+        ? (product.stock_by_store && 
+           product.stock_by_store[storeFilter] !== undefined && 
+           product.stock_by_store[storeFilter] > 0)
         : true;
       
       return matchesSearch && matchesCategory && matchesStore;

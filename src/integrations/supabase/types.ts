@@ -378,6 +378,32 @@ export type Database = {
           },
         ]
       }
+      vista_inventario_productos: {
+        Row: {
+          almacen_id: string | null
+          cantidad: number | null
+          created_at: string | null
+          id: string | null
+          nombre_producto: string | null
+          producto_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventario_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventario_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never

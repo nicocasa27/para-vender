@@ -17,13 +17,15 @@ interface ProductTableBodyProps {
   onViewHistory: (productId: string) => void;
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (productId: string) => void;
+  selectedStore?: string; // Add selectedStore prop
 }
 
 export function ProductTableBody({
   products,
   onViewHistory,
   onEditProduct,
-  onDeleteProduct
+  onDeleteProduct,
+  selectedStore
 }: ProductTableBodyProps) {
   if (products.length === 0) {
     return (
@@ -33,6 +35,16 @@ export function ProductTableBody({
     );
   }
 
+  // Function to get the correct quantity to display based on selected store
+  const getStockDisplay = (product: Product) => {
+    if (selectedStore && product.stock_by_store && product.stock_by_store[selectedStore] !== undefined) {
+      // Show the stock in the selected store
+      return formatQuantityWithUnit(product.stock_by_store[selectedStore], product.unidad);
+    }
+    // Show the total stock across all stores
+    return formatQuantityWithUnit(product.stock_total, product.unidad);
+  };
+
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -41,7 +53,7 @@ export function ProductTableBody({
             <TableHead>Nombre</TableHead>
             <TableHead>Categoría</TableHead>
             <TableHead>Precio</TableHead>
-            <TableHead>Stock Total</TableHead>
+            <TableHead>{selectedStore ? 'Stock en Sucursal' : 'Stock Total'}</TableHead>
             <TableHead>Stock Mínimo</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
@@ -52,7 +64,7 @@ export function ProductTableBody({
               <TableCell>{product.nombre}</TableCell>
               <TableCell>{product.categoria}</TableCell>
               <TableCell>${product.precio_venta.toFixed(2)}</TableCell>
-              <TableCell>{formatQuantityWithUnit(product.stock_total, product.unidad)}</TableCell>
+              <TableCell>{getStockDisplay(product)}</TableCell>
               <TableCell>{formatQuantityWithUnit(product.stock_minimo, product.unidad)}</TableCell>
               <TableCell className="text-right space-x-1">
                 <Button 
