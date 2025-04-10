@@ -14,15 +14,24 @@ interface StoreSelectorProps {
   onStoreChange: (storeId: string | null) => void;
   label?: string;
   className?: string;
+  disabled?: boolean;
+  excludeStoreId?: string | null;
 }
 
 export function StoreSelector({
   selectedStore,
   onStoreChange,
   label = "Filtrar por sucursal",
-  className
+  className,
+  disabled = false,
+  excludeStoreId = null
 }: StoreSelectorProps) {
   const { stores, isLoading } = useStores();
+
+  // Filter out the excluded store if provided
+  const filteredStores = excludeStoreId 
+    ? stores.filter(store => store.id !== excludeStoreId)
+    : stores;
 
   if (isLoading) {
     return <div className="text-sm text-muted-foreground">Cargando sucursales...</div>;
@@ -37,13 +46,14 @@ export function StoreSelector({
       <Select 
         value={selectedStore || "all"} 
         onValueChange={(value) => onStoreChange(value === "all" ? null : value)}
+        disabled={disabled || filteredStores.length === 0}
       >
         <SelectTrigger className="w-full">
           <SelectValue placeholder={label} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todas las sucursales</SelectItem>
-          {stores.map((store) => (
+          {filteredStores.map((store) => (
             <SelectItem key={store.id} value={store.id || "store-without-id"}>
               {store.nombre || "Sin nombre"}
             </SelectItem>

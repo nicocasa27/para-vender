@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,8 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import { TransferRecord } from "./types";
 
@@ -30,7 +32,8 @@ export function TransferHistory() {
           id,
           created_at,
           cantidad,
-          producto:producto_id(nombre),
+          notas,
+          producto:productos(nombre),
           almacen_origen:almacenes!movimientos_almacen_origen_id_fkey(nombre),
           almacen_destino:almacenes!movimientos_almacen_destino_id_fkey(nombre)
         `)
@@ -42,12 +45,12 @@ export function TransferHistory() {
       
       const formattedTransfers: TransferRecord[] = (data || []).map((item: any) => ({
         id: item.id,
-        fecha: format(new Date(item.created_at), 'dd/MM/yyyy HH:mm'),
+        fecha: item.created_at ? format(parseISO(item.created_at), 'dd/MM/yyyy HH:mm', { locale: es }) : "Fecha desconocida",
         origen: item.almacen_origen?.nombre || "N/A",
         destino: item.almacen_destino?.nombre || "N/A",
         producto: item.producto?.nombre || "N/A",
         cantidad: Number(item.cantidad),
-        notas: null
+        notas: item.notas
       }));
       
       setTransfers(formattedTransfers);
