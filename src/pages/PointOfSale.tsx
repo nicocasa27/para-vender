@@ -6,6 +6,7 @@ import { Cart } from "@/components/pos/Cart";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types/inventory";
+import { CartItem, productToCartItem } from "@/types/cart";
 
 interface CartItem {
   id: string;
@@ -106,13 +107,7 @@ export default function PointOfSale() {
     } else {
       setCart([
         ...cart,
-        {
-          id: product.id,
-          nombre: product.nombre,
-          precio: product.precio_venta,
-          cantidad: 1,
-          stock: product.stock_total || 0,
-        },
+        productToCartItem(product)
       ]);
     }
     toast.success(`${product.nombre} añadido al carrito`);

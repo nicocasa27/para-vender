@@ -1,104 +1,95 @@
-
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserWithRoles, UserRoleWithStore } from "@/types/auth";
+import { toast } from "sonner";
 
-export function useNewUserManagement(user: any, hasAdminRole: boolean) {
-  const queryClient = useQueryClient();
+export function useNewUserManagement() {
+  const [users, setUsers] = useState<UserWithRoles[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const {
-    data: users = [],
-    isLoading,
-    refetch
-  } = useQuery({
-    queryKey: ['users'],
-    queryFn: async () => {
-      try {
-        if (!user || !hasAdminRole) {
-          console.log("No hay usuario autenticado o no tiene permisos de admin");
-          return [];
-        }
+  const loadUsers = async () => {
+    setLoading(true);
+    try {
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('*');
 
-        // Obtener todos los perfiles
-        const { data: profiles, error: profilesError } = await supabase
-          .from("profiles")
-          .select("*")
-          .order('created_at', { ascending: false });
-          
-        if (profilesError) throw profilesError;
-        
-        // Obtener todos los roles
-        const { data: roles, error: rolesError } = await supabase
-          .from("user_roles")
-          .select(`
-            id,
-            user_id,
-            role,
-            almacen_id,
-            created_at,
-            almacenes:almacen_id(nombre)
-          `);
-          
-        if (rolesError) throw rolesError;
+      if (userError) {
+        throw userError;
+      }
 
-        // Combinar los datos
-        const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
-          // Find all roles for this user
-          const userRoles: UserRoleWithStore[] = (roles || [])
-            .filter(r => r.user_id === profile.id)
-            .map(role => ({
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select(`
+          *,
+          almacenes(nombre)
+        `);
+
+      if (rolesError) {
+        throw rolesError;
+      }
+
+      // Process the data to create UserWithRoles objects
+      const processedUsers = userData.map(user => {
+        // Get roles for this user
+        const userRoles = rolesData
+          .filter(role => role.user_id === user.id)
+          .map(role => {
+            // Handle almacenes data which might be an array or object
+            const almacenesData = role.almacenes;
+            let almacenNombre = '';
+            
+            if (almacenesData) {
+              if (Array.isArray(almacenesData)) {
+                // Handle array case
+                if (almacenesData.length > 0) {
+                  almacenNombre = almacenesData[0].nombre || '';
+                }
+              } else {
+                // Handle object case
+                almacenNombre = almacenesData.nombre || '';
+              }
+            }
+            
+            return {
               id: role.id,
               user_id: role.user_id,
-              role: role.role as any,
+              role: role.role,
               almacen_id: role.almacen_id,
-              created_at: role.created_at,
-              almacen_nombre: role.almacenes ? role.almacenes.nombre : null
-            }));
-            
-          return {
-            id: profile.id,
-            email: profile.email || "",
-            full_name: profile.full_name || null,
-            created_at: profile.created_at,
-            roles: userRoles
-          };
-        });
+              almacen_nombre: almacenNombre,
+              created_at: role.created_at
+            } as UserRoleWithStore;
+          });
 
-        return usersWithRoles;
-      } catch (error: any) {
-        toast.error("Error al cargar usuarios", {
-          description: error.message
-        });
-        throw error;
-      }
-    },
-    refetchInterval: 5000,
-    enabled: !!user && hasAdminRole
-  });
+        // Return combined user object
+        return {
+          id: user.id,
+          email: user.email,
+          full_name: user.full_name,
+          created_at: user.created_at,
+          roles: userRoles
+        } as UserWithRoles;
+      });
 
-  const handleDeleteRole = async (roleId: string) => {
-    try {
-      const { error } = await supabase
-        .from("user_roles")
-        .delete()
-        .eq("id", roleId);
+      setUsers(processedUsers);
 
-      if (error) throw error;
-
-      toast.success("Rol eliminado correctamente");
-      await refetch();
     } catch (error: any) {
-      toast.error("Error al eliminar rol", {
+      console.error("Error loading users:", error);
+      toast.error("Error al cargar usuarios", {
         description: error.message
       });
+    } finally {
+      setLoading(false);
     }
   };
 
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
   return {
     users,
-    isLoading,
-    refetch,
-    handleDeleteRole
+    loading,
+    reloadUsers: loadUsers
   };
 }

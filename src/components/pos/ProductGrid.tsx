@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,6 @@ import { Search, Tag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Product } from "@/types/inventory";
-import { CartItem } from "@/pages/PointOfSale";
 
 interface ProductGridProps {
   onProductSelect: (product: Product) => void;
@@ -37,7 +37,39 @@ export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps
 
         if (error) throw error;
 
-        setProducts(data || []);
+        // Get inventory data for this store
+        const { data: inventoryData, error: inventoryError } = await supabase
+          .from('inventario')
+          .select('producto_id, cantidad')
+          .eq('almacen_id', selectedStore);
+
+        if (inventoryError) throw inventoryError;
+
+        // Map inventory data
+        const inventoryMap = new Map();
+        if (inventoryData) {
+          inventoryData.forEach((item) => {
+            inventoryMap.set(item.producto_id, Number(item.cantidad || 0));
+          });
+        }
+
+        // Transform data to match Product type
+        const transformedProducts = data?.map(item => ({
+          id: item.id || '',
+          nombre: item.nombre || '',
+          precio_venta: Number(item.precio_venta) || 0,
+          stock_total: inventoryMap.get(item.id) || 0,
+          categoria: item.categorias?.nombre || 'Sin categoría',
+          unidad: item.unidades?.abreviatura || 'u',
+          // Add other required fields with default values
+          precio_compra: 0,
+          stock_minimo: 0,
+          stock_maximo: 0,
+          categoria_id: item.categorias?.id,
+          unidad_id: item.unidades?.id
+        } as Product));
+
+        setProducts(transformedProducts || []);
       } catch (error: any) {
         console.error("Error al cargar productos:", error.message);
         toast.error("Error al cargar productos");
@@ -82,10 +114,10 @@ export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps
               <div className="text-sm font-semibold">{product.nombre}</div>
               <div className="text-xs text-muted-foreground">
                 <Tag className="h-3 w-3 mr-1 inline-block" />
-                {product.categorias?.nombre || "Sin categoría"}
+                {product.categoria || "Sin categoría"}
               </div>
               <div className="text-xs text-muted-foreground">
-                {product.unidades?.abreviatura || "u"}
+                {product.unidad || "u"}
               </div>
               <div className="text-lg font-bold">${product.precio_venta}</div>
               <Button size="sm" onClick={() => handleProductSelect(product)}>
