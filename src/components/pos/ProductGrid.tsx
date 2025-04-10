@@ -73,6 +73,7 @@ export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps
             ? item.unidades[0]?.id
             : undefined;
 
+          // Create a properly typed Product object
           return {
             id: item.id || '',
             nombre: item.nombre || '',
@@ -86,7 +87,10 @@ export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps
             stock_maximo: 0,
             categoria_id: categoriaId,
             unidad_id: unidadId,
-            inventario: []
+            inventario: [{ 
+              almacen_id: selectedStore,
+              cantidad: inventoryMap.get(item.id) || 0 
+            }]
           } as Product;
         });
 

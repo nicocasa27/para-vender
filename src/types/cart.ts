@@ -1,5 +1,5 @@
 
-import { Product } from "./inventory";
+import { Product } from './inventory';
 
 export interface CartItem {
   id: string;
@@ -7,15 +7,26 @@ export interface CartItem {
   precio: number;
   cantidad: number;
   stock: number;
+  stock_minimo?: number;
+  stock_maximo?: number;
+  categoria?: string;
+  unidad?: string;
+  categoria_id?: string;
+  unidad_id?: string;
 }
 
-// Helper function to convert Product to CartItem
-export function productToCartItem(product: Product, quantity: number = 1): CartItem {
+export function productToCartItem(product: Product): CartItem {
   return {
     id: product.id,
     nombre: product.nombre,
     precio: product.precio_venta,
-    cantidad: quantity,
-    stock: product.stock_total || 0
+    cantidad: 1,
+    stock: product.stock_total,
+    stock_minimo: product.stock_minimo,
+    stock_maximo: product.stock_maximo,
+    categoria: product.categoria,
+    unidad: product.unidad,
+    categoria_id: product.categoria_id,
+    unidad_id: product.unidad_id
   };
 }

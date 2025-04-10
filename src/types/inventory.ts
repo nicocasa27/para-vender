@@ -3,21 +3,21 @@ export interface Product {
   id: string;
   nombre: string;
   precio_venta: number;
+  precio_compra: number;
   stock_total: number;
-  almacen_id?: string;
-  categoria?: string;
-  unidad?: string;
+  stock_minimo: number;
+  stock_maximo: number;
+  categoria: string;
   categoria_id?: string;
+  unidad: string;
   unidad_id?: string;
-  precio_compra?: number;
-  stock_minimo?: number;
-  stock_maximo?: number;
-  stock_by_store?: {[key: string]: number};
-  store_names?: {[key: string]: string};
-  inventario?: {
+  descripcion?: string;
+  inventario: {
     almacen_id: string;
     cantidad: number;
-  };
+  }[];
+  stock_by_store?: { [key: string]: number };
+  store_names?: { [key: string]: string };
 }
 
 export interface Category {
@@ -31,20 +31,35 @@ export interface Store {
   direccion?: string;
 }
 
-export interface StockTransfer {
+export interface Unit {
+  id: string;
+  nombre: string;
+  abreviatura: string;
+}
+
+export interface Inventory {
   id: string;
   producto_id: string;
-  producto: {
-    nombre: string;
-  };
-  almacen_origen_id: string;
-  almacen_origen: {
-    nombre: string;
-  };
-  almacen_destino_id: string;
-  almacen_destino: {
-    nombre: string;
-  };
+  almacen_id: string;
   cantidad: number;
-  fecha: string;
+}
+
+export interface ProductMovement {
+  id: string;
+  tipo: 'entrada' | 'salida' | 'transferencia';
+  cantidad: number;
+  producto_id: string;
+  almacen_origen_id?: string;
+  almacen_destino_id?: string;
+  notas?: string;
+  created_at: string;
+  producto?: {
+    nombre: string;
+  };
+  almacen_origen?: {
+    nombre: string;
+  };
+  almacen_destino?: {
+    nombre: string;
+  };
 }
