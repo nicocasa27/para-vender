@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRoleWithStore } from '@/types/auth';
-import { fetchUserRoles } from '../auth-utils';
+import { fetchUserRoles } from '../utils/user-roles';
 import { toast } from 'sonner';
 
 const MAX_ROLE_LOADING_RETRIES = 3;
@@ -130,7 +130,48 @@ export function useSessionContext() {
           setSession(currentSession);
           setUser(currentSession.user);
           
-          if (event === 'SIGNED_IN') {
+          // Verificar si el perfil existe y crearlo si no existe
+          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+            try {
+              // Verificar si el perfil existe
+              const { data: existingProfile, error: profileCheckError } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('id', currentSession.user.id)
+                .maybeSingle();
+                
+              if (profileCheckError) {
+                console.error("Error checking profile:", profileCheckError);
+              }
+              
+              // Si el perfil no existe, crearlo
+              if (!existingProfile) {
+                console.log("Profile not found, creating it");
+                
+                // Obtener información del usuario desde los metadatos
+                const fullName = currentSession.user.user_metadata.full_name || 
+                                 currentSession.user.user_metadata.name || 
+                                 currentSession.user.email?.split('@')[0] || 
+                                 "Usuario";
+                
+                const { error: insertError } = await supabase
+                  .from('profiles')
+                  .insert({
+                    id: currentSession.user.id,
+                    email: currentSession.user.email,
+                    full_name: fullName
+                  });
+                  
+                if (insertError) {
+                  console.error("Error creating profile:", insertError);
+                } else {
+                  console.log("Profile created successfully");
+                }
+              }
+            } catch (error) {
+              console.error("Exception during profile check/creation:", error);
+            }
+            
             console.log("Auth: User signed in, force refreshing roles");
             await loadUserRoles(currentSession.user.id, true);
           } else if (event === 'TOKEN_REFRESHED') {
@@ -172,6 +213,45 @@ export function useSessionContext() {
           console.log("Auth: Existing session found for user:", currentSession.user.id);
           setSession(currentSession);
           setUser(currentSession.user);
+          
+          // Verificar si existe el perfil y crearlo si no existe
+          try {
+            const { data: existingProfile, error: profileCheckError } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('id', currentSession.user.id)
+              .maybeSingle();
+              
+            if (profileCheckError) {
+              console.error("Error checking profile during init:", profileCheckError);
+            }
+            
+            if (!existingProfile) {
+              console.log("Profile not found during init, creating it");
+              
+              // Obtener información del usuario desde los metadatos
+              const fullName = currentSession.user.user_metadata.full_name || 
+                               currentSession.user.user_metadata.name || 
+                               currentSession.user.email?.split('@')[0] || 
+                               "Usuario";
+              
+              const { error: insertError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: currentSession.user.id,
+                  email: currentSession.user.email,
+                  full_name: fullName
+                });
+                
+              if (insertError) {
+                console.error("Error creating profile during init:", insertError);
+              } else {
+                console.log("Profile created successfully during init");
+              }
+            }
+          } catch (error) {
+            console.error("Exception during profile check/creation at init:", error);
+          }
           
           await loadUserRoles(currentSession.user.id, true);
         } else {

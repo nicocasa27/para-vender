@@ -97,14 +97,37 @@ export function UserSidePanel({
               id: data.user.id,
               full_name: userData.fullName,
               email: userData.email
-            })
-            .select();
+            });
             
           if (profileError && profileError.code !== '23505') {
             console.log("Error al crear perfil:", profileError);
+            if (profileError.code !== '23505') {
+              toast.warning("Perfil parcialmente creado", {
+                description: "El usuario se creó pero hubo problemas al configurar su perfil"
+              });
+            }
           }
         } catch (profileErr) {
           console.error("Error al crear perfil:", profileErr);
+          toast.warning("Perfil no creado", {
+            description: "El usuario se creó pero no se pudo configurar su perfil"
+          });
+        }
+        
+        try {
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: data.user.id,
+              role: 'viewer',
+              almacen_id: null
+            });
+            
+          if (roleError) {
+            console.error("Error al asignar rol:", roleError);
+          }
+        } catch (roleErr) {
+          console.error("Error al asignar rol:", roleErr);
         }
       }
 

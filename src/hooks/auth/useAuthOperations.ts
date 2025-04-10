@@ -73,6 +73,8 @@ export function useAuthOperations({
   const signUp = useCallback(async (email: string, password: string, fullName: string) => {
     try {
       console.log("Auth: Attempting to sign up with email:", email);
+      
+      // Primero creamos el usuario en Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -87,7 +89,30 @@ export function useAuthOperations({
         throw error;
       }
 
-      // Eliminada referencia a confirmación de correo, añadiendo mensaje para login inmediato
+      // Si el usuario se creó correctamente, creamos manualmente su perfil en la tabla profiles
+      if (data.user) {
+        console.log("Auth: User created successfully, creating profile:", data.user.id);
+        
+        try {
+          // Insertar el perfil del usuario manualmente
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              email: email,
+              full_name: fullName
+            });
+            
+          if (profileError) {
+            console.error("Auth: Error creating profile:", profileError);
+            // No fallamos completamente si el perfil no se crea, porque puede ser debido al trigger
+          }
+        } catch (profileError) {
+          console.error("Auth: Exception creating profile:", profileError);
+          // No fallamos completamente si el perfil no se crea
+        }
+      }
+      
       console.log("Auth: Sign up successful, role will be assigned by database trigger");
       
       sonnerToast.success("Registro exitoso", {

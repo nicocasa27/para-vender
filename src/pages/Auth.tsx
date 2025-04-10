@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
@@ -52,9 +51,20 @@ export default function Auth() {
     try {
       setIsRegistering(true);
       await signUp(registerEmail, registerPassword, registerFullName);
+      toast.success("Cuenta creada exitosamente", {
+        description: "Ya puedes iniciar sesión con tus credenciales."
+      });
       setActiveTab("login");
-    } catch (error) {
+      
+      // Limpiar los campos del formulario de registro
+      setRegisterEmail("");
+      setRegisterPassword("");
+      setRegisterFullName("");
+    } catch (error: any) {
       console.error("Error al registrarse:", error);
+      toast.error("Error al crear la cuenta", {
+        description: error.message || "Hubo un problema al registrarse"
+      });
     } finally {
       setIsRegistering(false);
     }
