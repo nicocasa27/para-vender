@@ -63,11 +63,11 @@ export function UserRolesTable({
   };
 
   // Obtiene un emoji o ícono por tipo de rol
-  const getRoleBadgeVariant = (roleName: string) => {
+  const getRoleBadgeVariant = (roleName: string): "default" | "destructive" | "outline" | "secondary" => {
     switch (roleName) {
       case 'admin': return 'destructive';
-      case 'manager': return 'blue';
-      case 'sales': return 'green';
+      case 'manager': return 'outline';
+      case 'sales': return 'default';
       case 'viewer': return 'secondary';
       default: return 'default';
     }
