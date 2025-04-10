@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ProductForm } from "./ProductForm";
 import {
@@ -94,6 +93,7 @@ export function ProductModal({
     const productId = isEditing && initialData?.id ? initialData.id : null;
     console.log("🔑 ProductModal: ID utilizado para la operación:", productId);
     
+    // Crear objeto de datos del producto
     const productData = {
       id: productId,
       nombre: data.name,
@@ -102,8 +102,16 @@ export function ProductModal({
       precio_compra: data.purchasePrice,
       precio_venta: data.salePrice,
       stock_minimo: data.minStock,
-      stock_maximo: data.maxStock,
+      stock_maximo: data.maxStock
     };
+    
+    // Agregar datos del inventario inicial si es un producto nuevo
+    if (!isEditing && data.warehouse && data.initialStock > 0) {
+      productData.inventario = {
+        almacen_id: data.warehouse,
+        cantidad: data.initialStock
+      };
+    }
     
     setTransformedData(productData);
     console.log("📩 ProductModal: Datos transformados:", productData);

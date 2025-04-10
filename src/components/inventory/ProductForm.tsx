@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -142,13 +141,23 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   useEffect(() => {
     if (initialData) {
       console.log("Resetting form with initial data:", initialData);
-      form.reset(initialData);
+      
+      // Asegurarnos de que los valores numéricos se conviertan adecuadamente
+      const formattedData = {
+        ...initialData,
+        purchasePrice: Number(initialData.purchasePrice) || 0,
+        salePrice: Number(initialData.salePrice) || 0,
+        minStock: Number(initialData.minStock) || 0,
+        maxStock: Number(initialData.maxStock) || 0,
+        initialStock: Number(initialData.initialStock) || 0,
+      };
+      
+      form.reset(formattedData);
     }
   }, [form, initialData]);
 
   const handleFormSubmit = async (data: ProductFormValues) => {
     console.log("%c📤 Formulario enviado con datos:", "color: green; font-weight: bold", data);
-    console.log("✅ handleFormSubmit ejecutado con:", data);
     
     setFormData(data);
     setSubmitError(null);
@@ -177,16 +186,25 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       return;
     }
     
+    // Validar datos numéricos
+    const numericData = {
+      ...data,
+      purchasePrice: Number(data.purchasePrice) || 0,
+      salePrice: Number(data.salePrice) || 0,
+      minStock: Number(data.minStock) || 0,
+      maxStock: Number(data.maxStock) || 0,
+      initialStock: Number(data.initialStock) || 0
+    };
+    
     toast("📨 Enviando...", { 
       description: isEditing ? "Actualizando producto..." : "Agregando producto..." 
     });
     
     try {
-      // Siempre llamamos a onSubmit con los datos
-      await onSubmit(data);
+      // Enviar los datos numéricos validados
+      await onSubmit(numericData);
       setSubmitSuccess(true);
       
-      // Mostramos notificación de éxito
       toast.success(isEditing ? "✅ Producto actualizado correctamente" : "✅ Producto agregado correctamente", {
         description: isEditing ? "Los cambios han sido guardados" : "El producto ha sido agregado al inventario"
       });
