@@ -24,17 +24,32 @@ export default function Auth() {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
-  // Limpiar cualquier sesión existente al cargar la página de autenticación
+  // Clean any existing session when loading the authentication page
   useEffect(() => {
     const cleanSession = async () => {
       try {
         setIsCleaningSession(true);
         
-        // Limpiar datos de localStorage y sessionStorage
+        // Clean localStorage and sessionStorage data
         localStorage.removeItem('supabase.auth.token');
         sessionStorage.removeItem('supabase.auth.token');
         
-        // Cerrar sesión en Supabase
+        // Also clear any other potential Supabase related storage items
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('supabase.')) {
+            localStorage.removeItem(key);
+          }
+        }
+        
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && key.startsWith('supabase.')) {
+            sessionStorage.removeItem(key);
+          }
+        }
+        
+        // Sign out from Supabase
         await supabase.auth.signOut();
         
         console.log("Auth page: Session cleaned on load");
@@ -48,14 +63,38 @@ export default function Auth() {
     cleanSession();
   }, []);
   
-  // Redirigir a dashboard si ya está autenticado
+  // Redirect to dashboard if already authenticated
   useEffect(() => {
     const checkSession = async () => {
       if (isCleaningSession) return;
       
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        navigate('/dashboard');
+        // Verify that the user exists in profiles table before redirecting
+        try {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', data.session.user.id)
+            .maybeSingle();
+            
+          if (profileError || !profile) {
+            console.error("Auth page: User found in session but not in profiles");
+            await supabase.auth.signOut();
+            localStorage.removeItem('supabase.auth.token');
+            sessionStorage.removeItem('supabase.auth.token');
+            return;
+          }
+          
+          // Only redirect if the user exists in the profiles table
+          navigate('/dashboard');
+        } catch (error) {
+          console.error("Error checking profile:", error);
+          // If there's an error, don't redirect and clean the session
+          await supabase.auth.signOut();
+          localStorage.removeItem('supabase.auth.token');
+          sessionStorage.removeItem('supabase.auth.token');
+        }
       }
     };
     

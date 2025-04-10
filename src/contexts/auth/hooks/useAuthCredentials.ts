@@ -13,8 +13,12 @@ export function useAuthCredentials(refreshUserRoles: () => Promise<any[]>) {
       console.log("Auth: Attempting to sign in with email:", email);
       setLoading(true);
       
-      // Primero limpiar cualquier sesión existente para evitar problemas con sesiones antiguas
+      // First clear any existing sessions to avoid issues with stale sessions
       await supabase.auth.signOut();
+      
+      // Clear any potentially corrupted tokens from storage
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.removeItem('supabase.auth.token');
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -28,7 +32,7 @@ export function useAuthCredentials(refreshUserRoles: () => Promise<any[]>) {
       if (data.user) {
         console.log("Auth: Sign in successful for user:", data.user.id);
         
-        // Verificar que el usuario exista en profiles
+        // Verify that the user exists in profiles table - THIS IS CRITICAL
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('id')
@@ -38,6 +42,8 @@ export function useAuthCredentials(refreshUserRoles: () => Promise<any[]>) {
         if (profileError || !profile) {
           console.error("Auth: User exists in auth but not in profiles:", profileError);
           await supabase.auth.signOut();
+          localStorage.removeItem('supabase.auth.token');
+          sessionStorage.removeItem('supabase.auth.token');
           throw new Error("Usuario no encontrado en el sistema. Por favor contacte al administrador.");
         }
         
@@ -64,8 +70,10 @@ export function useAuthCredentials(refreshUserRoles: () => Promise<any[]>) {
     } catch (error: any) {
       console.error("Auth: Sign in error:", error);
       
-      // Asegurar que cualquier sesión parcial sea eliminada
+      // Ensure any partial session is removed
       await supabase.auth.signOut();
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.removeItem('supabase.auth.token');
       
       sonnerToast.error("Error de inicio de sesión", {
         description: error.message || "Credenciales inválidas o problema de conexión"

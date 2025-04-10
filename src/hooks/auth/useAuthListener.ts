@@ -25,18 +25,20 @@ export function useAuthListener(
         console.log("Auth: Auth state change event:", event, "Session:", !!currentSession);
         
         if (currentSession?.user) {
-          // Verificar que el usuario exista en profiles antes de establecer la sesión
+          // Verify that the user exists in profiles before establishing the session
           try {
             const { data: profile, error: profileError } = await supabase
               .from('profiles')
               .select('id')
               .eq('id', currentSession.user.id)
-              .single();
+              .maybeSingle();
               
             if (profileError || !profile) {
               console.error("Auth: User not found in profiles during auth change:", profileError);
-              // Si el usuario no existe en profiles, cerrar sesión
+              // If the user doesn't exist in profiles, sign out
               await supabase.auth.signOut();
+              localStorage.removeItem('supabase.auth.token');
+              sessionStorage.removeItem('supabase.auth.token');
               setSession(null);
               setUser(null);
               setUserRoles([]);
@@ -51,53 +53,17 @@ export function useAuthListener(
               return;
             }
             
-            // Usuario válido, establecer sesión
+            // Valid user, set session
             setSession(currentSession);
             setUser(currentSession.user);
             
-            // Verificar perfil cuando el usuario inicia sesión
+            // Verify profile when user signs in
             if (event === 'SIGNED_IN') {
               console.log("Auth: User signed in, checking profile and roles");
               
-              try {
-                // Verificar si existe el perfil
-                const { data: profile, error: profileError } = await supabase
-                  .from('profiles')
-                  .select('id')
-                  .eq('id', currentSession.user.id)
-                  .single();
-                  
-                if (profileError || !profile) {
-                  console.log("Auth: Profile not found, creating it");
-                  
-                  // Crear perfil si no existe
-                  const { error: insertError } = await supabase
-                    .from('profiles')
-                    .insert({
-                      id: currentSession.user.id,
-                      email: currentSession.user.email,
-                      full_name: currentSession.user.user_metadata.full_name || 
-                                currentSession.user.email?.split('@')[0] || 
-                                "Usuario"
-                    });
-                    
-                  if (insertError) {
-                    console.error("Auth: Error creating profile:", insertError);
-                    toast.error("Error al crear perfil de usuario");
-                  } else {
-                    console.log("Auth: Profile created successfully");
-                    
-                    // Crear rol por defecto para nuevos usuarios
-                    await createDefaultRole(currentSession.user.id);
-                  }
-                }
-                
-                // Cargar roles en cualquier caso
-                await loadUserRoles(currentSession.user.id, true);
-                
-              } catch (error) {
-                console.error("Auth: Error during profile verification:", error);
-              }
+              // Load roles
+              await loadUserRoles(currentSession.user.id, true);
+              
             } else if (event === 'TOKEN_REFRESHED') {
               console.log("Auth: Token refreshed, checking if roles need refresh");
             } else {
@@ -106,7 +72,7 @@ export function useAuthListener(
             }
           } catch (error) {
             console.error("Auth: Error verifying user profile:", error);
-            // En caso de error, mantener la sesión actual pero registrar el problema
+            // In case of error, maintain the current session but log the problem
           }
         } else {
           console.log("Auth: No user in state change, clearing auth state");
@@ -121,9 +87,24 @@ export function useAuthListener(
           setUser(null);
           setUserRoles([]);
           
-          // Limpiar almacenamiento local para eliminar cualquier dato persistente
+          // Clear local storage to remove any persistent data
           localStorage.removeItem('supabase.auth.token');
           sessionStorage.removeItem('supabase.auth.token');
+          
+          // Remove all supabase-related items from storage
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('supabase.')) {
+              localStorage.removeItem(key);
+            }
+          }
+          
+          for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            if (key && key.startsWith('supabase.')) {
+              sessionStorage.removeItem(key);
+            }
+          }
         }
         
         setLoading(false);
@@ -134,33 +115,38 @@ export function useAuthListener(
       try {
         console.log("Auth: Initializing auth, checking for existing session");
         
-        // Intentar limpiar localStorage y sessionStorage en caso de datos corruptos
+        // Try to clean localStorage and sessionStorage in case of corrupt data
         try {
-          const supabaseAuthData = localStorage.getItem('supabase.auth.token');
-          if (supabaseAuthData) {
-            try {
-              const authData = JSON.parse(supabaseAuthData);
-              if (!authData || typeof authData !== 'object') {
-                localStorage.removeItem('supabase.auth.token');
+          // Remove any potentially corrupted tokens
+          const cleanStorageItems = (storage: Storage) => {
+            const itemsToRemove = [];
+            
+            for (let i = 0; i < storage.length; i++) {
+              const key = storage.key(i);
+              if (key && key.startsWith('supabase.')) {
+                try {
+                  const value = storage.getItem(key);
+                  if (value) {
+                    try {
+                      JSON.parse(value);
+                    } catch (e) {
+                      // If parsing fails, mark for removal
+                      itemsToRemove.push(key);
+                    }
+                  }
+                } catch (e) {
+                  // If there's any error accessing the item, mark for removal
+                  itemsToRemove.push(key);
+                }
               }
-            } catch (e) {
-              // Si hay un error al parsear, el dato está corrupto
-              localStorage.removeItem('supabase.auth.token');
             }
-          }
+            
+            // Remove all corrupted items
+            itemsToRemove.forEach(key => storage.removeItem(key));
+          };
           
-          const sessionAuthData = sessionStorage.getItem('supabase.auth.token');
-          if (sessionAuthData) {
-            try {
-              const authData = JSON.parse(sessionAuthData);
-              if (!authData || typeof authData !== 'object') {
-                sessionStorage.removeItem('supabase.auth.token');
-              }
-            } catch (e) {
-              // Si hay un error al parsear, el dato está corrupto
-              sessionStorage.removeItem('supabase.auth.token');
-            }
-          }
+          cleanStorageItems(localStorage);
+          cleanStorageItems(sessionStorage);
         } catch (e) {
           console.error("Auth: Error cleaning storage:", e);
         }
@@ -170,16 +156,18 @@ export function useAuthListener(
         if (currentSession?.user) {
           console.log("Auth: Existing session found for user:", currentSession.user.id);
           
-          // Verificar que el usuario exista en la tabla profiles
+          // Verify that the user exists in the profiles table
           const { data: existingProfile, error: profileError } = await supabase
             .from('profiles')
             .select('id')
             .eq('id', currentSession.user.id)
-            .single();
+            .maybeSingle();
             
           if (profileError || !existingProfile) {
             console.log("Auth: User not found in profiles during init, signing out");
             await supabase.auth.signOut();
+            localStorage.removeItem('supabase.auth.token');
+            sessionStorage.removeItem('supabase.auth.token');
             setSession(null);
             setUser(null);
             setUserRoles([]);
@@ -190,43 +178,9 @@ export function useAuthListener(
           setSession(currentSession);
           setUser(currentSession.user);
           
-          // Verificar si el perfil existe y crearlo si no existe
-          try {
-            const { data: existingProfile, error: profileError } = await supabase
-              .from('profiles')
-              .select('id')
-              .eq('id', currentSession.user.id)
-              .single();
-              
-            if (profileError || !existingProfile) {
-              console.log("Auth: Profile not found during init, creating it");
-              
-              const { error: insertError } = await supabase
-                .from('profiles')
-                .insert({
-                  id: currentSession.user.id,
-                  email: currentSession.user.email,
-                  full_name: currentSession.user.user_metadata.full_name || 
-                             currentSession.user.email?.split('@')[0] || 
-                             "Usuario"
-                });
-                
-              if (insertError) {
-                console.error("Auth: Error creating profile during init:", insertError);
-              } else {
-                console.log("Auth: Profile created successfully during init");
-                
-                // Crear rol por defecto
-                await createDefaultRole(currentSession.user.id);
-              }
-            }
-            
-            // Cargar roles
-            await loadUserRoles(currentSession.user.id, true);
-            
-          } catch (error) {
-            console.error("Auth: Error during profile check/creation at init:", error);
-          }
+          // Load roles
+          await loadUserRoles(currentSession.user.id, true);
+          
         } else {
           console.log("Auth: No existing session found");
           setSession(null);
