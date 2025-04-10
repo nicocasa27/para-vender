@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { UserRole } from '@/types/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast as sonnerToast } from "sonner";
+import { createDefaultRole } from '@/contexts/auth/utils/user-roles';
 
 interface UseAuthOperationsProps {
   refreshUserRoles: () => Promise<any[]>;
@@ -36,6 +37,9 @@ export function useAuthOperations({
 
       if (data.user) {
         console.log("Auth: Sign in successful for user:", data.user.id);
+        
+        // Asegurarse de que el usuario tenga un rol por defecto
+        await createDefaultRole(data.user.id);
         
         const roles = await refreshUserRoles();
         
@@ -107,13 +111,18 @@ export function useAuthOperations({
             console.error("Auth: Error creating profile:", profileError);
             // No fallamos completamente si el perfil no se crea, porque puede ser debido al trigger
           }
+          
+          // Crear un rol por defecto para el nuevo usuario
+          await createDefaultRole(data.user.id);
+          console.log("Auth: Default role created for new user");
+          
         } catch (profileError) {
           console.error("Auth: Exception creating profile:", profileError);
           // No fallamos completamente si el perfil no se crea
         }
       }
       
-      console.log("Auth: Sign up successful, role will be assigned by database trigger");
+      console.log("Auth: Sign up successful, role has been assigned");
       
       sonnerToast.success("Registro exitoso", {
         description: "Tu cuenta ha sido creada correctamente. Ya puedes iniciar sesión."

@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRoleWithStore } from '@/types/auth';
-import { fetchUserRoles } from '../utils/user-roles';
+import { fetchUserRoles, createDefaultRole } from '../utils/user-roles';
 import { toast } from 'sonner';
 
 const MAX_ROLE_LOADING_RETRIES = 3;
@@ -40,6 +40,11 @@ export function useSessionContext() {
         while (attempt < MAX_ROLE_LOADING_RETRIES) {
           attempt++;
           console.log(`Auth: Fetching roles attempt ${attempt}/${MAX_ROLE_LOADING_RETRIES}`);
+          
+          // Asegurarse de que el usuario tenga al menos un rol por defecto
+          if (attempt === 1 || roles.length === 0) {
+            await createDefaultRole(userId);
+          }
           
           const fetchedRoles = await fetchUserRoles(userId);
           
@@ -166,6 +171,9 @@ export function useSessionContext() {
                   console.error("Error creating profile:", insertError);
                 } else {
                   console.log("Profile created successfully");
+                  
+                  // Crear un rol por defecto para el usuario si se creó el perfil correctamente
+                  await createDefaultRole(currentSession.user.id);
                 }
               }
             } catch (error) {
@@ -253,6 +261,8 @@ export function useSessionContext() {
             console.error("Exception during profile check/creation at init:", error);
           }
           
+          // Asegurarse de que el usuario tenga al menos un rol
+          await createDefaultRole(currentSession.user.id);
           await loadUserRoles(currentSession.user.id, true);
         } else {
           console.log("Auth: No existing session found");

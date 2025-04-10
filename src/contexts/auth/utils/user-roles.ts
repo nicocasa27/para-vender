@@ -48,8 +48,30 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
 
     if (!rolesData || rolesData.length === 0) {
       console.log(`Auth: No roles found for user ${userId}`);
-      // En este caso, no asignamos automáticamente un rol viewer, dejamos que sea explícito
-      return [];
+      
+      // Si no hay roles, creamos un rol de viewer por defecto
+      await createDefaultRole(userId);
+      
+      // Intentamos obtener los roles nuevamente después de crear el rol por defecto
+      const { data: newRoles, error: newRolesError } = await supabase
+        .from('user_roles')
+        .select(`
+          id,
+          user_id,
+          role,
+          almacen_id,
+          created_at,
+          almacenes (
+            nombre
+          )
+        `)
+        .eq('user_id', userId);
+        
+      if (newRolesError) {
+        throw newRolesError;
+      }
+      
+      rolesData = newRoles || [];
     }
 
     console.log(`Auth: Found ${rolesData.length} roles for user ${userId}`);
@@ -85,6 +107,57 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
   } catch (error) {
     console.error("Auth: Error fetching user roles:", error);
     throw error;
+  }
+}
+
+/**
+ * Crea un rol por defecto para un usuario nuevo
+ */
+export async function createDefaultRole(userId: string): Promise<boolean> {
+  if (!userId) {
+    console.log("Auth: createDefaultRole called with no userId");
+    return false;
+  }
+  
+  try {
+    console.log(`Auth: Creating default viewer role for user ${userId}`);
+    
+    // Verificar si ya existe un rol para este usuario
+    const { data: existingRoles, error: checkError } = await supabase
+      .from('user_roles')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+      
+    if (checkError) {
+      console.error("Auth: Error checking for existing roles:", checkError);
+      throw checkError;
+    }
+    
+    // Solo crear un rol nuevo si no existe ninguno
+    if (!existingRoles) {
+      const { error: insertError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: 'viewer',
+          almacen_id: null
+        });
+        
+      if (insertError) {
+        console.error("Auth: Error creating default role:", insertError);
+        throw insertError;
+      }
+      
+      console.log(`Auth: Default viewer role created for user ${userId}`);
+      return true;
+    } else {
+      console.log(`Auth: User ${userId} already has roles, skipping default role creation`);
+      return false;
+    }
+  } catch (error) {
+    console.error("Auth: Error creating default role:", error);
+    return false;
   }
 }
 
