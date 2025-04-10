@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { UserRolesList } from "@/components/profile/UserRolesList";
-import { RefreshCw, Users, AlertTriangle, Building, Shield } from "lucide-react";
+import { RefreshCw, Users, AlertTriangle, Building, Shield, Trash2, UserX } from "lucide-react";
 import { useState } from "react";
 import { UserRoleForm } from "./UserRoleForm";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -23,6 +23,7 @@ interface UserRolesTableProps {
   loading: boolean;
   onDeleteRole: (roleId: string) => Promise<void>;
   onRefresh: () => void;
+  onDeleteUser?: (user: UserWithRoles) => void;
 }
 
 export function UserRolesTable({
@@ -31,6 +32,7 @@ export function UserRolesTable({
   loading,
   onDeleteRole,
   onRefresh,
+  onDeleteUser,
 }: UserRolesTableProps) {
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -145,7 +147,7 @@ export function UserRolesTable({
           <TableRow>
             <TableHead>Usuario</TableHead>
             <TableHead>Roles</TableHead>
-            <TableHead className="w-[150px]">Acciones</TableHead>
+            <TableHead className="w-[200px]">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -210,6 +212,18 @@ export function UserRolesTable({
                   >
                     Asignar rol
                   </Button>
+                  
+                  {onDeleteUser && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => onDeleteUser(user)}
+                      title="Eliminar usuario"
+                    >
+                      <UserX className="h-4 w-4 mr-1" />
+                      Eliminar
+                    </Button>
+                  )}
                 </div>
               </TableCell>
             </TableRow>

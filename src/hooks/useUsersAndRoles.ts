@@ -175,8 +175,11 @@ export function useUsersAndRoles(isAdmin: boolean) {
 
   // Wrapper para asegurar que se actualiza la lista después de eliminar usuario
   const handleDeleteUser = async (userId: string) => {
-    await deleteUser(userId);
-    await fetchUsers();
+    const success = await deleteUser(userId);
+    if (success) {
+      await fetchUsers();
+      toast.success("Usuario eliminado completamente");
+    }
   };
 
   // Iniciar carga de datos

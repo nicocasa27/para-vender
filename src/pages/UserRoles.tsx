@@ -2,14 +2,28 @@
 import { UserRolesTable } from "@/components/users/UserRolesTable";
 import { useUsersAndRoles } from "@/hooks/useUsersAndRoles";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Shield } from "lucide-react";
+import { RefreshCw, Shield, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 import { useEffect } from "react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
+import { UserWithRoles } from "@/types/auth";
 
 const UserRoles = () => {
   const { hasRole } = useAuth();
   const isAdmin = hasRole("admin");
+  const [userToDelete, setUserToDelete] = useState<UserWithRoles | null>(null);
   
   const { 
     users, 
@@ -17,7 +31,8 @@ const UserRoles = () => {
     error, 
     fetchUsers, 
     deleteRole,
-    addRole
+    addRole,
+    deleteUser
   } = useUsersAndRoles(isAdmin);
 
   // Cargar datos al montar el componente
@@ -47,6 +62,20 @@ const UserRoles = () => {
     } catch (error) {
       console.error("Error al eliminar rol:", error);
       toast.error("Error al eliminar rol");
+    }
+  };
+
+  // Handle user deletion
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    
+    try {
+      console.log("Deleting user:", userToDelete.id);
+      await deleteUser(userToDelete.id);
+      setUserToDelete(null);
+    } catch (error) {
+      console.error("Error al eliminar usuario:", error);
+      toast.error("Error al eliminar usuario");
     }
   };
 
@@ -104,12 +133,36 @@ const UserRoles = () => {
           loading={loading}
           onDeleteRole={handleDeleteRole}
           onRefresh={handleRefresh}
+          onDeleteUser={(user) => setUserToDelete(user)}
         />
       )}
 
       <div className="text-xs text-muted-foreground mt-2">
         Total de usuarios cargados: {users.length}
       </div>
+
+      {/* Diálogo de confirmación para eliminar usuario */}
+      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará al usuario <strong>{userToDelete?.full_name || userToDelete?.email}</strong> y todos sus roles asociados. 
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteUser}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
