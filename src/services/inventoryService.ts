@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Product, Category, Store } from "@/types/inventory";
 import { toast } from "sonner";
@@ -132,14 +131,12 @@ export async function addProduct(productData: any) {
 
 export async function updateProduct(productData: any) {
   console.log("🚀 updateProduct: Iniciando actualización con datos:", productData);
-  toast.info("Actualizando producto en base de datos...");
   
   try {
     // Verificar que existe el ID del producto
     if (!productData.id) {
       const errorMsg = "ID de producto es requerido para actualizar";
       console.error("❌ updateProduct: Error -", errorMsg);
-      toast.error("Error de actualización", { description: errorMsg });
       throw new Error(errorMsg);
     }
     
@@ -158,19 +155,14 @@ export async function updateProduct(productData: any) {
       console.error("❌ updateProduct: Error al verificar existencia:", checkError);
       
       if (checkError.code === 'PGRST116') {
-        const errorMsg = `No se encontró ningún producto con el ID: ${productId}`;
-        toast.error("Error de actualización", { description: errorMsg });
-        throw new Error(errorMsg);
+        throw new Error(`No se encontró ningún producto con el ID: ${productId}`);
       }
       
-      toast.error("Error de base de datos", { description: checkError.message });
       throw checkError;
     }
     
     if (!existingProduct) {
-      const errorMsg = `No se encontró ningún producto con el ID: ${productId}`;
-      toast.error("Error de actualización", { description: errorMsg });
-      throw new Error(errorMsg);
+      throw new Error(`No se encontró ningún producto con el ID: ${productId}`);
     }
     
     console.log("✅ updateProduct: Producto encontrado:", existingProduct);
@@ -198,24 +190,17 @@ export async function updateProduct(productData: any) {
 
     if (error) {
       console.error("❌ updateProduct: Error en Supabase:", error);
-      toast.error("Error al actualizar en la base de datos", { description: error.message });
       throw error;
     }
     
     if (!data || data.length === 0) {
-      const errorMsg = "La actualización no modificó ningún registro";
-      toast.error("Error de actualización", { description: errorMsg });
-      throw new Error(errorMsg);
+      throw new Error("La actualización no modificó ningún registro");
     }
     
     console.log("✅ updateProduct: Producto actualizado correctamente:", data);
-    toast.success("✅ Producto actualizado correctamente");
     return { success: true, data };
   } catch (error) {
     console.error("❌ updateProduct: Excepción durante actualización:", error);
-    toast.error("Error al actualizar", { 
-      description: error instanceof Error ? error.message : "Error desconocido" 
-    });
     // Propagamos el error para que se maneje en capas superiores
     throw error; 
   }
