@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
@@ -139,7 +138,7 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
 
   return (
     <div className="space-y-4">
-      <ProductSearchBar
+      <ProductsSearchBar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onRefresh={handleRefresh}
