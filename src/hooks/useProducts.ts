@@ -26,7 +26,7 @@ export function useProducts() {
   
   // Obtener información del usuario y sus sucursales asignadas
   const { user, userRoles, hasRole } = useAuth();
-  const { stores: userStores, hasStores, loading: storesLoading } = useCurrentStores();
+  const { stores: userStores, hasStores, isLoading: storesLoading } = useCurrentStores();
   
   // Función para obtener los IDs de las sucursales asignadas al usuario
   const getUserStoreIds = useMemo(() => {

@@ -43,7 +43,7 @@ export function Inventory() {
       ) : (
         <>
           {!isAdmin && !isManager && (
-            <Alert variant={isSales ? "default" : "warning"}>
+            <Alert variant={isSales ? "default" : "destructive"}>
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>
                 {isSales 
