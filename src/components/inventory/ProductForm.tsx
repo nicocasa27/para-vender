@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -71,6 +70,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 }) => {
   const { toast: uiToast } = useToast();
   const [formData, setFormData] = useState<ProductFormValues | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
   
   const { 
     categories, 
@@ -151,20 +152,44 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     });
     
     setFormData(data);
+    setSubmitError(null);
+    setSubmitSuccess(false);
     
     if (categories.length === 0 || units.length === 0) {
+      const errorMsg = "No hay categorías o unidades disponibles. Por favor, crea primero estos valores.";
+      setSubmitError(errorMsg);
       toast.error("❌ Datos incompletos", {
-        description: "No hay categorías o unidades disponibles. Por favor, crea primero estos valores."
+        description: errorMsg
       });
       return;
     }
     
     if (!isEditing && !data.warehouse && warehouses.length > 0) {
-      toast.error("❌ Por favor seleccione un almacén");
+      const errorMsg = "Por favor seleccione un almacén";
+      setSubmitError(errorMsg);
+      toast.error("❌ Error de validación", {
+        description: errorMsg
+      });
       return;
     }
     
-    onSubmit(data);
+    try {
+      onSubmit(data);
+      setSubmitSuccess(true);
+      
+      if (isEditing) {
+        toast.success("✅ Cambios guardados", {
+          description: "El producto se ha actualizado correctamente"
+        });
+      }
+    } catch (error) {
+      console.error("Error al enviar el formulario:", error);
+      const errorMsg = error instanceof Error ? error.message : "Ocurrió un error desconocido";
+      setSubmitError(errorMsg);
+      toast.error("❌ Error al guardar", {
+        description: errorMsg
+      });
+    }
   };
 
   if (isLoading) {
@@ -452,6 +477,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 type="submit" 
                 disabled={isSubmitting}
                 className="min-w-[150px] bg-blue-600 hover:bg-blue-700"
+                aria-label="Guardar cambios del producto"
               >
                 {isSubmitting ? (
                   <>
@@ -472,6 +498,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                 type="submit" 
                 disabled={isSubmitting}
                 className="min-w-[150px]"
+                aria-label="Agregar nuevo producto"
               >
                 {isSubmitting ? (
                   <>
@@ -484,6 +511,18 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               </Button>
             )}
           </div>
+          
+          {submitError && (
+            <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">
+              <strong>Error:</strong> {submitError}
+            </div>
+          )}
+          
+          {submitSuccess && isEditing && (
+            <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md text-green-600 text-sm">
+              <strong>Éxito:</strong> Los cambios han sido guardados correctamente.
+            </div>
+          )}
         </form>
       </Form>
       
