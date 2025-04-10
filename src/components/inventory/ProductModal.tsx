@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ProductForm } from "./ProductForm";
 import {
@@ -72,7 +73,11 @@ export function ProductModal({
   }, [metadataError]);
 
   const handleSubmit = async (data: any) => {
-    console.log("🧠 ProductModal.handleSubmit: Datos recibidos:", data);
+    console.log("🧾 handleSubmit recibió:", data);
+    
+    if (process.env.NODE_ENV === "development") {
+      console.log("🧠 ProductModal.handleSubmit: Datos recibidos:", data);
+    }
     
     if (!categories.length || !units.length) {
       const errorMsg = "No se pueden cargar categorías o unidades";
@@ -195,7 +200,7 @@ export function ProductModal({
               isEditing={isEditing}
             />
             
-            {transformedData && (
+            {process.env.NODE_ENV === "development" && transformedData && (
               <div className="mt-4 p-4 bg-gray-100 rounded-md">
                 <h3 className="font-semibold mb-2">Datos transformados que se enviarán a Supabase:</h3>
                 <pre className="text-xs overflow-auto max-h-40 p-2 bg-black text-green-400 rounded">
