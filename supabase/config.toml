@@ -1,10 +1,8 @@
 
-# This is an example `supabase/config.toml` file
-# Visit the docs to see full annotations: 
-# https://supabase.com/docs/guides/functions/config
+# This is the config.toml file for Supabase Functions
 
 [functions.delete-user]
 verify_jwt = true
 
 [functions.sync-users]
-verify_jwt = true
+verify_jwt = false

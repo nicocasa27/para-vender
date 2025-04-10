@@ -1,3 +1,4 @@
+
 import { UserRolesTable } from "@/components/users/UserRolesTable";
 import { useUsersAndRoles } from "@/hooks/useUsersAndRoles";
 import { Button } from "@/components/ui/button";
@@ -99,7 +100,7 @@ const UserRoles = () => {
         </div>
         <div className="flex gap-2">
           <Button
-            variant="outline"
+            variant="default"
             size="sm"
             onClick={handleSyncUsers}
             disabled={syncing || loading}

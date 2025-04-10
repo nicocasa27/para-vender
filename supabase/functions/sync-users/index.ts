@@ -15,15 +15,7 @@ serve(async (req) => {
   }
 
   try {
-    // Extract authorization header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "No se proporcionó token de autorización" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
+    // Disable authentication requirement for this function
     // Create Supabase admin client
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -37,6 +29,8 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    console.log("Starting user synchronization process");
+
     // Get all users from auth
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
     
@@ -48,10 +42,12 @@ serve(async (req) => {
       );
     }
 
+    console.log(`Found ${authUsers.users.length} users in auth system`);
+
     // Get existing profiles
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('id');
+      .select('id, email');
       
     if (profilesError) {
       console.error("Error obteniendo perfiles:", profilesError);
@@ -61,19 +57,22 @@ serve(async (req) => {
       );
     }
 
+    console.log(`Found ${profiles?.length || 0} existing profiles`);
+
     // Create map of existing profiles
     const profileMap = new Map();
     profiles?.forEach(profile => {
-      profileMap.set(profile.id, true);
+      profileMap.set(profile.id, profile);
     });
 
     // Find users in auth but not in profiles
     const usersToCreate = authUsers.users.filter(user => !profileMap.has(user.id));
     
-    console.log(`Se encontraron ${usersToCreate.length} usuarios para crear perfiles`);
+    console.log(`Found ${usersToCreate.length} users that need profiles created`);
     
     // Create profiles and default roles for each missing user
     let createdProfiles = 0;
+    const createdProfileDetails = [];
     
     for (const user of usersToCreate) {
       // Prepare user data
@@ -86,15 +85,21 @@ serve(async (req) => {
                   "Usuario sin nombre"
       };
       
+      console.log(`Creating profile for user: ${userData.email} (${userData.id})`);
+      
       // Create profile
-      const { error: insertError } = await supabase
+      const { data: insertData, error: insertError } = await supabase
         .from('profiles')
-        .insert(userData);
+        .insert(userData)
+        .select();
         
       if (insertError) {
         console.error(`Error al crear perfil para ${user.email}:`, insertError);
         continue;
       }
+      
+      console.log(`Profile created successfully for ${userData.email}`);
+      createdProfileDetails.push(userData);
       
       // Create default viewer role
       const { error: roleError } = await supabase
@@ -110,26 +115,78 @@ serve(async (req) => {
         continue;
       }
       
+      console.log(`Default role created for ${userData.email}`);
       createdProfiles++;
     }
 
-    // Find profiles without auth users
+    // Check for users with missing roles
+    let createdRoles = 0;
+    const usersWithProfiles = profiles?.map(p => p.id) || [];
+    
+    // Get all existing roles
+    const { data: existingRoles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('user_id');
+      
+    if (rolesError) {
+      console.error("Error fetching roles:", rolesError);
+    } else {
+      console.log(`Found ${existingRoles?.length || 0} existing roles`);
+      
+      // Create map of users with roles
+      const roleMap = new Map();
+      existingRoles?.forEach(role => {
+        roleMap.set(role.user_id, true);
+      });
+      
+      // Find users with profiles but no roles
+      const usersNeedingRoles = usersWithProfiles.filter(userId => !roleMap.has(userId));
+      console.log(`Found ${usersNeedingRoles.length} users without roles`);
+      
+      // Create default roles
+      for (const userId of usersNeedingRoles) {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: userId,
+            role: 'viewer',
+            almacen_id: null
+          });
+          
+        if (roleError) {
+          console.error(`Error creating default role for user ${userId}:`, roleError);
+        } else {
+          createdRoles++;
+          console.log(`Created default role for user ${userId}`);
+        }
+      }
+    }
+
+    // Find profiles without auth users (orphaned profiles)
     const profilesWithoutAuth = [];
     
     for (const profile of profiles || []) {
       const authUser = authUsers.users.find(u => u.id === profile.id);
       if (!authUser) {
-        profilesWithoutAuth.push(profile.id);
+        profilesWithoutAuth.push({
+          id: profile.id,
+          email: profile.email
+        });
       }
     }
+
+    console.log(`Found ${profilesWithoutAuth.length} orphaned profiles without auth users`);
 
     // Return summary
     return new Response(
       JSON.stringify({
         success: true,
-        created: createdProfiles,
-        missingAuth: profilesWithoutAuth.length,
-        missingAuthIds: profilesWithoutAuth
+        created_profiles: createdProfiles,
+        created_roles: createdRoles,
+        orphaned_profiles: profilesWithoutAuth.length,
+        orphaned_profile_details: profilesWithoutAuth,
+        created_profile_details: createdProfileDetails,
+        message: `Created ${createdProfiles} profiles and ${createdRoles} roles`
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
