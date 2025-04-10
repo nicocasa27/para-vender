@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { UserRolesList } from "@/components/profile/UserRolesList";
-import { RefreshCw, Users, AlertTriangle } from "lucide-react";
+import { RefreshCw, Users, AlertTriangle, Building, Shield } from "lucide-react";
 import { useState } from "react";
 import { UserRoleForm } from "./UserRoleForm";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -21,7 +21,7 @@ interface UserRolesTableProps {
   users?: UserWithRoles[];
   roles?: RoleWithStore[];
   loading: boolean;
-  onDeleteRole: (roleId: string) => void;
+  onDeleteRole: (roleId: string) => Promise<void>;
   onRefresh: () => void;
 }
 
@@ -35,12 +35,11 @@ export function UserRolesTable({
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  console.log("UserRolesTable rendering with users:", users.length);
-  
-  // Handler para eliminar rol y luego refrescar
+  // Handler para eliminar rol
   const handleDeleteRole = async (roleId: string) => {
-    await onDeleteRole(roleId);
-    // No necesitamos llamar a onRefresh aquí porque ya lo hace onDeleteRole
+    if (window.confirm("¿Estás seguro de que quieres eliminar este rol?")) {
+      await onDeleteRole(roleId);
+    }
   };
   
   const handleAddRole = (user: UserWithRoles) => {
@@ -61,6 +60,17 @@ export function UserRolesTable({
   // Determina si un rol es predeterminado (generado dinámicamente)
   const isDefaultRole = (roleId: string) => {
     return roleId.startsWith('default-viewer-');
+  };
+
+  // Obtiene un emoji o ícono por tipo de rol
+  const getRoleBadgeVariant = (roleName: string) => {
+    switch (roleName) {
+      case 'admin': return 'destructive';
+      case 'manager': return 'blue';
+      case 'sales': return 'green';
+      case 'viewer': return 'secondary';
+      default: return 'default';
+    }
   };
 
   if (loading) {
@@ -85,7 +95,12 @@ export function UserRolesTable({
         <TableBody>
           {roles.map((role) => (
             <TableRow key={role.id}>
-              <TableCell>{role.role}</TableCell>
+              <TableCell>
+                <Badge variant={getRoleBadgeVariant(role.role)} className="flex items-center gap-1">
+                  <Shield className="h-3 w-3" />
+                  {role.role}
+                </Badge>
+              </TableCell>
               <TableCell>{role.almacen_nombre || "Global"}</TableCell>
               <TableCell>
                 <Button
@@ -164,19 +179,22 @@ export function UserRolesTable({
                   {user.roles.map(role => (
                     <Badge 
                       key={role.id}
-                      variant={role.role === 'admin' ? 'destructive' : isDefaultRole(role.id) ? 'outline' : 'default'}
+                      variant={getRoleBadgeVariant(role.role)}
                       className="flex items-center gap-1"
                     >
+                      {role.role === 'admin' && <Shield className="h-3 w-3" />}
+                      {role.role === 'sales' && <Building className="h-3 w-3" />}
                       {role.role}
                       {role.almacen_nombre && ` (${role.almacen_nombre})`}
                       {!isDefaultRole(role.id) && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-4 w-4 p-0 hover:bg-transparent"
+                          className="h-4 w-4 p-0 ml-1 hover:bg-transparent"
                           onClick={() => handleDeleteRole(role.id)}
                         >
-                          <AlertTriangle className="h-3 w-3" />
+                          <span className="sr-only">Eliminar rol</span>
+                          ×
                         </Button>
                       )}
                     </Badge>

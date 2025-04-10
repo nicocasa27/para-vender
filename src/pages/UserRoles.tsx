@@ -2,8 +2,8 @@
 import { UserRolesTable } from "@/components/users/UserRolesTable";
 import { useUsersAndRoles } from "@/hooks/useUsersAndRoles";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { RefreshCw, Shield } from "lucide-react";
+import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 import { useEffect } from "react";
 
@@ -43,19 +43,32 @@ const UserRoles = () => {
     try {
       console.log("Deleting role:", roleId);
       await deleteRole(roleId);
-      // No necesitamos llamar a fetchUsers aquí porque ya lo hace deleteRole internamente
-      // toast success también se maneja dentro de deleteRole
+      // No need to call fetchUsers since deleteRole internally refreshes the data
     } catch (error) {
       console.error("Error al eliminar rol:", error);
       toast.error("Error al eliminar rol");
     }
   };
 
+  if (!isAdmin) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="bg-destructive/20 text-destructive p-4 rounded-md">
+          <h2 className="text-lg font-semibold">Acceso denegado</h2>
+          <p>No tienes permisos para acceder a esta sección.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Roles de Usuario</h1>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <Shield className="h-6 w-6" /> 
+            Roles de Usuario
+          </h1>
           <p className="text-muted-foreground">
             Gestione los permisos y roles de los usuarios del sistema.
           </p>
@@ -90,7 +103,6 @@ const UserRoles = () => {
           users={users} 
           loading={loading}
           onDeleteRole={handleDeleteRole}
-          // No pasamos onAddRole porque no es una prop esperada por UserRolesTable
           onRefresh={handleRefresh}
         />
       )}
