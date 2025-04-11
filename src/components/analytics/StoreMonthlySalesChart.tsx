@@ -23,17 +23,27 @@ export function StoreMonthlySalesChart({ storeIds }: StoreMonthlySalesChartProps
   const { stores } = useStores();
   const [chartData, setChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
-      if (!storeIds || storeIds.length === 0) return;
+      if (!storeIds || storeIds.length === 0) {
+        setIsLoading(false);
+        setChartData([]);
+        return;
+      }
       
       setIsLoading(true);
+      setError(null);
+      
       try {
+        console.log("Cargando datos de ventas mensuales para tiendas:", storeIds);
         const data = await fetchStoreMonthlySales(storeIds);
+        console.log("Datos recibidos:", data);
         setChartData(data);
-      } catch (error) {
-        console.error("Error loading store monthly sales data:", error);
+      } catch (err) {
+        console.error("Error loading store monthly sales data:", err);
+        setError("No se pudieron cargar los datos de ventas mensuales");
       } finally {
         setIsLoading(false);
       }
@@ -65,7 +75,22 @@ export function StoreMonthlySalesChart({ storeIds }: StoreMonthlySalesChartProps
     );
   }
 
-  if (chartData.length === 0) {
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Ventas Totales por Sucursal (Comparativa Mensual)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center items-center h-[350px]">
+            <p className="text-red-500">{error}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!chartData || chartData.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -101,6 +126,9 @@ export function StoreMonthlySalesChart({ storeIds }: StoreMonthlySalesChartProps
     const store = stores?.find(s => s.id === storeId);
     return store ? store.nombre : 'Tienda desconocida';
   };
+
+  // Filter out any keys that aren't store IDs
+  const dataKeys = Object.keys(chartData[0] || {}).filter(key => key !== 'month');
 
   return (
     <Card>

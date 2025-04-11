@@ -90,6 +90,7 @@ export async function fetchItemSalesTrend(storeIds: string[] = [], timeRange: st
 export async function fetchStoreMonthlySales(storeIds: string[] = []) {
   try {
     if (!storeIds || storeIds.length === 0) {
+      console.log("No se proporcionaron tiendas para la consulta");
       return [];
     }
 
@@ -102,6 +103,8 @@ export async function fetchStoreMonthlySales(storeIds: string[] = []) {
     
     const startDateStr = startDate.toISOString();
     const endDateStr = now.toISOString();
+    
+    console.log(`Obteniendo ventas desde ${startDateStr} hasta ${endDateStr} para tiendas:`, storeIds);
     
     // Fetch all sales for the selected stores in the date range
     const { data, error } = await supabase
@@ -117,6 +120,7 @@ export async function fetchStoreMonthlySales(storeIds: string[] = []) {
       .in('almacen_id', storeIds);
     
     if (error) {
+      console.error("Error al obtener datos de ventas:", error);
       throw error;
     }
     
@@ -124,6 +128,8 @@ export async function fetchStoreMonthlySales(storeIds: string[] = []) {
       console.log("No hay datos de ventas disponibles para el período seleccionado");
       return [];
     }
+    
+    console.log(`Se encontraron ${data.length} registros de ventas`);
     
     // Process data to group by month and store
     const monthlyData: Record<string, Record<string, number>> = {};
@@ -133,10 +139,9 @@ export async function fetchStoreMonthlySales(storeIds: string[] = []) {
     for (let i = 0; i < 12; i++) {
       const monthDate = new Date(now);
       monthDate.setMonth(now.getMonth() - i);
-      const monthKey = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
       const monthName = monthDate.toLocaleString('es-MX', { month: 'short' });
       const displayKey = `${monthName} ${monthDate.getFullYear()}`;
-      months.unshift(displayKey); // Fix: using string instead of object
+      months.unshift(displayKey);
       
       if (!monthlyData[displayKey]) {
         monthlyData[displayKey] = {};
@@ -180,6 +185,7 @@ export async function fetchStoreMonthlySales(storeIds: string[] = []) {
         return monthNames.indexOf(monthA.toLowerCase()) - monthNames.indexOf(monthB.toLowerCase());
       });
     
+    console.log("Datos procesados para el gráfico:", chartData);
     return chartData;
     
   } catch (error) {

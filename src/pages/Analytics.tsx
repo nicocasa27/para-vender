@@ -13,6 +13,7 @@ export default function Analytics() {
   useEffect(() => {
     if (stores && stores.length > 0) {
       setSelectedStoreIds(stores.map(store => store.id));
+      console.log("Tiendas disponibles:", stores);
     }
   }, [stores]);
 
@@ -65,7 +66,9 @@ export default function Analytics() {
       <SalesChart storeIds={selectedStoreIds} />
       
       {/* Monthly Store Sales Comparison */}
-      <StoreMonthlySalesChart storeIds={selectedStoreIds} />
+      {selectedStoreIds.length > 0 && (
+        <StoreMonthlySalesChart storeIds={selectedStoreIds} />
+      )}
     </div>
   );
 }
