@@ -10,6 +10,16 @@ import { TopProductsChart } from "@/components/analytics/TopProductsChart";
 import { RevenueOverTimeChart } from "@/components/analytics/RevenueOverTimeChart";
 import { SalesDataPoint, CategoryDataPoint, ProductDataPoint } from "@/types/analytics";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SalesByStoreChart } from "@/components/analytics/SalesByStoreChart";
+import { SalesByHourChart } from "@/components/analytics/SalesByHourChart";
+import { SalesTrendByItemChart } from "@/components/analytics/SalesTrendByItemChart";
+import { ProductsNotSoldChart } from "@/components/analytics/ProductsNotSoldChart";
+import { AverageTicketChart } from "@/components/analytics/AverageTicketChart";
+import { MarginByCategory } from "@/components/analytics/MarginByCategory";
+import { LowStockTable } from "@/components/analytics/LowStockTable";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SalesIcon, TrendingUp, ShoppingBag, Clock, Calendar, BarChart3Icon, TrendingDown, Receipt, PercentIcon, AlertCircle } from "lucide-react";
 
 export default function Analytics() {
   const { stores, isLoading: loadingStores } = useCurrentStores();
@@ -19,17 +29,20 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState("week");
   const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
+  const [selectedStore, setSelectedStore] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("general");
 
   useEffect(() => {
     if (stores && stores.length > 0) {
       setSelectedStoreIds(stores.map(store => store.id));
+      setSelectedStore(stores[0].id);
     }
   }, [stores]);
 
   const fetchAnalytics = async (period = "week") => {
     if (!stores || stores.length === 0) return;
     
-    const storeIds = stores.map(store => store.id);
+    const storeIds = selectedStore ? [selectedStore] : stores.map(store => store.id);
     setLoading(true);
     
     try {
@@ -72,10 +85,14 @@ export default function Analytics() {
     if (!loadingStores && stores.length > 0) {
       fetchAnalytics(dateRange);
     }
-  }, [stores, loadingStores, dateRange]);
+  }, [stores, loadingStores, dateRange, selectedStore]);
+
+  const handleStoreChange = (storeId: string) => {
+    setSelectedStore(storeId);
+  };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight mb-2">Analíticas</h2>
         <p className="text-muted-foreground">
@@ -84,8 +101,25 @@ export default function Analytics() {
       </div>
       
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-xl font-medium">Resumen de Ventas</h3>
+        <div className="flex items-center gap-4">
+          <Select value={selectedStore || ''} onValueChange={handleStoreChange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Seleccionar sucursal" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todas las sucursales</SelectItem>
+              {stores.map(store => (
+                <SelectItem key={store.id} value={store.id}>{store.nombre}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="general">General</TabsTrigger>
+              <TabsTrigger value="advanced">Avanzado</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
         
         <div className="flex items-center gap-2">
@@ -122,37 +156,162 @@ export default function Analytics() {
         </div>
       </div>
       
-      {/* Added SalesChart here, moved from dashboard */}
-      <SalesChart storeIds={selectedStoreIds} />
+      <TabsContent value="general" className="mt-0">
+        {/* Fila 1: Ventas diarias y Productos más vendidos */}
+        <div className="grid grid-cols-1 gap-6 mb-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-medium">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  <span>Ventas diarias (últimos 30 días)</span>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RevenueOverTimeChart data={revenueOverTime} loading={loading} />
+            </CardContent>
+          </Card>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Ventas por Categoría</CardTitle>
+        {/* Fila 2: Ventas por categoría y Top productos */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-medium">
+                <div className="flex items-center gap-2">
+                  <ShoppingBag className="h-5 w-5" />
+                  <span>Ventas por Categoría</span>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SalesByCategoryChart data={salesByCategory} loading={loading} />
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-medium">
+                <div className="flex items-center gap-2">
+                  <BarChart3Icon className="h-5 w-5" />
+                  <span>Top 10 Productos</span>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TopProductsChart data={topProducts} loading={loading} />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Fila 3: Ventas por sucursal (comparativa mensual) */}
+        <Card className="mb-6">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-medium">
+              <div className="flex items-center gap-2">
+                <SalesIcon className="h-5 w-5" />
+                <span>Ventas totales por sucursal (comparativa mensual)</span>
+              </div>
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <SalesByCategoryChart data={salesByCategory} loading={loading} />
+            <SalesByStoreChart storeIds={selectedStoreIds} period={dateRange} />
           </CardContent>
         </Card>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Productos</CardTitle>
+        {/* Fila 4: Horarios de mayor venta */}
+        <Card className="mb-6">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-medium">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                <span>Horarios de mayor venta</span>
+              </div>
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <TopProductsChart data={topProducts} loading={loading} />
+            <SalesByHourChart storeId={selectedStore} period={dateRange} />
           </CardContent>
         </Card>
-      </div>
+        
+        {/* Fila 5: Productos con inventario crítico */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-medium">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" />
+                <span>Productos con inventario crítico</span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <LowStockTable storeId={selectedStore} />
+          </CardContent>
+        </Card>
+      </TabsContent>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Ingresos por Día</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RevenueOverTimeChart data={revenueOverTime} loading={loading} />
-        </CardContent>
-      </Card>
+      <TabsContent value="advanced" className="mt-0">
+        {/* Fila 1: Tendencia de ventas por ítem */}
+        <Card className="mb-6">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-medium">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                <span>Tendencia de ventas por ítem</span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SalesTrendByItemChart storeId={selectedStore} period={dateRange} />
+          </CardContent>
+        </Card>
+        
+        {/* Fila 2: Productos que han dejado de venderse */}
+        <Card className="mb-6">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-medium">
+              <div className="flex items-center gap-2">
+                <TrendingDown className="h-5 w-5" />
+                <span>Productos que han dejado de venderse</span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ProductsNotSoldChart storeId={selectedStore} period={dateRange} />
+          </CardContent>
+        </Card>
+        
+        {/* Fila 3: Ticket promedio por tienda */}
+        <Card className="mb-6">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-medium">
+              <div className="flex items-center gap-2">
+                <Receipt className="h-5 w-5" />
+                <span>Ticket promedio por tienda</span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AverageTicketChart storeIds={selectedStoreIds} period={dateRange} />
+          </CardContent>
+        </Card>
+        
+        {/* Fila 4: Margen de ganancia por categoría */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-medium">
+              <div className="flex items-center gap-2">
+                <PercentIcon className="h-5 w-5" />
+                <span>Margen de ganancia por categoría</span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MarginByCategory storeId={selectedStore} period={dateRange} />
+          </CardContent>
+        </Card>
+      </TabsContent>
     </div>
   );
 }
