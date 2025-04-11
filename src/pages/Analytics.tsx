@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +18,7 @@ import { AverageTicketChart } from "@/components/analytics/AverageTicketChart";
 import { MarginByCategory } from "@/components/analytics/MarginByCategory";
 import { LowStockTable } from "@/components/analytics/LowStockTable";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SalesIcon, TrendingUp, ShoppingBag, Clock, Calendar, BarChart3Icon, TrendingDown, Receipt, PercentIcon, AlertCircle } from "lucide-react";
+import { BarChart3Icon, TrendingUp, ShoppingBag, Clock, Calendar, DollarSign, TrendingDown, Receipt, PercentIcon, AlertCircle } from "lucide-react";
 
 export default function Analytics() {
   const { stores, isLoading: loadingStores } = useCurrentStores();
@@ -46,7 +45,6 @@ export default function Analytics() {
     setLoading(true);
     
     try {
-      // Ventas por categoría
       const { data: salesCategoryData, error: salesCategoryError } = await supabase.rpc(
         "get_ventas_por_categoria",
         { store_ids: storeIds }
@@ -55,7 +53,6 @@ export default function Analytics() {
       if (salesCategoryError) throw salesCategoryError;
       setSalesByCategory(salesCategoryData || []);
       
-      // Productos más vendidos
       const { data: topProductsData, error: topProductsError } = await supabase.rpc(
         "get_top_productos",
         { store_ids: storeIds }
@@ -64,7 +61,6 @@ export default function Analytics() {
       if (topProductsError) throw topProductsError;
       setTopProducts(topProductsData || []);
       
-      // Ventas por día
       const { data: salesTimeData, error: salesTimeError } = await supabase.rpc(
         "get_ventas_por_dia",
         { store_ids: storeIds }
@@ -157,7 +153,6 @@ export default function Analytics() {
       </div>
       
       <TabsContent value="general" className="mt-0">
-        {/* Fila 1: Ventas diarias y Productos más vendidos */}
         <div className="grid grid-cols-1 gap-6 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -174,7 +169,6 @@ export default function Analytics() {
           </Card>
         </div>
 
-        {/* Fila 2: Ventas por categoría y Top productos */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -205,12 +199,11 @@ export default function Analytics() {
           </Card>
         </div>
 
-        {/* Fila 3: Ventas por sucursal (comparativa mensual) */}
         <Card className="mb-6">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-medium">
               <div className="flex items-center gap-2">
-                <SalesIcon className="h-5 w-5" />
+                <DollarSign className="h-5 w-5" />
                 <span>Ventas totales por sucursal (comparativa mensual)</span>
               </div>
             </CardTitle>
@@ -220,7 +213,6 @@ export default function Analytics() {
           </CardContent>
         </Card>
         
-        {/* Fila 4: Horarios de mayor venta */}
         <Card className="mb-6">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-medium">
@@ -235,7 +227,6 @@ export default function Analytics() {
           </CardContent>
         </Card>
         
-        {/* Fila 5: Productos con inventario crítico */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-medium">
@@ -252,7 +243,6 @@ export default function Analytics() {
       </TabsContent>
       
       <TabsContent value="advanced" className="mt-0">
-        {/* Fila 1: Tendencia de ventas por ítem */}
         <Card className="mb-6">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-medium">
@@ -267,7 +257,6 @@ export default function Analytics() {
           </CardContent>
         </Card>
         
-        {/* Fila 2: Productos que han dejado de venderse */}
         <Card className="mb-6">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-medium">
@@ -282,7 +271,6 @@ export default function Analytics() {
           </CardContent>
         </Card>
         
-        {/* Fila 3: Ticket promedio por tienda */}
         <Card className="mb-6">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-medium">
@@ -297,7 +285,6 @@ export default function Analytics() {
           </CardContent>
         </Card>
         
-        {/* Fila 4: Margen de ganancia por categoría */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-medium">
