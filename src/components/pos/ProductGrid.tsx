@@ -15,8 +15,15 @@ interface ProductGridProps {
 
 export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const { products, loading } = useProducts(selectedStore);
+  const { products, loading, setStoreFilter } = useProducts();
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+
+  // Set the store filter when the selected store changes
+  useEffect(() => {
+    if (selectedStore) {
+      setStoreFilter(selectedStore);
+    }
+  }, [selectedStore, setStoreFilter]);
 
   useEffect(() => {
     if (products) {
