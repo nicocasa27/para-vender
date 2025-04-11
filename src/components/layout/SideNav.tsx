@@ -1,142 +1,106 @@
 
-import React from "react";
-import { NavLink } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import {
-  Home,
-  BarChart3,
-  Store,
+  LayoutDashboard,
+  Package,
   ShoppingCart,
-  Users,
-  Settings,
-  LineChart
+  BarChart4,
+  ChevronLeft,
+  ChevronRight,
+  Store,
+  Users
 } from "lucide-react";
-import { useRoleVerification } from "@/contexts/auth/hooks/useRoleVerification";
 
-export type SideNavProps = React.HTMLAttributes<HTMLDivElement>;
+interface SideNavProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+}
 
-export function SideNav({ className, ...props }: SideNavProps) {
-  const { hasRole } = useRoleVerification();
-  const isAdmin = hasRole('admin');
+export const SideNav: React.FC<SideNavProps> = ({ open, setOpen }) => {
+  const location = useLocation();
+  
+  const navItems = [
+    {
+      title: "Dashboard",
+      href: "/",
+      icon: LayoutDashboard,
+    },
+    {
+      title: "Inventario",
+      href: "/inventory",
+      icon: Package,
+    },
+    {
+      title: "Punto de Venta",
+      href: "/pos",
+      icon: ShoppingCart,
+    },
+    {
+      title: "Análisis",
+      href: "/analytics",
+      icon: BarChart4,
+    },
+    {
+      title: "Roles de Usuario",
+      href: "/user-roles",
+      icon: Users,
+    },
+  ];
 
   return (
-    <div className={cn("pb-12", className)} {...props}>
-      <div className="space-y-4 py-4">
-        <div className="px-4 py-2">
-          <h2 className="mb-2 px-2 text-xl font-semibold tracking-tight">
-            Menu
-          </h2>
-          <div className="space-y-1">
-            <NavLink
-              to="/dashboard"
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
-                  isActive
-                    ? "bg-primary text-primary-foreground hover:text-primary-foreground"
-                    : "hover:bg-muted"
-                )
-              }
-            >
-              <Home className="h-4 w-4" />
-              <span>Inicio</span>
-            </NavLink>
-            <NavLink
-              to="/inventory"
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
-                  isActive
-                    ? "bg-primary text-primary-foreground hover:text-primary-foreground"
-                    : "hover:bg-muted"
-                )
-              }
-            >
-              <Store className="h-4 w-4" />
-              <span>Inventario</span>
-            </NavLink>
-            <NavLink
-              to="/pos"
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
-                  isActive
-                    ? "bg-primary text-primary-foreground hover:text-primary-foreground"
-                    : "hover:bg-muted"
-                )
-              }
-            >
-              <ShoppingCart className="h-4 w-4" />
-              <span>Punto de Venta</span>
-            </NavLink>
-            <NavLink
-              to="/analytics"
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
-                  isActive
-                    ? "bg-primary text-primary-foreground hover:text-primary-foreground"
-                    : "hover:bg-muted"
-                )
-              }
-            >
-              <BarChart3 className="h-4 w-4" />
-              <span>Analíticas</span>
-            </NavLink>
-            <NavLink
-              to="/analiticas2"
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
-                  isActive
-                    ? "bg-primary text-primary-foreground hover:text-primary-foreground"
-                    : "hover:bg-muted"
-                )
-              }
-            >
-              <LineChart className="h-4 w-4" />
-              <span>Analíticas 2</span>
-            </NavLink>
+    <div
+      className={cn(
+        "h-screen border-r bg-sidebar overflow-hidden transition-all duration-300 ease-spring",
+        open ? "w-64" : "w-16"
+      )}
+    >
+      <div className="flex h-16 items-center border-b px-4">
+        <div className="flex items-center gap-2 transition-all duration-300">
+          <div className={cn("flex items-center justify-center transition-all duration-300",
+                           !open && "w-full")}>
+            <Store className="h-8 w-8 text-primary" />
           </div>
+          {open && (
+            <span className="font-display text-lg font-semibold tracking-tight animate-fade-in">
+              Mi-Tiendita
+            </span>
+          )}
         </div>
-        {isAdmin && (
-          <div className="px-4 py-2">
-            <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight">
-              Administración
-            </h2>
-            <div className="space-y-1">
-              <NavLink
-                to="/user-roles"
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
-                    isActive
-                      ? "bg-primary text-primary-foreground hover:text-primary-foreground"
-                      : "hover:bg-muted"
-                  )
-                }
-              >
-                <Users className="h-4 w-4" />
-                <span>Usuarios y Roles</span>
-              </NavLink>
-              <NavLink
-                to="/profile"
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
-                    isActive
-                      ? "bg-primary text-primary-foreground hover:text-primary-foreground"
-                      : "hover:bg-muted"
-                  )
-                }
-              >
-                <Settings className="h-4 w-4" />
-                <span>Mi perfil</span>
-              </NavLink>
-            </div>
-          </div>
-        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn("absolute right-0 mx-2 text-sidebar-foreground hover:text-foreground",
+                      !open && "right-auto")}
+          onClick={() => setOpen(!open)}
+        >
+          {open ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </Button>
       </div>
+      <ScrollArea className="h-[calc(100vh-4rem)]">
+        <div className="px-2 py-4">
+          <nav className="space-y-1">
+            {navItems.map((item) => (
+              <Link key={item.href} to={item.href}>
+                <div
+                  className={cn(
+                    "flex items-center py-2 px-3 rounded-md text-sm font-medium transition-all",
+                    location.pathname === item.href
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                  )}
+                >
+                  <item.icon className={cn("h-5 w-5 transition-all", 
+                                         open ? "mr-2" : "mx-auto")} />
+                  {open && <span>{item.title}</span>}
+                </div>
+              </Link>
+            ))}
+          </nav>
+        </div>
+      </ScrollArea>
     </div>
   );
 }
