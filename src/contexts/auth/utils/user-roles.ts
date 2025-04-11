@@ -45,8 +45,8 @@ export async function createDefaultRole(userId: string): Promise<boolean> {
     if (!profileExists) {
       console.log(`createDefaultRole: Profile for user ${userId} does not exist, creating it`);
       
-      // Obtener datos del usuario para crear el perfil
-      const { data: userData, error: userDataError } = await supabase.auth.admin.getUserById(userId);
+      // Obtener datos del usuario
+      const { data: userData, error: userDataError } = await supabase.auth.getUser(userId);
       
       if (userDataError) {
         console.error("createDefaultRole: Error getting user data:", userDataError);

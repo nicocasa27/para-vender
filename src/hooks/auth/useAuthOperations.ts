@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { UserRole } from '@/types/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast as sonnerToast } from "sonner";
-import { createDefaultRole } from '@/contexts/auth/utils/user-roles';
+import { createDefaultRole } from '@/contexts/auth/auth-utils';
 
 interface UseAuthOperationsProps {
   refreshUserRoles: () => Promise<any[]>;
@@ -56,7 +56,7 @@ export function useAuthOperations({
         if (profileError || !profile) {
           console.error("Auth: User found in auth but not in profiles");
           
-          // Crear el perfil que falta en lugar de cerrar sesión
+          // Crear el perfil que falta
           console.log("Auth: Creating missing profile for user:", data.user.id);
           const { error: createProfileError } = await supabase
             .from('profiles')
@@ -73,6 +73,9 @@ export function useAuthOperations({
           }
           
           console.log("Auth: Profile created successfully, now creating default role");
+          
+          // Forzar sincronización para garantizar que el usuario se cree correctamente
+          await forceUserSync(data.user.id);
         }
         
         // Asegurarse de que el usuario tenga un rol por defecto
@@ -114,6 +117,28 @@ export function useAuthOperations({
     }
   }, [navigate, refreshUserRoles]);
 
+  // Función auxiliar para forzar la sincronización de un usuario específico
+  const forceUserSync = async (userId: string) => {
+    try {
+      console.log("Auth: Forcing sync for user:", userId);
+      const { error: syncError } = await supabase.functions.invoke("sync-users", {
+        body: { 
+          forceUpdate: true,
+          forceSyncAll: false,
+          specificUserId: userId
+        },
+      });
+      
+      if (syncError) {
+        console.error("Auth: Error calling sync-users function:", syncError);
+      } else {
+        console.log("Auth: Successfully synchronized user:", userId);
+      }
+    } catch (error) {
+      console.error("Auth: Error during force sync:", error);
+    }
+  };
+
   /**
    * Registra un nuevo usuario
    */
@@ -134,6 +159,7 @@ export function useAuthOperations({
           data: {
             full_name: fullName,
           },
+          emailRedirectTo: window.location.origin + '/auth',
         },
       });
 
@@ -146,7 +172,7 @@ export function useAuthOperations({
         console.log("Auth: User created successfully, creating profile:", data.user.id);
         
         try {
-          // Insertar el perfil del usuario manualmente
+          // Insertar el perfil del usuario directamente
           const { error: profileError } = await supabase
             .from('profiles')
             .insert({
@@ -162,7 +188,7 @@ export function useAuthOperations({
           
           console.log("Auth: Profile created successfully, now creating default role");
           
-          // Crear un rol por defecto para el nuevo usuario
+          // Crear un rol por defecto para el nuevo usuario directamente
           const { error: roleError } = await supabase
             .from('user_roles')
             .insert({
@@ -178,26 +204,13 @@ export function useAuthOperations({
           
           console.log("Auth: Default role created for new user");
           
+          // Forzar sincronización para garantizar que el usuario se cree correctamente
+          await forceUserSync(data.user.id);
+          
         } catch (err) {
           console.error("Auth: Exception during profile/role creation:", err);
           // Intentamos llamar a la función de sincronización como fallback
-          try {
-            const { error: syncError } = await supabase.functions.invoke("sync-users", {
-              body: { 
-                forceUpdate: true,
-                forceSyncAll: true,
-                specificUserId: data.user.id // Añadimos el ID específico del usuario
-              },
-            });
-            
-            if (syncError) {
-              console.error("Auth: Error calling sync-users function:", syncError);
-            } else {
-              console.log("Auth: Successfully used sync-users as fallback");
-            }
-          } catch (syncErr) {
-            console.error("Auth: Exception calling sync-users function:", syncErr);
-          }
+          await forceUserSync(data.user.id);
         }
       }
       

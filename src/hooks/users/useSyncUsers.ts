@@ -14,19 +14,86 @@ export function useSyncUsers() {
   /**
    * Sincroniza los usuarios de auth con las tablas de perfiles y roles
    */
-  const syncUsers = async () => {
+  const syncUsers = async (specificUserId?: string) => {
     try {
       setSyncing(true);
-      toast.info("Iniciando sincronización completa de usuarios...");
       
-      console.log("Calling sync-users edge function with forceUpdate=true");
+      if (specificUserId) {
+        toast.info(`Sincronizando usuario específico (${specificUserId})...`);
+        console.log(`Calling sync-users edge function for user ${specificUserId}`);
+      } else {
+        toast.info("Iniciando sincronización completa de usuarios...");
+        console.log("Calling sync-users edge function with forceUpdate=true");
+      }
       
-      // Siempre llamar con forceUpdate=true para garantizar que todos los usuarios se sincronicen
+      // Parámetros para la sincronización
+      const params = { 
+        forceUpdate: true,
+        forceSyncAll: !specificUserId, // Solo forzar todos si no hay usuario específico
+        specificUserId: specificUserId || null
+      };
+      
+      // Primero, intentar una sincronización directa mediante operaciones en la base de datos
+      if (specificUserId) {
+        try {
+          // 1. Verificar si el usuario existe en auth
+          const { data: authData, error: authError } = await supabase.auth.getUser(specificUserId);
+          
+          if (authError) {
+            console.error("Error verificando usuario en auth:", authError);
+          } else if (authData.user) {
+            console.log("Usuario encontrado en auth, sincronizando manualmente");
+            
+            // 2. Insertar/actualizar perfil
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .upsert({
+                id: specificUserId,
+                email: authData.user.email,
+                full_name: authData.user.user_metadata?.full_name || authData.user.email?.split('@')[0] || "Usuario"
+              });
+              
+            if (profileError) {
+              console.error("Error creando/actualizando perfil:", profileError);
+            } else {
+              console.log("Perfil creado/actualizado correctamente");
+            }
+            
+            // 3. Verificar si ya tiene roles
+            const { data: existingRoles, error: rolesError } = await supabase
+              .from('user_roles')
+              .select('id')
+              .eq('user_id', specificUserId);
+              
+            if (rolesError) {
+              console.error("Error verificando roles existentes:", rolesError);
+            } else if (!existingRoles || existingRoles.length === 0) {
+              // 4. Crear rol por defecto si no tiene
+              const { error: roleError } = await supabase
+                .from('user_roles')
+                .insert({
+                  user_id: specificUserId,
+                  role: 'viewer',
+                  almacen_id: null
+                });
+                
+              if (roleError) {
+                console.error("Error creando rol por defecto:", roleError);
+              } else {
+                console.log("Rol por defecto creado correctamente");
+              }
+            } else {
+              console.log(`Usuario ya tiene ${existingRoles.length} roles asignados`);
+            }
+          }
+        } catch (directSyncError) {
+          console.error("Error en sincronización directa:", directSyncError);
+        }
+      }
+      
+      // Llamar a la función edge como respaldo o para sincronización completa
       const { data, error } = await supabase.functions.invoke("sync-users", {
-        body: { 
-          forceUpdate: true,
-          forceSyncAll: true // Agregamos este parámetro para sincronizar todos los usuarios
-        },
+        body: params,
       });
 
       if (error) {
@@ -82,6 +149,10 @@ export function useSyncUsers() {
         toast.success("Usuarios sincronizados correctamente", {
           description: "No se requirieron cambios"
         });
+      }
+      
+      if (data.specific_user_processed) {
+        toast.success(`Usuario ${data.specific_user_processed} sincronizado correctamente`);
       }
       
       return data;

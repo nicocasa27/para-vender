@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
@@ -122,14 +121,46 @@ export default function Auth() {
     }
   };
 
-  // Forzar sincronización del usuario después del registro
+  // Función reforzada para sincronizar el usuario después del registro
   const syncNewUser = async (userId: string) => {
     if (!userId) return;
     
     try {
       setIsSyncing(true);
       
-      console.log("Auth: Llamando a función de sincronización para nuevo usuario:", userId);
+      console.log("Auth: Realizando llamada directa a la API de Supabase para sincronizar usuario:", userId);
+      
+      // Primera sincronización: intentar crear el perfil directamente
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          email: registerEmail,
+          full_name: registerFullName
+        });
+        
+      if (profileError) {
+        console.error("Error creando/actualizando perfil:", profileError);
+      } else {
+        console.log("Perfil creado/actualizado correctamente");
+      }
+      
+      // Segunda sincronización: intentar crear rol por defecto
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: 'viewer',
+          almacen_id: null
+        });
+        
+      if (roleError) {
+        console.error("Error creando rol por defecto:", roleError);
+      } else {
+        console.log("Rol por defecto creado correctamente");
+      }
+      
+      // Tercera sincronización: llamar a la función edge para asegurar la sincronización
       const { data, error } = await supabase.functions.invoke("sync-users", {
         body: { 
           forceUpdate: true,
@@ -140,7 +171,7 @@ export default function Auth() {
       
       if (error) {
         console.error("Error llamando a la función sync-users:", error);
-        return;
+        throw error;
       }
       
       console.log("Resultado de sincronización para nuevo usuario:", data);
