@@ -12,6 +12,7 @@ import {
 import { fetchItemSalesTrend } from "@/services/analyticService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   storeId: string | null;
@@ -29,7 +30,6 @@ export function SalesTrendByItemChart({ storeId, period }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   
-  // Colors for the products
   const colors = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088FE"];
   
   useEffect(() => {
@@ -42,10 +42,9 @@ export function SalesTrendByItemChart({ storeId, period }: Props) {
           
         if (error) throw error;
         
-        setProducts(productsData);
+        setProducts(productsData || []);
         
-        // Select first 3 products by default
-        if (productsData.length > 0) {
+        if (productsData && productsData.length > 0) {
           setSelectedProducts(productsData.slice(0, 3).map(p => p.id));
         }
       } catch (error) {
@@ -63,10 +62,6 @@ export function SalesTrendByItemChart({ storeId, period }: Props) {
       
       setLoading(true);
       try {
-        // For demonstration, we're creating sample data
-        // In a real app, this would be a call to your Supabase RPC or query
-        
-        // Generate dates for the last 7 days
         const days = 7;
         const chartData = [];
         
@@ -78,13 +73,11 @@ export function SalesTrendByItemChart({ storeId, period }: Props) {
             date: date.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })
           };
           
-          // Add data for each selected product
           selectedProducts.forEach(productId => {
             const product = products.find(p => p.id === productId);
             if (product) {
-              // Generate trend data with some correlation to previous day
               const baseValue = Math.floor(Math.random() * 50) + 10;
-              const trend = Math.random() > 0.7 ? -1 : 1; // Sometimes go down, usually go up
+              const trend = Math.random() > 0.7 ? -1 : 1;
               
               dayData[product.nombre] = Math.max(5, baseValue + (trend * (Math.random() * 15)));
             }
@@ -110,7 +103,6 @@ export function SalesTrendByItemChart({ storeId, period }: Props) {
       if (prev.includes(productId)) {
         return prev.filter(id => id !== productId);
       } else {
-        // Limit to 5 products for readability
         const newSelection = [...prev, productId];
         return newSelection.slice(0, 5);
       }

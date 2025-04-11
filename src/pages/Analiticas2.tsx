@@ -159,43 +159,66 @@ const Analiticas2 = () => {
             break;
         }
         
-        let query = supabase
+        // Primero obtenemos los productos con sus categorías
+        const { data: products, error: prodError } = await supabase
+          .from('productos')
+          .select(`
+            id,
+            nombre,
+            categoria_id,
+            categorias:categoria_id(id, nombre)
+          `);
+          
+        if (prodError) throw prodError;
+        
+        // Creamos un mapa de productos a categorías
+        const productToCategory: Record<string, { id: string, name: string }> = {};
+        products?.forEach(product => {
+          if (product.categorias) {
+            productToCategory[product.id] = { 
+              id: product.categoria_id, 
+              name: product.categorias.nombre 
+            };
+          }
+        });
+        
+        // Ahora obtenemos las ventas en el período seleccionado
+        let salesQuery = supabase
           .from('detalles_venta')
           .select(`
+            producto_id,
             subtotal,
-            productos:producto_id(categoria_id),
-            categorias:productos.categoria_id(nombre),
             ventas:venta_id(almacen_id, created_at)
           `)
           .gte('ventas.created_at', startDate.toISOString())
           .lte('ventas.created_at', now.toISOString());
           
         if (selectedStore) {
-          query = query.eq('ventas.almacen_id', selectedStore);
+          salesQuery = salesQuery.eq('ventas.almacen_id', selectedStore);
         }
         
-        const { data, error } = await query;
+        const { data: salesData, error: salesError } = await salesQuery;
         
-        if (error) throw error;
+        if (salesError) throw salesError;
         
         // Agrupar por categoría
-        const categoryTotals: Record<string, number> = {};
+        const categoryTotals: Record<string, { name: string, total: number }> = {};
         
-        data?.forEach(item => {
-          if (!item.categorias?.nombre) return;
+        salesData?.forEach(item => {
+          if (!item.producto_id || !productToCategory[item.producto_id]) return;
           
-          const categoryName = item.categorias.nombre;
+          const category = productToCategory[item.producto_id];
           const amount = Number(item.subtotal) || 0;
           
-          if (!categoryTotals[categoryName]) {
-            categoryTotals[categoryName] = 0;
+          if (!categoryTotals[category.id]) {
+            categoryTotals[category.id] = { name: category.name, total: 0 };
           }
           
-          categoryTotals[categoryName] += amount;
+          categoryTotals[category.id].total += amount;
         });
         
         // Formatear para gráfico
-        return Object.entries(categoryTotals).map(([name, total]) => ({
+        return Object.values(categoryTotals).map(({ name, total }) => ({
           categoria: name,
           total: Number(total.toFixed(1))
         }));

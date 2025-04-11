@@ -73,7 +73,7 @@ export const fetchItemSalesTrend = async (
     
     if (data && data.length > 0) {
       data.forEach(item => {
-        if (!item.ventas || !item.productos) return;
+        if (!item.ventas?.created_at || !item.productos?.nombre) return;
         
         const saleDate = new Date(item.ventas.created_at);
         const dateStr = saleDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' });

@@ -207,7 +207,7 @@ export function ProductsNotSoldChart({ storeId, period }: Props) {
         <Tooltip 
           formatter={(value, name) => {
             if (name === "change") 
-              return [`${value.toFixed(1)}%`, "Variación"]; 
+              return [`${Number(value).toFixed(1)}%`, "Variación"]; 
             else 
               return [value, name === "current" ? "Ventas actuales" : "Ventas anteriores"];
           }}
