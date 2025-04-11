@@ -62,21 +62,70 @@ export function MarginByCategory() {
             startDate.setMonth(now.getMonth() - 1);
         }
         
-        // Fetch sales data with product details including category and prices
-        const { data: salesData, error: salesError } = await supabase
+        // Modificando la consulta para evitar errores de parsing
+        // Obtener ventas del almacén seleccionado
+        const { data: ventasData, error: ventasError } = await supabase
+          .from('ventas')
+          .select('id, created_at')
+          .eq('almacen_id', selectedStore)
+          .gte('created_at', startDate.toISOString())
+          .lte('created_at', now.toISOString());
+        
+        if (ventasError) throw ventasError;
+        
+        if (!ventasData || ventasData.length === 0) {
+          setData([]);
+          setLoading(false);
+          return;
+        }
+        
+        const ventaIds = ventasData.map(v => v.id);
+        
+        // Obtener detalles de venta
+        const { data: detallesData, error: detallesError } = await supabase
           .from('detalles_venta')
-          .select(`
-            cantidad,
-            precio_unitario,
-            productos:producto_id(id, nombre, categoria_id, precio_compra),
-            categorias:productos.categoria_id(id, nombre),
-            ventas:venta_id(id, created_at, almacen_id)
-          `)
-          .gte('ventas.created_at', startDate.toISOString())
-          .lte('ventas.created_at', now.toISOString())
-          .eq('ventas.almacen_id', selectedStore);
+          .select('cantidad, precio_unitario, producto_id, venta_id')
+          .in('venta_id', ventaIds);
           
-        if (salesError) throw salesError;
+        if (detallesError) throw detallesError;
+        
+        if (!detallesData || detallesData.length === 0) {
+          setData([]);
+          setLoading(false);
+          return;
+        }
+        
+        // Obtener información de productos
+        const productoIds = [...new Set(detallesData.map(d => d.producto_id))];
+        
+        const { data: productosData, error: productosError } = await supabase
+          .from('productos')
+          .select('id, nombre, categoria_id, precio_compra')
+          .in('id', productoIds);
+          
+        if (productosError) throw productosError;
+        
+        // Crear un mapa de productos para acceso rápido
+        const productosMap: Record<string, any> = {};
+        productosData?.forEach(p => {
+          productosMap[p.id] = p;
+        });
+        
+        // Obtener categorías
+        const categoriaIds = [...new Set(productosData?.map(p => p.categoria_id) || [])];
+        
+        const { data: categoriasData, error: categoriasError } = await supabase
+          .from('categorias')
+          .select('id, nombre')
+          .in('id', categoriaIds);
+          
+        if (categoriasError) throw categoriasError;
+        
+        // Crear un mapa de categorías
+        const categoriasMap: Record<string, any> = {};
+        categoriasData?.forEach(c => {
+          categoriasMap[c.id] = c;
+        });
         
         // Group and calculate by category
         const marginByCategory: Record<string, { 
@@ -86,13 +135,18 @@ export function MarginByCategory() {
           margin: number
         }> = {};
         
-        salesData?.forEach(item => {
-          if (!item.categorias?.nombre || !item.productos) return;
+        detallesData.forEach(detalle => {
+          const producto = productosMap[detalle.producto_id];
+          if (!producto) return;
           
-          const categoryName = item.categorias.nombre;
-          const quantity = Number(item.cantidad) || 0;
-          const salePrice = Number(item.precio_unitario) || 0;
-          const costPrice = Number(item.productos.precio_compra) || 0;
+          const categoriaId = producto.categoria_id;
+          const categoria = categoriasMap[categoriaId];
+          if (!categoria) return;
+          
+          const categoryName = categoria.nombre;
+          const quantity = Number(detalle.cantidad) || 0;
+          const salePrice = Number(detalle.precio_unitario) || 0;
+          const costPrice = Number(producto.precio_compra) || 0;
           
           const saleTotal = quantity * salePrice;
           const costTotal = quantity * costPrice;

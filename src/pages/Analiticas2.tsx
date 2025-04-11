@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { ReloadIcon } from "@radix-ui/react-icons";
+import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStores } from "@/hooks/useStores";
 import { useQuery } from "@tanstack/react-query";
@@ -85,39 +85,96 @@ const Analiticas2 = () => {
             break;
         }
 
+        // Simplificar la consulta para evitar errores de parsing
         let query = supabase
           .from('detalles_venta')
           .select(`
             subtotal,
-            productos:producto_id(categoria_id),
-            categorias:productos.categoria_id(nombre),
-            ventas:venta_id(almacen_id, created_at)
+            producto_id,
+            venta_id
           `)
-          .gte('ventas.created_at', startDate.toISOString())
-          .lte('ventas.created_at', now.toISOString());
+          .gte('created_at', startDate.toISOString())
+          .lte('created_at', now.toISOString());
           
         if (selectedStore) {
-          query = query.eq('ventas.almacen_id', selectedStore);
-        }
+          // Primero obtener ventas para el almacén seleccionado
+          const { data: ventas, error: ventasError } = await supabase
+            .from('ventas')
+            .select('id')
+            .eq('almacen_id', selectedStore)
+            .gte('created_at', startDate.toISOString())
+            .lte('created_at', now.toISOString());
+            
+          if (ventasError) throw ventasError;
           
-        const { data, error } = await query;
+          if (ventas && ventas.length > 0) {
+            const ventaIds = ventas.map(v => v.id);
+            query = query.in('venta_id', ventaIds);
+          } else {
+            return []; // No hay ventas para este almacén en este período
+          }
+        }
         
-        if (error) throw error;
+        const { data: detalles, error: detallesError } = await query;
+        if (detallesError) throw detallesError;
         
-        // Agrupar por categoría
+        if (!detalles || detalles.length === 0) {
+          return [];
+        }
+        
+        // Obtener detalles de productos para conseguir las categorías
+        const productoIds = [...new Set(detalles.map(d => d.producto_id))];
+        
+        const { data: productos, error: productosError } = await supabase
+          .from('productos')
+          .select(`
+            id,
+            categoria_id
+          `)
+          .in('id', productoIds);
+          
+        if (productosError) throw productosError;
+        
+        // Mapear productos a categorías
+        const productoCategoriaMap: Record<string, string> = {};
+        productos?.forEach(p => {
+          if (p.id && p.categoria_id) {
+            productoCategoriaMap[p.id] = p.categoria_id;
+          }
+        });
+        
+        // Obtener nombres de categorías
+        const categoriaIds = [...new Set(Object.values(productoCategoriaMap))];
+        
+        const { data: categorias, error: categoriasError } = await supabase
+          .from('categorias')
+          .select('id, nombre')
+          .in('id', categoriaIds);
+          
+        if (categoriasError) throw categoriasError;
+        
+        // Mapear IDs de categoría a nombres
+        const categoriaNombreMap: Record<string, string> = {};
+        categorias?.forEach(c => {
+          if (c.id && c.nombre) {
+            categoriaNombreMap[c.id] = c.nombre;
+          }
+        });
+        
+        // Agrupar ventas por categoría
         const categoryTotals: Record<string, number> = {};
         
-        data?.forEach(item => {
-          if (!item.categorias?.nombre) return;
+        detalles.forEach(detalle => {
+          const productoId = detalle.producto_id;
+          const categoriaId = productoCategoriaMap[productoId];
+          const categoriaNombre = categoriaNombreMap[categoriaId] || 'Sin categoría';
+          const amount = Number(detalle.subtotal) || 0;
           
-          const categoryName = item.categorias.nombre;
-          const amount = Number(item.subtotal) || 0;
-          
-          if (!categoryTotals[categoryName]) {
-            categoryTotals[categoryName] = 0;
+          if (!categoryTotals[categoriaNombre]) {
+            categoryTotals[categoriaNombre] = 0;
           }
           
-          categoryTotals[categoryName] += amount;
+          categoryTotals[categoriaNombre] += amount;
         });
         
         // Formatear para gráfico
@@ -227,9 +284,9 @@ const Analiticas2 = () => {
           disabled={topProductsLoading || categorySalesLoading || revenueLoading}
         >
           {(topProductsLoading || categorySalesLoading || revenueLoading) ? (
-            <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
           ) : (
-            <ReloadIcon className="mr-2 h-4 w-4" />
+            <RefreshCw className="mr-2 h-4 w-4" />
           )}
           Actualizar datos
         </Button>

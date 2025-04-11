@@ -13,12 +13,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
-interface Props {
+interface SalesByHourChartProps {
   storeId: string | null;
   period: string;
 }
 
-export function SalesByHourChart({ storeId, period }: Props) {
+export function SalesByHourChart({ storeId, period }: SalesByHourChartProps) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any[]>([]);
   

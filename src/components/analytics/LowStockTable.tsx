@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { AlertTriangle, AlertCircle } from "lucide-react";
 
-interface Props {
+interface LowStockTableProps {
   storeId: string | null;
 }
 
@@ -25,7 +25,7 @@ interface LowStockProduct {
   status: 'warning' | 'critical';
 }
 
-export function LowStockTable({ storeId }: Props) {
+export function LowStockTable({ storeId }: LowStockTableProps) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<LowStockProduct[]>([]);
   
