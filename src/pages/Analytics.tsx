@@ -8,17 +8,14 @@ import { SalesChart } from "@/components/dashboard";
 import { SalesByCategoryChart } from "@/components/analytics/SalesByCategoryChart";
 import { TopProductsChart } from "@/components/analytics/TopProductsChart";
 import { RevenueOverTimeChart } from "@/components/analytics/RevenueOverTimeChart";
-import { SalesDataPoint, CategoryDataPoint, ProductDataPoint, ItemSalesTrendDataPoint } from "@/types/analytics";
+import { SalesDataPoint, CategoryDataPoint, ProductDataPoint } from "@/types/analytics";
 import { toast } from "sonner";
-import { ItemSalesTrendChart } from "@/components/analytics/ItemSalesTrendChart";
-import { fetchItemSalesTrend } from "@/services/analyticService";
 
 export default function Analytics() {
   const { stores, isLoading: loadingStores } = useCurrentStores();
   const [salesByCategory, setSalesByCategory] = useState<CategoryDataPoint[]>([]);
   const [topProducts, setTopProducts] = useState<ProductDataPoint[]>([]);
   const [revenueOverTime, setRevenueOverTime] = useState<SalesDataPoint[]>([]);
-  const [itemSalesTrend, setItemSalesTrend] = useState<ItemSalesTrendDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState("week");
   const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
@@ -62,10 +59,6 @@ export default function Analytics() {
       
       if (salesTimeError) throw salesTimeError;
       setRevenueOverTime(salesTimeData || []);
-      
-      // Tendencia de ventas por ítem (nueva)
-      const itemTrendData = await fetchItemSalesTrend(storeIds, period);
-      setItemSalesTrend(itemTrendData);
       
     } catch (error) {
       console.error("Error fetching analytics:", error);
@@ -129,11 +122,8 @@ export default function Analytics() {
         </div>
       </div>
       
-      {/* SalesChart */}
+      {/* Added SalesChart here, moved from dashboard */}
       <SalesChart storeIds={selectedStoreIds} />
-
-      {/* Nueva gráfica de tendencia de ventas por ítem */}
-      <ItemSalesTrendChart data={itemSalesTrend} loading={loading} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
