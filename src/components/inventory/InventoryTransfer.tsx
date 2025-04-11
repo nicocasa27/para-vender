@@ -8,10 +8,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import { StockTransferForm } from "./StockTransferForm";
-import { TransferHistory } from "./TransferHistory";
+import { StockTransferForm } from "./stock-transfer/StockTransferForm";
+import { TransferHistory } from "./stock-transfer/TransferHistory";
 
-export function StockTransferManager() {
+export function InventoryTransfer() {
   const [refreshHistoryToggle, setRefreshHistoryToggle] = useState(false);
 
   const handleTransferComplete = () => {
@@ -22,9 +22,9 @@ export function StockTransferManager() {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
       <Card>
         <CardHeader>
-          <CardTitle>Transferir Stock</CardTitle>
+          <CardTitle>Transferir Inventario</CardTitle>
           <CardDescription>
-            Mueva productos entre sucursales de manera rápida
+            Mueva productos entre sucursales
           </CardDescription>
         </CardHeader>
         <CardContent>

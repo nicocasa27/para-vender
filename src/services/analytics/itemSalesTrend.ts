@@ -2,124 +2,127 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export interface ItemSalesTrendData {
-  id: string;
-  name: string;
-  series: {
-    date: string;
-    value: number;
-  }[];
-}
-
-interface DataPoint {
+export interface ItemSalesTrend {
   date: string;
-  [key: string]: number | string;
+  [productName: string]: number | string;
 }
 
-export async function fetchItemSalesTrend(
-  period: "weekly" | "monthly" = "monthly",
-  storeIds: string[] | null = null,
-  limit: number = 5
-): Promise<ItemSalesTrendData[]> {
+export const fetchItemSalesTrend = async (
+  timeRange: string,
+  storeId: string | null,
+  productIds: string[]
+): Promise<ItemSalesTrend[]> => {
   try {
-    const today = new Date();
-    const startDate = new Date();
+    // Determine the date range based on timeRange
+    const now = new Date();
+    let startDate;
     
-    if (period === "weekly") {
-      startDate.setDate(today.getDate() - 7);
-    } else {
-      startDate.setMonth(today.getMonth() - 6);
+    switch (timeRange) {
+      case "week":
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7); // 7 days ago
+        break;
+      case "month":
+        startDate = new Date(now);
+        startDate.setMonth(now.getMonth() - 1); // 1 month ago
+        break;
+      case "year":
+        startDate = new Date(now);
+        startDate.setFullYear(now.getFullYear() - 1); // 1 year ago
+        break;
+      default:
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7); // Default to 7 days
     }
-
-    // Consulta para obtener los productos más vendidos
+    
+    // Convert dates to ISO format for Supabase
+    const startDateStr = startDate.toISOString();
+    const endDateStr = now.toISOString();
+    
+    if (productIds.length === 0) {
+      return [];
+    }
+    
+    // Build the query
     let query = supabase
       .from('detalles_venta')
       .select(`
         cantidad,
         producto_id,
-        productos:productos(id, nombre),
+        productos:producto_id(id, nombre),
         ventas:venta_id(id, created_at, almacen_id)
       `)
-      .gte('ventas.created_at', startDate.toISOString())
-      .order('ventas.created_at');
-
-    if (storeIds && storeIds.length > 0) {
-      query = query.in('ventas.almacen_id', storeIds);
+      .gte('ventas.created_at', startDateStr)
+      .lte('ventas.created_at', endDateStr)
+      .in('producto_id', productIds);
+    
+    // Filter by store if provided
+    if (storeId) {
+      query = query.eq('ventas.almacen_id', storeId);
     }
-
-    const { data: salesData, error } = await query;
-
+    
+    const { data, error } = await query;
+    
     if (error) {
-      console.error("Error fetching sales trend data:", error);
-      toast.error("Error al cargar tendencia de ventas");
-      return [];
-    }
-
-    if (!salesData || salesData.length === 0) {
-      return [];
+      throw error;
     }
     
-    // Agrupar por producto y sumar las cantidades por fecha
-    const productSales: Record<string, Record<string, number>> = {};
-    const productNames: Record<string, string> = {};
+    // Group sales by date and product
+    const salesByDay = new Map<string, Map<string, number>>();
+    const productNames = new Map<string, string>();
     
-    salesData.forEach((sale: any) => {
-      if (!sale.productos || !sale.ventas) return;
-      
-      const productId = sale.producto_id;
-      const productName = sale.productos.nombre;
-      const saleDate = new Date(sale.ventas.created_at);
-      let dateKey;
-      
-      if (period === "weekly") {
-        dateKey = saleDate.toISOString().split('T')[0]; // YYYY-MM-DD
-      } else {
-        dateKey = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
-      }
-      
-      if (!productSales[productId]) {
-        productSales[productId] = {};
-      }
-      
-      if (!productSales[productId][dateKey]) {
-        productSales[productId][dateKey] = 0;
-      }
-      
-      productSales[productId][dateKey] += Number(sale.cantidad) || 0;
-      productNames[productId] = productName;
+    if (data && data.length > 0) {
+      data.forEach(item => {
+        if (!item.ventas || !item.productos) return;
+        
+        const saleDate = new Date(item.ventas.created_at);
+        const dateStr = saleDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' });
+        const productId = item.producto_id;
+        const productName = item.productos.nombre;
+        const cantidad = Number(item.cantidad) || 0;
+        
+        // Store product name for later use
+        productNames.set(productId, productName);
+        
+        // Initialize date entry if it doesn't exist
+        if (!salesByDay.has(dateStr)) {
+          salesByDay.set(dateStr, new Map<string, number>());
+        }
+        
+        // Get current count and add quantity
+        const productSales = salesByDay.get(dateStr)!;
+        const currentCount = productSales.get(productId) || 0;
+        productSales.set(productId, currentCount + cantidad);
+      });
+    }
+    
+    // Convert to expected format for chart
+    const dates = Array.from(salesByDay.keys()).sort((a, b) => {
+      const dateA = new Date(a);
+      const dateB = new Date(b);
+      return dateA.getTime() - dateB.getTime();
     });
     
-    // Calcular el total de ventas por producto para encontrar los más vendidos
-    const productTotals: Record<string, number> = {};
-    
-    Object.entries(productSales).forEach(([productId, salesByDate]) => {
-      productTotals[productId] = Object.values(salesByDate).reduce((acc, val) => acc + val, 0);
-    });
-    
-    // Obtener los productos más vendidos (limited by 'limit' parameter)
-    const topProductIds = Object.entries(productTotals)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, limit)
-      .map(([id]) => id);
-    
-    // Formatear los datos para la gráfica
-    const result: ItemSalesTrendData[] = topProductIds.map(productId => {
-      const series = Object.entries(productSales[productId]).map(([date, value]) => ({
-        date,
-        value
-      }));
+    const result: ItemSalesTrend[] = dates.map(date => {
+      const entry: ItemSalesTrend = { date };
       
-      return {
-        id: productId,
-        name: productNames[productId] || `Producto ${productId}`,
-        series: series.sort((a, b) => a.date.localeCompare(b.date))
-      };
+      // Add each product's sales for the date
+      productIds.forEach(productId => {
+        const productName = productNames.get(productId) || `Product ${productId.substring(0, 4)}`;
+        const sales = salesByDay.get(date)?.get(productId) || 0;
+        entry[productName] = sales;
+      });
+      
+      return entry;
     });
     
     return result;
+    
   } catch (error) {
-    console.error("Error in fetchItemSalesTrend:", error);
-    toast.error("Error al obtener tendencia de ventas");
+    console.error('Error fetching item sales trend:', error);
+    toast.error("Error al cargar la tendencia de ventas por ítem");
+    
+    // Return empty dataset on error
     return [];
   }
-}
+};
