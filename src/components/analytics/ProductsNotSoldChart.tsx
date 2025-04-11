@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -8,213 +8,189 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
+  Legend,
+  Cell
 } from "recharts";
-import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { fetchNonSellingProducts } from "@/services/analyticService";
+import { ChevronDown, ChevronUp, Minus } from "lucide-react";
+import { useStores } from "@/hooks/useStores";
 
-interface Props {
-  storeId: string | null;
-  period: string;
-}
-
-interface ProductSalesChange {
-  name: string;
-  current: number;
-  previous: number;
-  change: number;
-}
-
-export function ProductsNotSoldChart({ storeId, period }: Props) {
+export function ProductsNotSoldChart() {
+  const [timeRange, setTimeRange] = useState("month");
+  const [selectedStore, setSelectedStore] = useState<string | null>(null);
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<ProductSalesChange[]>([]);
+  const { stores, isLoading: storesLoading } = useStores();
+  
+  // Define colors for the chart based on change percentage
+  const getBarColor = (change: number) => {
+    if (change <= -50) return "#ef4444"; // Strong negative (red)
+    if (change <= -20) return "#f97316"; // Moderate negative (orange)
+    return "#eab308"; // Mild negative (yellow)
+  };
+  
+  // Sort the data from worst to best (most negative change first)
+  const sortedData = [...data].sort((a, b) => a.change - b.change);
+  
+  useEffect(() => {
+    // Set first store as default when stores load
+    if (stores.length > 0 && !selectedStore) {
+      setSelectedStore(stores[0].id);
+    }
+  }, [stores, selectedStore]);
   
   useEffect(() => {
     const fetchData = async () => {
+      if (!selectedStore) return;
+      
       setLoading(true);
       try {
-        // Determine date ranges for current and previous periods
-        const today = new Date();
-        let currentStartDate = new Date();
-        let previousStartDate = new Date();
-        let previousEndDate = new Date();
-        
-        switch (period) {
-          case "week":
-            currentStartDate.setDate(today.getDate() - 7);
-            previousStartDate.setDate(today.getDate() - 14);
-            previousEndDate.setDate(today.getDate() - 7);
-            break;
-          case "month":
-            currentStartDate.setDate(today.getDate() - 30);
-            previousStartDate.setDate(today.getDate() - 60);
-            previousEndDate.setDate(today.getDate() - 30);
-            break;
-          case "year":
-            currentStartDate.setMonth(today.getMonth() - 12);
-            previousStartDate.setMonth(today.getMonth() - 24);
-            previousEndDate.setMonth(today.getMonth() - 12);
-            break;
-          default:
-            currentStartDate.setDate(today.getDate() - 7);
-            previousStartDate.setDate(today.getDate() - 14);
-            previousEndDate.setDate(today.getDate() - 7);
-        }
-        
-        // Get all products
-        const { data: products, error: prodError } = await supabase
-          .from('productos')
-          .select('id, nombre')
-          .limit(100); // Limit to prevent performance issues
-          
-        if (prodError) throw prodError;
-        
-        if (!products || products.length === 0) {
-          setData([]);
-          setLoading(false);
-          return;
-        }
-        
-        // Initialize product sales map
-        const productSalesMap: Record<string, { name: string, current: number, previous: number }> = {};
-        products.forEach(prod => {
-          productSalesMap[prod.id] = { name: prod.nombre, current: 0, previous: 0 };
-        });
-        
-        // Get current period sales
-        let currentQuery = supabase
-          .from('detalles_venta')
-          .select(`
-            producto_id, 
-            cantidad,
-            ventas:venta_id(almacen_id, created_at)
-          `)
-          .gte('ventas.created_at', currentStartDate.toISOString())
-          .lte('ventas.created_at', today.toISOString());
-          
-        if (storeId && storeId !== "all") {
-          currentQuery = currentQuery.eq('ventas.almacen_id', storeId);
-        }
-        
-        const { data: currentSales, error: currentError } = await currentQuery;
-        
-        if (currentError) throw currentError;
-        
-        // Process current period sales
-        if (currentSales && currentSales.length > 0) {
-          currentSales.forEach(sale => {
-            const productId = sale.producto_id;
-            if (!productId || !productSalesMap[productId]) return;
-            
-            const cantidad = Number(sale.cantidad) || 0;
-            productSalesMap[productId].current += cantidad;
-          });
-        }
-        
-        // Get previous period sales
-        let previousQuery = supabase
-          .from('detalles_venta')
-          .select(`
-            producto_id, 
-            cantidad,
-            ventas:venta_id(almacen_id, created_at)
-          `)
-          .gte('ventas.created_at', previousStartDate.toISOString())
-          .lte('ventas.created_at', previousEndDate.toISOString());
-          
-        if (storeId && storeId !== "all") {
-          previousQuery = previousQuery.eq('ventas.almacen_id', storeId);
-        }
-        
-        const { data: previousSales, error: previousError } = await previousQuery;
-        
-        if (previousError) throw previousError;
-        
-        // Process previous period sales
-        if (previousSales && previousSales.length > 0) {
-          previousSales.forEach(sale => {
-            const productId = sale.producto_id;
-            if (!productId || !productSalesMap[productId]) return;
-            
-            const cantidad = Number(sale.cantidad) || 0;
-            productSalesMap[productId].previous += cantidad;
-          });
-        }
-        
-        // Calculate changes and format data for chart
-        const salesChanges: ProductSalesChange[] = Object.values(productSalesMap)
-          .map(product => {
-            let changePercent = 0;
-            
-            if (product.previous > 0) {
-              changePercent = ((product.current - product.previous) / product.previous) * 100;
-            } else if (product.current > 0) {
-              changePercent = 100; // New product with sales
-            }
-            
-            return {
-              name: product.name,
-              current: product.current,
-              previous: product.previous,
-              change: Number(changePercent.toFixed(1))
-            };
-          })
-          // Filter for products with significant negative change
-          .filter(product => product.previous > 0 && product.change < 0)
-          // Sort by largest negative change first
-          .sort((a, b) => a.change - b.change)
-          // Take top 8 worst performing products
-          .slice(0, 8);
-        
-        setData(salesChanges);
+        const nonSellingProducts = await fetchNonSellingProducts(timeRange, selectedStore);
+        setData(nonSellingProducts);
       } catch (error) {
         console.error("Error fetching non-selling products:", error);
-        toast.error("Error al cargar productos sin ventas");
       } finally {
         setLoading(false);
       }
     };
     
     fetchData();
-  }, [storeId, period]);
+  }, [timeRange, selectedStore]);
   
-  if (loading) {
-    return <Skeleton className="h-[400px] w-full rounded-md" />;
-  }
+  const formatChange = (change: number) => {
+    const value = Number(change);
+    if (isNaN(value)) return <Minus className="h-4 w-4" />;
+    
+    if (value < 0) {
+      return (
+        <span className="flex items-center text-red-500">
+          <ChevronDown className="h-4 w-4 mr-1" />
+          {Math.abs(value)}%
+        </span>
+      );
+    } else if (value > 0) {
+      return (
+        <span className="flex items-center text-green-500">
+          <ChevronUp className="h-4 w-4 mr-1" />
+          {value}%
+        </span>
+      );
+    } else {
+      return (
+        <span className="flex items-center text-gray-500">
+          <Minus className="h-4 w-4 mr-1" />
+          0%
+        </span>
+      );
+    }
+  };
   
-  if (data.length === 0) {
-    return <div className="flex items-center justify-center h-[400px] text-muted-foreground">
-      No hay datos de productos con disminución de ventas para el período seleccionado
-    </div>;
-  }
+  // Custom tooltip to show more detailed information
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const item = payload[0].payload;
+      return (
+        <div className="bg-white p-3 border rounded shadow-md">
+          <p className="font-medium text-gray-900">{item.name}</p>
+          <p className="text-sm text-gray-600">
+            <span className="font-medium">Período actual:</span> {item.current} unidades
+          </p>
+          <p className="text-sm text-gray-600">
+            <span className="font-medium">Período anterior:</span> {item.previous} unidades
+          </p>
+          <p className={`text-sm font-medium ${item.change < 0 ? 'text-red-500' : 'text-green-500'}`}>
+            Cambio: {typeof item.change === 'number' ? `${item.change.toFixed(1)}%` : 'N/A'}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
   
   return (
-    <ResponsiveContainer width="100%" height={400}>
-      <BarChart
-        data={data}
-        layout="vertical"
-        margin={{ top: 20, right: 30, left: 150, bottom: 5 }}
-      >
-        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-        <XAxis type="number" />
-        <YAxis 
-          dataKey="name" 
-          type="category" 
-          tick={{ fontSize: 12 }}
-          width={140}
-        />
-        <Tooltip 
-          formatter={(value, name) => {
-            if (name === "change") 
-              return [`${value.toFixed(1)}%`, "Variación"]; 
-            else 
-              return [value, name === "current" ? "Ventas actuales" : "Ventas anteriores"];
-          }}
-        />
-        <ReferenceLine x={0} stroke="#000" />
-        <Bar dataKey="change" fill="#ff8042" name="Variación %" />
-      </BarChart>
-    </ResponsiveContainer>
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle>Productos con menor desempeño</CardTitle>
+          </div>
+          <div className="flex space-x-2">
+            <Select 
+              value={timeRange} 
+              onValueChange={setTimeRange}
+            >
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="week">Última semana</SelectItem>
+                <SelectItem value="month">Último mes</SelectItem>
+                <SelectItem value="year">Último año</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select 
+              value={selectedStore || ''} 
+              onValueChange={setSelectedStore}
+              disabled={storesLoading}
+            >
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="Tienda" />
+              </SelectTrigger>
+              <SelectContent>
+                {stores.map((store) => (
+                  <SelectItem key={store.id} value={store.id}>
+                    {store.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <Skeleton className="h-[300px] w-full rounded-md" />
+        ) : data.length === 0 ? (
+          <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+            No hay datos disponibles para el período y tienda seleccionados
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={sortedData}
+              layout="vertical"
+              margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+              <XAxis
+                type="number"
+                tickFormatter={(value) => `${value}%`}
+                domain={['dataMin', 0]}
+              />
+              <YAxis
+                dataKey="name"
+                type="category"
+                width={110}
+                tick={{ fontSize: 12 }}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+              <Bar
+                dataKey="change"
+                name="Cambio en ventas (%)"
+              >
+                {sortedData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={getBarColor(entry.change)} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </CardContent>
+    </Card>
   );
 }

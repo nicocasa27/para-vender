@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -8,191 +8,234 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Cell
 } from "recharts";
-import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { MarginDataPoint } from "@/types/analytics";
+import { useStores } from "@/hooks/useStores";
 import { toast } from "sonner";
 
-interface Props {
-  storeId: string | null;
-  period: string;
-}
-
-interface MarginData {
-  name: string;
-  sales: number;
-  cost: number;
-  margin: number;
-}
-
-export function MarginByCategory({ storeId, period }: Props) {
+export function MarginByCategory() {
+  const [timeRange, setTimeRange] = useState("month");
+  const [selectedStore, setSelectedStore] = useState<string | null>(null);
+  const [data, setData] = useState<MarginDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<MarginData[]>([]);
+  const { stores, isLoading: storesLoading } = useStores();
+  
+  // Define colors for the bars
+  const salesColor = "#818cf8"; // Indigo
+  const costsColor = "#fb7185"; // Rose
+  const marginColor = "#10b981"; // Emerald
+  
+  useEffect(() => {
+    // Set first store as default when stores load
+    if (stores.length > 0 && !selectedStore) {
+      setSelectedStore(stores[0].id);
+    }
+  }, [stores, selectedStore]);
   
   useEffect(() => {
     const fetchData = async () => {
+      if (!selectedStore) return;
+      
       setLoading(true);
       try {
         // Determine date range based on period
-        const today = new Date();
+        const now = new Date();
         let startDate = new Date();
         
-        switch (period) {
+        switch (timeRange) {
           case "week":
-            startDate.setDate(today.getDate() - 7);
+            startDate.setDate(now.getDate() - 7);
             break;
           case "month":
-            startDate.setDate(today.getDate() - 30);
+            startDate.setMonth(now.getMonth() - 1);
             break;
           case "year":
-            startDate.setMonth(today.getMonth() - 12);
+            startDate.setFullYear(now.getFullYear() - 1);
             break;
           default:
-            startDate.setDate(today.getDate() - 7);
+            startDate.setMonth(now.getMonth() - 1);
         }
         
-        // Get all categories
-        const { data: categories, error: catError } = await supabase
-          .from('categorias')
-          .select('id, nombre');
-          
-        if (catError) throw catError;
-        
-        if (!categories || categories.length === 0) {
-          setData([]);
-          setLoading(false);
-          return;
-        }
-        
-        // Initialize margin data by category
-        const categoryMap: Record<string, { name: string, sales: number, cost: number }> = {};
-        categories.forEach(cat => {
-          categoryMap[cat.id] = { name: cat.nombre, sales: 0, cost: 0 };
-        });
-        
-        // Get products with categories
-        const { data: products, error: prodError } = await supabase
-          .from('productos')
-          .select('id, nombre, categoria_id, precio_venta, precio_compra');
-          
-        if (prodError) throw prodError;
-        
-        // Create product price map
-        const productPriceMap: Record<string, { venta: number, compra: number, categoria_id: string | null }> = {};
-        products.forEach(prod => {
-          productPriceMap[prod.id] = { 
-            venta: Number(prod.precio_venta) || 0, 
-            compra: Number(prod.precio_compra) || 0,
-            categoria_id: prod.categoria_id
-          };
-        });
-        
-        // Query for sales
-        let query = supabase
+        // Fetch sales data with product details including category and prices
+        const { data: salesData, error: salesError } = await supabase
           .from('detalles_venta')
           .select(`
-            id, 
-            producto_id, 
-            cantidad, 
+            cantidad,
             precio_unitario,
-            venta_id,
-            ventas:venta_id(almacen_id, created_at)
+            productos:producto_id(id, nombre, categoria_id, precio_compra),
+            categorias:productos.categoria_id(id, nombre),
+            ventas:venta_id(id, created_at, almacen_id)
           `)
           .gte('ventas.created_at', startDate.toISOString())
-          .lte('ventas.created_at', today.toISOString());
+          .lte('ventas.created_at', now.toISOString())
+          .eq('ventas.almacen_id', selectedStore);
           
-        if (storeId && storeId !== "all") {
-          query = query.eq('ventas.almacen_id', storeId);
-        }
-        
-        const { data: salesDetails, error: salesError } = await query;
-        
         if (salesError) throw salesError;
         
-        if (salesDetails && salesDetails.length > 0) {
-          // Process sales data
-          salesDetails.forEach(detail => {
-            const productId = detail.producto_id;
-            if (!productId || !productPriceMap[productId]) return;
-            
-            const categoriaId = productPriceMap[productId].categoria_id;
-            if (!categoriaId || !categoryMap[categoriaId]) return;
-            
-            const cantidad = Number(detail.cantidad) || 0;
-            const precioVenta = Number(detail.precio_unitario) || productPriceMap[productId].venta;
-            const precioCompra = productPriceMap[productId].compra;
-            
-            categoryMap[categoriaId].sales += precioVenta * cantidad;
-            categoryMap[categoriaId].cost += precioCompra * cantidad;
-          });
-        }
+        // Group and calculate by category
+        const marginByCategory: Record<string, { 
+          category: string, 
+          sales: number, 
+          costs: number, 
+          margin: number
+        }> = {};
         
-        // Format data for chart
-        const marginData: MarginData[] = Object.values(categoryMap)
-          .filter(cat => cat.sales > 0 || cat.cost > 0) // Only include categories with data
-          .map(cat => {
-            const margin = cat.sales > 0 
-              ? Number(((cat.sales - cat.cost) / cat.sales * 100).toFixed(1))
-              : 0;
-              
-            return {
-              name: cat.name,
-              sales: Number(cat.sales.toFixed(1)),
-              cost: Number(cat.cost.toFixed(1)),
-              margin
+        salesData?.forEach(item => {
+          if (!item.categorias?.nombre || !item.productos) return;
+          
+          const categoryName = item.categorias.nombre;
+          const quantity = Number(item.cantidad) || 0;
+          const salePrice = Number(item.precio_unitario) || 0;
+          const costPrice = Number(item.productos.precio_compra) || 0;
+          
+          const saleTotal = quantity * salePrice;
+          const costTotal = quantity * costPrice;
+          const marginTotal = saleTotal - costTotal;
+          
+          if (!marginByCategory[categoryName]) {
+            marginByCategory[categoryName] = {
+              category: categoryName,
+              sales: 0,
+              costs: 0,
+              margin: 0
             };
-          })
-          .sort((a, b) => b.sales - a.sales); // Sort by sales descending
+          }
+          
+          marginByCategory[categoryName].sales += saleTotal;
+          marginByCategory[categoryName].costs += costTotal;
+          marginByCategory[categoryName].margin += marginTotal;
+        });
         
-        setData(marginData);
+        // Format data for chart and sort by margin (highest first)
+        const chartData = Object.values(marginByCategory)
+          .map(item => ({
+            category: item.category,
+            sales: Number(item.sales.toFixed(1)),
+            costs: Number(item.costs.toFixed(1)),
+            margin: Number(item.margin.toFixed(1))
+          }))
+          .sort((a, b) => b.margin - a.margin)
+          .slice(0, 6); // Top 6 categories by margin
+          
+        setData(chartData);
       } catch (error) {
-        console.error("Error fetching margin data:", error);
-        toast.error("Error al cargar datos de margen");
+        console.error("Error fetching margin by category:", error);
+        toast.error("Error al cargar datos de margen por categoría");
       } finally {
         setLoading(false);
       }
     };
     
     fetchData();
-  }, [storeId, period]);
+  }, [timeRange, selectedStore]);
   
-  if (loading) {
-    return <Skeleton className="h-[400px] w-full rounded-md" />;
-  }
-  
-  if (data.length === 0) {
-    return <div className="flex items-center justify-center h-[400px] text-muted-foreground">
-      No hay datos de margen disponibles para el período seleccionado
-    </div>;
-  }
+  // Custom tooltip to show more detailed information
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const category = label;
+      const salesValue = payload.find(p => p.dataKey === 'sales')?.value;
+      const costsValue = payload.find(p => p.dataKey === 'costs')?.value;
+      const marginValue = payload.find(p => p.dataKey === 'margin')?.value;
+      
+      // Calculate margin percentage
+      const marginPercentage = (marginValue / salesValue * 100).toFixed(1);
+      
+      return (
+        <div className="bg-white p-3 border rounded shadow-md">
+          <p className="font-medium text-gray-900">{category}</p>
+          <p className="text-sm text-indigo-600">
+            <span className="font-medium">Ventas:</span> ${typeof salesValue === 'number' ? salesValue.toFixed(1) : 0}
+          </p>
+          <p className="text-sm text-rose-600">
+            <span className="font-medium">Costos:</span> ${typeof costsValue === 'number' ? costsValue.toFixed(1) : 0}
+          </p>
+          <p className="text-sm text-emerald-600 font-medium">
+            Margen: ${typeof marginValue === 'number' ? marginValue.toFixed(1) : 0} ({marginPercentage}%)
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
   
   return (
-    <ResponsiveContainer width="100%" height={400}>
-      <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" />
-        <YAxis 
-          yAxisId="left" 
-          orientation="left" 
-          tickFormatter={(value) => `$${(value/1000).toFixed(1)}K`} 
-        />
-        <YAxis 
-          yAxisId="right" 
-          orientation="right" 
-          tickFormatter={(value) => `${value.toFixed(1)}%`} 
-        />
-        <Tooltip 
-          formatter={(value, name) => {
-            if (name === "margin") return [`${value.toFixed(1)}%`, "Margen"];
-            return [`$${Number(value).toFixed(1)}`, name === "sales" ? "Ventas" : "Costo"];
-          }}
-        />
-        <Legend />
-        <Bar yAxisId="left" dataKey="sales" name="Ventas" fill="#8884d8" />
-        <Bar yAxisId="left" dataKey="cost" name="Costo" fill="#82ca9d" />
-        <Bar yAxisId="right" dataKey="margin" name="Margen %" fill="#ffc658" />
-      </BarChart>
-    </ResponsiveContainer>
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle>Margen por categoría</CardTitle>
+          </div>
+          <div className="flex space-x-2">
+            <Select 
+              value={timeRange} 
+              onValueChange={setTimeRange}
+            >
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="week">Última semana</SelectItem>
+                <SelectItem value="month">Último mes</SelectItem>
+                <SelectItem value="year">Último año</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select 
+              value={selectedStore || ''} 
+              onValueChange={setSelectedStore}
+              disabled={storesLoading}
+            >
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="Tienda" />
+              </SelectTrigger>
+              <SelectContent>
+                {stores.map((store) => (
+                  <SelectItem key={store.id} value={store.id}>
+                    {store.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <Skeleton className="h-[300px] w-full rounded-md" />
+        ) : data.length === 0 ? (
+          <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+            No hay datos disponibles para el período y tienda seleccionados
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={data}
+              margin={{ top: 5, right: 30, left: 20, bottom: 50 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="category" 
+                angle={-45} 
+                textAnchor="end"
+                height={70}
+                tick={{ fontSize: 12 }}
+              />
+              <YAxis tickFormatter={(value) => `$${value}`} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend wrapperStyle={{ bottom: 0 }} />
+              <Bar dataKey="sales" name="Ventas" fill={salesColor} />
+              <Bar dataKey="costs" name="Costos" fill={costsColor} />
+              <Bar dataKey="margin" name="Margen" fill={marginColor} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </CardContent>
+    </Card>
   );
 }
