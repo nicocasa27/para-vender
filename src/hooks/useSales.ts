@@ -72,8 +72,7 @@ export function useSales() {
   const processNewSale = useCallback(async (
     products: Product[], 
     storeId: string, 
-    paymentMethod: string, 
-    customerName?: string
+    paymentMethod: string
   ) => {
     try {
       setLoading(true);
@@ -93,7 +92,7 @@ export function useSales() {
       const saleData = {
         almacen_id: storeId,
         metodo_pago: paymentMethod,
-        cliente: null, // Ya no se guarda el nombre del cliente
+        cliente: null, // No guardamos el nombre del cliente
         total,
         detalles: saleDetails
       };

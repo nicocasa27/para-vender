@@ -1,14 +1,12 @@
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Tag, Package } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { ShoppingCart, Search } from "lucide-react";
 import { Product } from "@/types/inventory";
-import { formatQuantityWithUnit } from "@/utils/inventory/formatters";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useSales } from "@/hooks/useSales";
+import { useProducts } from "@/hooks/useProducts";
 
 interface ProductGridProps {
   onProductSelect: (product: Product) => void;
@@ -16,179 +14,87 @@ interface ProductGridProps {
 }
 
 export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const { products, loading } = useProducts(selectedStore);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    if (!selectedStore) return;
-
-    const fetchProducts = async () => {
-      setLoading(true);
-      try {
-        // Obtenemos los productos directamente con sus detalles
-        const { data: productsData, error: productsError } = await supabase
-          .from('productos')
-          .select(`
-            id,
-            nombre,
-            precio_venta,
-            categoria_id,
-            unidad_id
-          `);
-
-        if (productsError) throw productsError;
-
-        // Obtenemos las categorías y unidades para enriquecer los datos
-        const [categoriesResponse, unitsResponse] = await Promise.all([
-          supabase.from('categorias').select('id, nombre'),
-          supabase.from('unidades').select('id, nombre, abreviatura')
-        ]);
-
-        // Creamos mapas para búsquedas rápidas
-        const categoriesMap = new Map();
-        const unitsMap = new Map();
-
-        if (categoriesResponse.data) {
-          categoriesResponse.data.forEach(cat => categoriesMap.set(cat.id, cat.nombre));
-        }
-
-        if (unitsResponse.data) {
-          unitsResponse.data.forEach(unit => unitsMap.set(unit.id, unit.abreviatura || unit.nombre));
-        }
-
-        // Get inventory data for this store
-        const { data: inventoryData, error: inventoryError } = await supabase
-          .from('inventario')
-          .select('producto_id, cantidad')
-          .eq('almacen_id', selectedStore);
-
-        if (inventoryError) throw inventoryError;
-
-        // Map inventory data
-        const inventoryMap = new Map();
-        if (inventoryData) {
-          inventoryData.forEach((item) => {
-            inventoryMap.set(item.producto_id, Number(item.cantidad || 0));
-          });
-        }
-
-        // Transform data to match Product type
-        const transformedProducts = productsData?.map(item => {
-          const categoria = categoriesMap.get(item.categoria_id) || 'Sin categoría';
-          const unidad = unitsMap.get(item.unidad_id) || 'u';
-          
-          return {
-            id: item.id || '',
-            nombre: item.nombre || '',
-            precio_venta: Number(item.precio_venta) || 0,
-            stock_total: inventoryMap.get(item.id) || 0,
-            categoria: categoria,
-            unidad: unidad,
-            categoria_id: item.categoria_id,
-            unidad_id: item.unidad_id,
-            precio_compra: 0,
-            stock_minimo: 0,
-            stock_maximo: 0,
-            inventario: [{ 
-              almacen_id: selectedStore,
-              cantidad: inventoryMap.get(item.id) || 0 
-            }]
-          } as Product;
-        });
-
-        // Filtrar productos sin stock
-        const productsWithStock = transformedProducts?.filter(p => p.stock_total > 0) || [];
-        setProducts(productsWithStock);
-      } catch (error: any) {
-        console.error("Error al cargar productos:", error.message);
-        toast.error("Error al cargar productos");
-        setProducts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [selectedStore]);
-
-  const filteredProducts = products.filter((product) =>
-    product.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleProductSelect = (product: Product) => {
-    if (product.stock_total <= 0) {
-      toast.error("Producto sin existencias");
-      return;
+    if (products) {
+      setFilteredProducts(
+        products.filter(
+          (product) =>
+            product.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (product.categoria &&
+              product.categoria.toLowerCase().includes(searchQuery.toLowerCase()))
+        )
+      );
     }
-    onProductSelect(product);
+  }, [products, searchQuery]);
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
   };
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="mb-4 flex items-center">
-          <Skeleton className="h-10 w-full mr-2" />
-          <Skeleton className="h-10 w-10" />
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <Skeleton key={i} className="h-36 w-full" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (products.length === 0) {
-    return (
-      <div className="text-center p-8 bg-muted/30 rounded-lg">
-        <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <h3 className="text-lg font-medium mb-2">No hay productos disponibles</h3>
-        <p className="text-muted-foreground">No se encontraron productos con existencias en esta sucursal.</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[...Array(6)].map((_, index) => (
+          <Card key={index} className="h-32 animate-pulse bg-gray-100">
+            <CardContent className="p-4 flex flex-col items-center">
+              <div className="w-full h-full flex flex-col justify-between items-center">
+                <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
+                <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
+                <div className="h-8 w-full bg-gray-200 rounded"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="mb-4 flex items-center">
+    <div className="space-y-4">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-5 w-5" />
         <Input
-          type="text"
-          placeholder="Buscar producto..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="mr-2"
+          placeholder="Buscar productos..."
+          className="pl-10"
+          value={searchQuery}
+          onChange={handleSearch}
         />
-        <Search className="h-5 w-5 text-muted-foreground" />
       </div>
 
       {filteredProducts.length === 0 ? (
-        <div className="text-center p-8 bg-muted/30 rounded-lg">
-          <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">Sin resultados</h3>
-          <p className="text-muted-foreground">No se encontraron productos que coincidan con "{searchTerm}".</p>
+        <div className="text-center py-8 bg-gray-50 rounded-lg text-muted-foreground">
+          <p className="text-lg">No se encontraron productos</p>
+          <p className="text-sm mt-2">Intente con otra búsqueda</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
           {filteredProducts.map((product) => (
-            <Card key={product.id} className={`cursor-pointer hover:shadow-md transition-all ${product.stock_total <= 0 ? 'opacity-50' : ''}`}>
-              <CardContent className="p-4 flex flex-col items-center">
-                <div className="text-lg font-medium mt-2 text-center">{product.nombre}</div>
-                <div className="text-xs text-muted-foreground mt-1 flex items-center">
-                  <Tag className="h-3 w-3 mr-1 inline-block" />
-                  {product.categoria}
+            <Card key={product.id} className="overflow-hidden border hover:shadow-md transition-shadow">
+              <CardContent className="p-4 h-full flex flex-col justify-between">
+                <div className="space-y-2 mb-3">
+                  <h3 className="font-medium text-base line-clamp-1">{product.nombre}</h3>
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs">
+                      {product.categoria || "Sin categoría"}
+                    </span>
+                    <span className="mx-2">•</span>
+                    <span>{product.unidad || "unidad"}</span>
+                  </div>
+                  <p className="text-lg font-bold text-primary">${product.precio_venta.toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Stock: {product.stock_total || 0} {product.unidad || "unidades"}
+                  </p>
                 </div>
-                <div className="text-sm mt-1 font-semibold">
-                  Stock: {formatQuantityWithUnit(product.stock_total, product.unidad)}
-                </div>
-                <div className="text-xl font-bold mt-2 text-primary">${product.precio_venta.toFixed(2)}</div>
-                <Button 
-                  size="sm" 
-                  className="mt-3 w-full" 
-                  onClick={() => handleProductSelect(product)}
-                  disabled={product.stock_total <= 0}
+                <Button
+                  onClick={() => onProductSelect(product)}
+                  className="w-full"
+                  disabled={!product.stock_total || product.stock_total <= 0}
                 >
+                  <ShoppingCart className="mr-2 h-4 w-4" />
                   Añadir
                 </Button>
               </CardContent>

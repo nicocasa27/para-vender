@@ -151,14 +151,14 @@ export default function PointOfSale() {
           </div>
 
           {selectedStore ? (
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Sección de Productos */}
+            <div className="space-y-6">
+              {/* Sección de Productos - Ahora está arriba */}
               <div>
                 <h2 className="text-lg font-semibold mb-4">Productos</h2>
                 <ProductGrid onProductSelect={handleProductSelect} selectedStore={selectedStore} />
               </div>
               
-              {/* Sección de Carrito y Pago */}
+              {/* Sección de Carrito y Pago - Ahora está abajo */}
               <div>
                 <h2 className="text-lg font-semibold mb-4">Carrito</h2>
                 <Cart
