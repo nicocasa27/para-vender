@@ -35,14 +35,20 @@ export default function Analytics() {
   useEffect(() => {
     if (stores && stores.length > 0) {
       setSelectedStoreIds(stores.map(store => store.id));
-      setSelectedStore(stores[0].id);
+      setSelectedStore("all"); // Set to "all" initially
     }
   }, [stores]);
 
   const fetchAnalytics = async (period = "week") => {
     if (!stores || stores.length === 0) return;
     
-    const storeIds = selectedStore ? [selectedStore] : stores.map(store => store.id);
+    // Use selectedStore to determine store IDs for queries
+    const storeIds = selectedStore === "all" 
+      ? stores.map(store => store.id) 
+      : (selectedStore ? [selectedStore] : []);
+      
+    if (storeIds.length === 0) return;
+    
     setLoading(true);
     
     try {
@@ -99,7 +105,7 @@ export default function Analytics() {
       
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Select value={selectedStore || ''} onValueChange={handleStoreChange}>
+          <Select value={selectedStore || 'all'} onValueChange={handleStoreChange}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Seleccionar sucursal" />
             </SelectTrigger>
@@ -223,7 +229,7 @@ export default function Analytics() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <SalesByHourChart storeId={selectedStore} period={dateRange} />
+              <SalesByHourChart storeId={selectedStore === "all" ? null : selectedStore} period={dateRange} />
             </CardContent>
           </Card>
           
@@ -237,7 +243,7 @@ export default function Analytics() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <LowStockTable storeId={selectedStore} />
+              <LowStockTable storeId={selectedStore === "all" ? null : selectedStore} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -253,7 +259,7 @@ export default function Analytics() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <SalesTrendByItemChart storeId={selectedStore} period={dateRange} />
+              <SalesTrendByItemChart storeId={selectedStore === "all" ? null : selectedStore} period={dateRange} />
             </CardContent>
           </Card>
           
@@ -267,7 +273,7 @@ export default function Analytics() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ProductsNotSoldChart storeId={selectedStore} period={dateRange} />
+              <ProductsNotSoldChart storeId={selectedStore === "all" ? null : selectedStore} period={dateRange} />
             </CardContent>
           </Card>
           
@@ -295,7 +301,7 @@ export default function Analytics() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <MarginByCategory storeId={selectedStore} period={dateRange} />
+              <MarginByCategory storeId={selectedStore === "all" ? null : selectedStore} period={dateRange} />
             </CardContent>
           </Card>
         </TabsContent>

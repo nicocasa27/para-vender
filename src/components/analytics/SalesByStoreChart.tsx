@@ -36,6 +36,8 @@ export function SalesByStoreChart({ storeIds, period }: Props) {
   useEffect(() => {
     const fetchStores = async () => {
       try {
+        if (storeIds.length === 0) return;
+        
         const { data: storesData, error } = await supabase
           .from('almacenes')
           .select('id, nombre')
@@ -66,31 +68,73 @@ export function SalesByStoreChart({ storeIds, period }: Props) {
       
       setLoading(true);
       try {
-        // For demonstration, we're creating sample data
-        // In a real app, this would be a call to your Supabase RPC or query
-        
-        // Get the last 3 months
-        const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
-                      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        // Determine date range based on period
         const today = new Date();
-        const lastMonths = [];
+        const months = [];
+        const monthData: Record<string, Record<string, number>> = {};
         
-        for (let i = 2; i >= 0; i--) {
-          const monthIndex = today.getMonth() - i;
-          const actualMonth = monthIndex >= 0 ? monthIndex : 12 + monthIndex;
-          lastMonths.push(months[actualMonth]);
+        // Determine how many months to look back based on period
+        let monthsToLookBack = 3;
+        if (period === "year") {
+          monthsToLookBack = 12;
+        } else if (period === "week") {
+          monthsToLookBack = 1;
         }
         
-        // Generate chart data with realistic sample data
-        const chartData = lastMonths.map(month => {
-          const monthData: any = { month };
+        // Generate month names for past N months
+        for (let i = monthsToLookBack - 1; i >= 0; i--) {
+          const date = new Date();
+          date.setMonth(date.getMonth() - i);
+          
+          const monthName = date.toLocaleString('es-ES', { month: 'long' });
+          months.push(monthName);
+          
+          // Initialize month data for each store
+          monthData[monthName] = {};
+          stores.forEach(store => {
+            monthData[monthName][store.id] = 0;
+          });
+        }
+        
+        // Get sales data for each store
+        for (const store of stores) {
+          // Calculate date range for query
+          const startDate = new Date();
+          startDate.setMonth(today.getMonth() - monthsToLookBack);
+          startDate.setDate(1); // First day of month
+          
+          const { data: salesData, error } = await supabase
+            .from('ventas')
+            .select('total, created_at')
+            .eq('almacen_id', store.id)
+            .gte('created_at', startDate.toISOString())
+            .lte('created_at', today.toISOString());
+            
+          if (error) throw error;
+          
+          if (salesData && salesData.length > 0) {
+            // Aggregate sales by month
+            salesData.forEach(sale => {
+              const saleDate = new Date(sale.created_at);
+              const monthName = saleDate.toLocaleString('es-ES', { month: 'long' });
+              
+              if (monthData[monthName] && monthData[monthName][store.id] !== undefined) {
+                monthData[monthName][store.id] += Number(sale.total);
+              }
+            });
+          }
+        }
+        
+        // Format data for chart
+        const chartData = months.map(month => {
+          const entry: any = { month };
           
           stores.forEach(store => {
-            // Generate random sales between 10000 and 100000
-            monthData[store.nombre] = Math.floor(Math.random() * 90000) + 10000;
+            const storeTotal = monthData[month][store.id];
+            entry[store.nombre] = Number(storeTotal.toFixed(1));
           });
           
-          return monthData;
+          return entry;
         });
         
         setData(chartData);
@@ -109,13 +153,21 @@ export function SalesByStoreChart({ storeIds, period }: Props) {
     return <Skeleton className="h-[400px] w-full rounded-md" />;
   }
   
+  if (data.length === 0) {
+    return <div className="flex items-center justify-center h-[400px] text-muted-foreground">
+      No hay datos de ventas disponibles para el período seleccionado
+    </div>;
+  }
+  
   return (
     <ResponsiveContainer width="100%" height={400}>
       <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="month" />
-        <YAxis tickFormatter={(value) => `$${(value/1000).toFixed(0)}K`} />
-        <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, '']} />
+        <YAxis tickFormatter={(value) => `$${(value/1000).toFixed(1)}K`} />
+        <Tooltip 
+          formatter={(value) => [`$${Number(value).toFixed(1)}`, '']} 
+        />
         <Legend />
         {stores.map((store) => (
           <Bar 

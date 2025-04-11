@@ -22,6 +22,12 @@ export function RevenueOverTimeChart({ data, loading }: Props) {
     return <Skeleton className="h-[300px] w-full rounded-md" />;
   }
   
+  if (!data || data.length === 0) {
+    return <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+      No hay datos de ventas disponibles para el período seleccionado
+    </div>;
+  }
+  
   // Preparar datos para el gráfico
   const chartData = data.map(item => ({
     name: item.fecha,
@@ -37,10 +43,10 @@ export function RevenueOverTimeChart({ data, loading }: Props) {
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="name" />
         <YAxis 
-          tickFormatter={(value) => `$${value}`}
+          tickFormatter={(value) => `$${value.toFixed(1)}`}
         />
         <Tooltip 
-          formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Ingresos']}
+          formatter={(value) => [`$${Number(value).toFixed(1)}`, 'Ingresos']}
         />
         <Line
           type="monotone"

@@ -26,33 +26,61 @@ export function SalesByHourChart({ storeId, period }: Props) {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // For demonstration, we're creating sample data
-        // In a real app, this would be a call to your Supabase RPC or query
+        // Determine date range based on period
+        const today = new Date();
+        let startDate = new Date();
         
-        const hours = Array.from({ length: 24 }, (_, i) => i);
-        const chartData = hours.map(hour => {
-          // Generate realistic sales pattern with higher volumes during typical shopping hours
-          let value;
-          if (hour >= 8 && hour <= 20) {
-            // Shopping hours - higher sales
-            // Peaks at lunch time and after work
-            if (hour >= 12 && hour <= 14) {
-              value = Math.floor(Math.random() * 20000) + 15000; // Lunch time peak
-            } else if (hour >= 17 && hour <= 19) {
-              value = Math.floor(Math.random() * 25000) + 20000; // After work peak
-            } else {
-              value = Math.floor(Math.random() * 15000) + 5000; // Regular shopping hours
-            }
-          } else {
-            // Non-shopping hours - lower sales
-            value = Math.floor(Math.random() * 3000);
-          }
+        switch (period) {
+          case "week":
+            startDate.setDate(today.getDate() - 7);
+            break;
+          case "month":
+            startDate.setDate(today.getDate() - 30);
+            break;
+          case "year":
+            startDate.setMonth(today.getMonth() - 12);
+            break;
+          default:
+            startDate.setDate(today.getDate() - 7);
+        }
+        
+        // Initialize hour data
+        const hourData: Record<string, number> = {};
+        for (let i = 0; i < 24; i++) {
+          hourData[`${i}:00`] = 0;
+        }
+        
+        // Query ventas data
+        let query = supabase
+          .from('ventas')
+          .select('id, total, created_at')
+          .gte('created_at', startDate.toISOString())
+          .lte('created_at', today.toISOString());
           
-          return {
-            hour: `${hour}:00`,
-            value
-          };
-        });
+        if (storeId) {
+          query = query.eq('almacen_id', storeId);
+        }
+        
+        const { data: ventasData, error } = await query;
+        
+        if (error) throw error;
+        
+        if (ventasData && ventasData.length > 0) {
+          // Aggregate sales by hour
+          ventasData.forEach(venta => {
+            const ventaDate = new Date(venta.created_at);
+            const hour = ventaDate.getHours();
+            const hourKey = `${hour}:00`;
+            
+            hourData[hourKey] += Number(venta.total);
+          });
+        }
+        
+        // Format data for chart
+        const chartData = Object.entries(hourData).map(([hour, value]) => ({
+          hour,
+          value: Number(value.toFixed(1))
+        }));
         
         setData(chartData);
       } catch (error) {
@@ -70,6 +98,12 @@ export function SalesByHourChart({ storeId, period }: Props) {
     return <Skeleton className="h-[350px] w-full rounded-md" />;
   }
   
+  if (data.every(item => item.value === 0)) {
+    return <div className="flex items-center justify-center h-[350px] text-muted-foreground">
+      No hay datos de ventas disponibles para el período seleccionado
+    </div>;
+  }
+  
   return (
     <ResponsiveContainer width="100%" height={350}>
       <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
@@ -79,9 +113,9 @@ export function SalesByHourChart({ storeId, period }: Props) {
           tick={{ fontSize: 12 }}
           interval={1}
         />
-        <YAxis tickFormatter={(value) => `$${(value/1000).toFixed(0)}K`} />
+        <YAxis tickFormatter={(value) => `$${(value/1000).toFixed(1)}K`} />
         <Tooltip 
-          formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Ventas']}
+          formatter={(value) => [`$${Number(value).toFixed(1)}`, 'Ventas']}
           labelFormatter={(label) => `Hora: ${label}`}
         />
         <Bar 
