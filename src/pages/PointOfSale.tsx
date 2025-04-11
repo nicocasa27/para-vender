@@ -12,15 +12,20 @@ import { Product } from "@/types/inventory";
 import { CartItem, productToCartItem } from "@/types/cart";
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useSales } from "@/hooks/useSales";
+import { Label } from "@/components/ui/label";
+import { ShoppingCart, CreditCard, Banknote } from "lucide-react";
 
 export default function PointOfSale() {
   const [selectedStore, setSelectedStore] = useState<string | undefined>(undefined);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [customerName, setCustomerName] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("efectivo");
   const { stores } = useStores();
   const { user, hasRole } = useAuth();
   const [isSales, setIsSales] = useState(false);
+  const { processNewSale, loading } = useSales();
 
   useEffect(() => {
     if (user) {
@@ -60,6 +65,8 @@ export default function PointOfSale() {
 
   const clearCart = () => {
     setCartItems([]);
+    setCustomerName("");
+    setPaymentMethod("efectivo");
   };
 
   const calculateTotal = () => {
@@ -78,55 +85,21 @@ export default function PointOfSale() {
     }
 
     try {
-      // Crear la venta
-      const { data: venta, error: ventaError } = await supabase
-        .from('ventas')
-        .insert([
-          {
-            almacen_id: selectedStore,
-            total: calculateTotal(),
-            fecha: new Date().toISOString(),
-            usuario_id: user?.id
-          }
-        ])
-        .select()
-        .single();
-
-      if (ventaError) throw ventaError;
-
-      // Crear los detalles de la venta
-      const detallesVenta = cartItems.map(item => ({
-        venta_id: venta.id,
-        producto_id: item.id,
-        cantidad: item.cantidad,
-        precio_unitario: item.precio,
-        subtotal: item.precio * item.cantidad
-      }));
-
-      const { error: detallesError } = await supabase
-        .from('detalles_venta')
-        .insert(detallesVenta);
-
-      if (detallesError) throw detallesError;
-
-      // Actualizar el inventario (restar cantidades)
-      for (const item of cartItems) {
-        const { error: inventarioError } = await supabase
-          .from('inventario')
-          .update({ cantidad: item.stock - item.cantidad })
-          .eq('almacen_id', selectedStore)
-          .eq('producto_id', item.id);
-
-        if (inventarioError) throw inventarioError;
+      // Usar el hook useSales para procesar la venta
+      const success = await processNewSale(
+        cartItems, 
+        selectedStore, 
+        paymentMethod, 
+        customerName || undefined
+      );
+      
+      if (success) {
+        clearCart();
+        toast.success("Venta completada con éxito");
       }
-
-      toast.success("Venta confirmada correctamente");
-      clearCart();
     } catch (error: any) {
       console.error("Error al confirmar la venta:", error);
-      toast.error("Error al confirmar la venta", {
-        description: error.message
-      });
+      toast.error(`Error al procesar la venta: ${error.message}`);
     }
   };
 
@@ -134,12 +107,15 @@ export default function PointOfSale() {
     <div className="container mx-auto py-6">
       <Card>
         <CardHeader>
-          <CardTitle>Punto de Venta</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <ShoppingCart className="h-6 w-6" />
+            Punto de Venta
+          </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="mb-4">
-            <Select onValueChange={(value) => setSelectedStore(value)}>
-              <SelectTrigger className="w-[180px]">
+            <Select onValueChange={(value) => setSelectedStore(value)} value={selectedStore}>
+              <SelectTrigger className="w-full sm:w-[300px]">
                 <SelectValue placeholder="Seleccionar Sucursal" />
               </SelectTrigger>
               <SelectContent>
@@ -153,7 +129,7 @@ export default function PointOfSale() {
           </div>
 
           <Tabs defaultValue="products" className="space-y-4">
-            <TabsList>
+            <TabsList className="w-full grid grid-cols-2">
               <TabsTrigger value="products">Productos</TabsTrigger>
               <TabsTrigger value="cart">Carrito</TabsTrigger>
             </TabsList>
@@ -161,7 +137,10 @@ export default function PointOfSale() {
               {selectedStore ? (
                 <ProductGrid onProductSelect={handleProductSelect} selectedStore={selectedStore} />
               ) : (
-                <div className="text-center p-4">Selecciona una sucursal para ver los productos.</div>
+                <div className="text-center p-8 bg-muted/30 rounded-lg">
+                  <h3 className="text-lg font-medium mb-2">Selecciona una sucursal</h3>
+                  <p className="text-muted-foreground">Selecciona una sucursal para ver los productos disponibles.</p>
+                </div>
               )}
             </TabsContent>
             <TabsContent value="cart">
@@ -172,9 +151,49 @@ export default function PointOfSale() {
                 clearCart={clearCart}
                 calculateTotal={calculateTotal}
               />
-              <Button onClick={handleConfirmSale} disabled={cartItems.length === 0 || !selectedStore}>
-                Confirmar Venta
-              </Button>
+              
+              <div className="mt-6 grid gap-4 p-4 border rounded-lg">
+                <div>
+                  <Label htmlFor="customerName">Nombre del Cliente (opcional)</Label>
+                  <Input 
+                    id="customerName" 
+                    value={customerName} 
+                    onChange={(e) => setCustomerName(e.target.value)} 
+                    placeholder="Cliente Anónimo"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="paymentMethod">Método de Pago</Label>
+                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                    <SelectTrigger id="paymentMethod">
+                      <SelectValue placeholder="Seleccionar método de pago" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="efectivo">
+                        <div className="flex items-center gap-2">
+                          <Banknote className="h-4 w-4" />
+                          <span>Efectivo</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="tarjeta">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4" />
+                          <span>Tarjeta</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <Button 
+                  className="mt-4" 
+                  onClick={handleConfirmSale} 
+                  disabled={cartItems.length === 0 || !selectedStore || loading}
+                >
+                  {loading ? "Procesando..." : "Confirmar Venta"}
+                </Button>
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>

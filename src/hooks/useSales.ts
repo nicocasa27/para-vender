@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { createSale, fetchSales, fetchSaleDetails } from '@/services/salesService';
 import { toast } from 'sonner';
@@ -68,6 +69,7 @@ export function useSales() {
     }
   }, []);
 
+  // Solo una definición de processNewSale
   const processNewSale = useCallback(async (
     products: Product[], 
     storeId: string, 
@@ -124,53 +126,7 @@ export function useSales() {
     detailsLoading,
     loadSales,
     loadSaleDetails,
-    processNewSale: useCallback(async (
-      products: Product[], 
-      storeId: string, 
-      paymentMethod: string, 
-      customerName?: string
-    ) => {
-      try {
-        setLoading(true);
-        
-        // 1. Preparar los detalles de la venta
-        const saleDetails = products.map(product => ({
-          producto_id: product.id,
-          cantidad: product.cantidad,
-          precio_unitario: product.precio,
-          subtotal: product.precio * product.cantidad
-        }));
-        
-        // 2. Calcular el total
-        const total = saleDetails.reduce((sum, item) => sum + item.subtotal, 0);
-        
-        // 3. Crear la venta
-        const saleData = {
-          almacen_id: storeId,
-          metodo_pago: paymentMethod,
-          cliente: customerName || null,
-          total,
-          detalles: saleDetails
-        };
-        
-        // 4. Guardar la venta
-        const result = await createSale(saleData);
-        
-        if (result.success) {
-          toast.success("Venta completada correctamente");
-          return true;
-        } else {
-          toast.error("Error al procesar la venta");
-          return false;
-        }
-      } catch (error: any) {
-        console.error("Error al procesar la venta:", error);
-        toast.error(`Error: ${error.message}`);
-        return false;
-      } finally {
-        setLoading(false);
-      }
-    }, []),
+    processNewSale,
     setCurrentSale
   };
 }

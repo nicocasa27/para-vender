@@ -3,13 +3,12 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Search, Tag } from "lucide-react";
+import { Search, Tag, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Product } from "@/types/inventory";
-import { CartItem, productToCartItem } from "@/types/cart";
 import { formatQuantityWithUnit } from "@/utils/inventory/formatters";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProductGridProps {
   onProductSelect: (product: Product) => void;
@@ -27,17 +26,36 @@ export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        // Obtenemos los productos directamente con sus detalles
+        const { data: productsData, error: productsError } = await supabase
           .from('productos')
           .select(`
             id,
             nombre,
             precio_venta,
-            categorias (id, nombre),
-            unidades (id, abreviatura)
+            categoria_id,
+            unidad_id
           `);
 
-        if (error) throw error;
+        if (productsError) throw productsError;
+
+        // Obtenemos las categorías y unidades para enriquecer los datos
+        const [categoriesResponse, unitsResponse] = await Promise.all([
+          supabase.from('categorias').select('id, nombre'),
+          supabase.from('unidades').select('id, nombre, abreviatura')
+        ]);
+
+        // Creamos mapas para búsquedas rápidas
+        const categoriesMap = new Map();
+        const unitsMap = new Map();
+
+        if (categoriesResponse.data) {
+          categoriesResponse.data.forEach(cat => categoriesMap.set(cat.id, cat.nombre));
+        }
+
+        if (unitsResponse.data) {
+          unitsResponse.data.forEach(unit => unitsMap.set(unit.id, unit.abreviatura || unit.nombre));
+        }
 
         // Get inventory data for this store
         const { data: inventoryData, error: inventoryError } = await supabase
@@ -56,25 +74,10 @@ export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps
         }
 
         // Transform data to match Product type
-        const transformedProducts = data?.map(item => {
-          // Safely access nested properties
-          const categoria = Array.isArray(item.categorias) && item.categorias.length > 0 
-            ? item.categorias[0]?.nombre || 'Sin categoría'
-            : 'Sin categoría';
+        const transformedProducts = productsData?.map(item => {
+          const categoria = categoriesMap.get(item.categoria_id) || 'Sin categoría';
+          const unidad = unitsMap.get(item.unidad_id) || 'u';
           
-          const categoriaId = Array.isArray(item.categorias) && item.categorias.length > 0
-            ? item.categorias[0]?.id
-            : undefined;
-            
-          const unidad = Array.isArray(item.unidades) && item.unidades.length > 0
-            ? item.unidades[0]?.abreviatura || 'u'
-            : 'u';
-            
-          const unidadId = Array.isArray(item.unidades) && item.unidades.length > 0
-            ? item.unidades[0]?.id
-            : undefined;
-
-          // Create a properly typed Product object
           return {
             id: item.id || '',
             nombre: item.nombre || '',
@@ -82,12 +85,11 @@ export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps
             stock_total: inventoryMap.get(item.id) || 0,
             categoria: categoria,
             unidad: unidad,
-            // Add other required fields with default values
+            categoria_id: item.categoria_id,
+            unidad_id: item.unidad_id,
             precio_compra: 0,
             stock_minimo: 0,
             stock_maximo: 0,
-            categoria_id: categoriaId,
-            unidad_id: unidadId,
             inventario: [{ 
               almacen_id: selectedStore,
               cantidad: inventoryMap.get(item.id) || 0 
@@ -95,7 +97,9 @@ export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps
           } as Product;
         });
 
-        setProducts(transformedProducts || []);
+        // Filtrar productos sin stock
+        const productsWithStock = transformedProducts?.filter(p => p.stock_total > 0) || [];
+        setProducts(productsWithStock);
       } catch (error: any) {
         console.error("Error al cargar productos:", error.message);
         toast.error("Error al cargar productos");
@@ -113,11 +117,37 @@ export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps
   );
 
   const handleProductSelect = (product: Product) => {
+    if (product.stock_total <= 0) {
+      toast.error("Producto sin existencias");
+      return;
+    }
     onProductSelect(product);
   };
 
   if (loading) {
-    return <div className="text-center p-4">Cargando productos...</div>;
+    return (
+      <div className="space-y-4">
+        <div className="mb-4 flex items-center">
+          <Skeleton className="h-10 w-full mr-2" />
+          <Skeleton className="h-10 w-10" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {[...Array(8)].map((_, i) => (
+            <Skeleton key={i} className="h-36 w-full" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (products.length === 0) {
+    return (
+      <div className="text-center p-8 bg-muted/30 rounded-lg">
+        <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+        <h3 className="text-lg font-medium mb-2">No hay productos disponibles</h3>
+        <p className="text-muted-foreground">No se encontraron productos con existencias en esta sucursal.</p>
+      </div>
+    );
   }
 
   return (
@@ -133,26 +163,39 @@ export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps
         <Search className="h-5 w-5 text-muted-foreground" />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {filteredProducts.map((product) => (
-          <Card key={product.id} className="cursor-pointer">
-            <CardContent className="p-2 flex flex-col items-center">
-              <div className="text-sm font-semibold">{product.nombre}</div>
-              <div className="text-xs text-muted-foreground">
-                <Tag className="h-3 w-3 mr-1 inline-block" />
-                {product.categoria || "Sin categoría"}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Stock: {formatQuantityWithUnit(product.stock_total, product.unidad)}
-              </div>
-              <div className="text-lg font-bold">${product.precio_venta}</div>
-              <Button size="sm" onClick={() => handleProductSelect(product)}>
-                Añadir
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {filteredProducts.length === 0 ? (
+        <div className="text-center p-8 bg-muted/30 rounded-lg">
+          <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium mb-2">Sin resultados</h3>
+          <p className="text-muted-foreground">No se encontraron productos que coincidan con "{searchTerm}".</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredProducts.map((product) => (
+            <Card key={product.id} className={`cursor-pointer hover:shadow-md transition-all ${product.stock_total <= 0 ? 'opacity-50' : ''}`}>
+              <CardContent className="p-4 flex flex-col items-center">
+                <div className="text-lg font-medium mt-2 text-center">{product.nombre}</div>
+                <div className="text-xs text-muted-foreground mt-1 flex items-center">
+                  <Tag className="h-3 w-3 mr-1 inline-block" />
+                  {product.categoria}
+                </div>
+                <div className="text-sm mt-1 font-semibold">
+                  Stock: {formatQuantityWithUnit(product.stock_total, product.unidad)}
+                </div>
+                <div className="text-xl font-bold mt-2 text-primary">${product.precio_venta.toFixed(2)}</div>
+                <Button 
+                  size="sm" 
+                  className="mt-3 w-full" 
+                  onClick={() => handleProductSelect(product)}
+                  disabled={product.stock_total <= 0}
+                >
+                  Añadir
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
