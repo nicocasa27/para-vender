@@ -22,8 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { StoreData, ProductStock, StockTransferFormProps } from "./types";
-import { getStores, getProductsInStore, executeStockTransfer } from "./stock-transfer-api";
+import { ProductStock, StockTransferFormProps, StoreData } from "./types";
 import { toast } from "sonner";
 
 const transferSchema = z.object({
@@ -32,13 +31,15 @@ const transferSchema = z.object({
   productId: z.string().min(1, { message: "Selecciona un producto" }),
   quantity: z.coerce.number().min(1, { message: "La cantidad debe ser mayor a 0" }),
   notes: z.string().optional(),
+}).refine(data => data.sourceStoreId !== data.targetStoreId, {
+  message: "El origen y destino no pueden ser el mismo",
+  path: ["targetStoreId"],
 });
 
-export function StockTransferForm({ onTransferComplete, onTransferSuccess }: StockTransferFormProps) {
+export function StockTransferForm({ onTransferComplete }: StockTransferFormProps) {
   const [stores, setStores] = useState<StoreData[]>([]);
   const [products, setProducts] = useState<ProductStock[]>([]);
-  const [sourceData, setSourceData] = useState<{ cantidad: number } | null>(null);
-  const [isTransferring, setIsTransferring] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof transferSchema>>({
     resolver: zodResolver(transferSchema),
@@ -52,114 +53,158 @@ export function StockTransferForm({ onTransferComplete, onTransferSuccess }: Sto
   });
 
   const { watch, setValue } = form;
-  const { sourceStoreId, productId } = watch();
+  const sourceStoreId = watch("sourceStoreId");
 
+  // Load stores on component mount
   useEffect(() => {
     const loadStores = async () => {
-      const storesData = await getStores();
-      setStores(storesData);
+      try {
+        const { data, error } = await supabase
+          .from("almacenes")
+          .select("id, nombre")
+          .order("nombre");
+
+        if (error) throw error;
+        setStores(data || []);
+      } catch (error) {
+        console.error("Error al cargar sucursales:", error);
+        toast.error("Error al cargar las sucursales");
+      }
     };
+
     loadStores();
   }, []);
 
+  // Load products when source store changes
   useEffect(() => {
     const loadProducts = async () => {
-      if (sourceStoreId) {
-        const productsData = await getProductsInStore(sourceStoreId);
-        setProducts(productsData);
-        setValue("productId", "");
-      } else {
+      if (!sourceStoreId) {
         setProducts([]);
-        setValue("productId", "");
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("inventario")
+          .select(`
+            cantidad,
+            productos!inner(
+              id,
+              nombre,
+              unidades(nombre, abreviatura)
+            )
+          `)
+          .eq("almacen_id", sourceStoreId)
+          .gt("cantidad", 0);
+
+        if (error) throw error;
+
+        // Transform the data to match our ProductStock interface
+        const productsData = (data || []).map((item: any) => ({
+          id: item.productos.id,
+          nombre: item.productos.nombre,
+          stock: Number(item.cantidad),
+          unidad: item.productos.unidades?.abreviatura || "u",
+        }));
+
+        setProducts(productsData);
+        setValue("productId", ""); // Reset product selection when store changes
+      } catch (error) {
+        console.error("Error al cargar productos:", error);
+        toast.error("Error al cargar los productos");
       }
     };
+
     loadProducts();
   }, [sourceStoreId, setValue]);
 
-  useEffect(() => {
-    const loadSourceData = async () => {
-      const { sourceStoreId, productId } = form.getValues();
-      if (sourceStoreId && productId) {
-        // Fetch the source inventory data
-        try {
-          const { data, error } = await supabase
-            .from("inventario")
-            .select("cantidad")
-            .eq("producto_id", productId)
-            .eq("almacen_id", sourceStoreId)
-            .single();
-          
-          if (error) {
-            console.error("Error fetching source data:", error);
-            toast.error("Error al cargar datos del inventario de origen");
-            setSourceData(null);
-          } else {
-            setSourceData(data ? { cantidad: data.cantidad } : null);
-          }
-        } catch (error) {
-          console.error("Error fetching source data:", error);
-          toast.error("Error al cargar datos del inventario de origen");
-          setSourceData(null);
-        }
-      } else {
-        setSourceData(null);
-      }
-    };
-    loadSourceData();
-  }, [form]);
-
-  const handleUpdateInventory = async () => {
-    const { sourceStoreId, productId, quantity } = form.getValues();
-    if (!sourceStoreId || !productId) return;
-
-    if (!sourceData) {
-      toast.error("No se pudieron cargar los datos del inventario de origen");
-      return;
-    }
-
-    // Check if sourceData is null before accessing its properties
-    if (sourceData) {
-      const newSourceAmount = Math.max(0, sourceData.cantidad - Number(quantity));
-
-      try {
-        const { error } = await supabase
-          .from("inventario")
-          .update({ cantidad: newSourceAmount, updated_at: new Date().toISOString() })
-          .eq("producto_id", productId)
-          .eq("almacen_id", sourceStoreId);
-
-        if (error) {
-          console.error("Error updating inventory:", error);
-          toast.error("Error al actualizar el inventario");
-        } else {
-          toast.success("Inventario actualizado correctamente");
-        }
-      } catch (error) {
-        console.error("Error updating inventory:", error);
-        toast.error("Error al actualizar el inventario");
-      }
-    }
-  };
-
   const onSubmit = async (data: z.infer<typeof transferSchema>) => {
-    setIsTransferring(true);
+    setIsLoading(true);
+    
     try {
-      await executeStockTransfer(
-        data.productId,
-        data.sourceStoreId,
-        data.targetStoreId,
-        data.quantity,
-        data.notes
-      );
-      form.reset();
+      // 1. Get current quantity of the product in source store
+      const { data: sourceInventory, error: sourceError } = await supabase
+        .from("inventario")
+        .select("id, cantidad")
+        .eq("producto_id", data.productId)
+        .eq("almacen_id", data.sourceStoreId)
+        .single();
       
-      // Support both callback props for backward compatibility
-      if (onTransferComplete) onTransferComplete();
-      if (onTransferSuccess) onTransferSuccess();
-    } catch (error) {
-      console.error("Error al procesar la transferencia:", error);
+      if (sourceError) throw sourceError;
+      
+      // 2. Check if there's enough stock
+      if (Number(sourceInventory.cantidad) < data.quantity) {
+        toast.error("Stock insuficiente en el almacén de origen");
+        return;
+      }
+      
+      // 3. Update source inventory (decrement)
+      const newSourceQuantity = Number(sourceInventory.cantidad) - data.quantity;
+      const { error: updateSourceError } = await supabase
+        .from("inventario")
+        .update({ cantidad: newSourceQuantity })
+        .eq("id", sourceInventory.id);
+      
+      if (updateSourceError) throw updateSourceError;
+      
+      // 4. Check if product exists in target store
+      const { data: targetInventory, error: targetCheckError } = await supabase
+        .from("inventario")
+        .select("id, cantidad")
+        .eq("producto_id", data.productId)
+        .eq("almacen_id", data.targetStoreId)
+        .maybeSingle();
+      
+      if (targetCheckError) throw targetCheckError;
+      
+      // 5. Update target inventory or create new record
+      if (targetInventory) {
+        // Update existing inventory
+        const newTargetQuantity = Number(targetInventory.cantidad) + data.quantity;
+        const { error: updateTargetError } = await supabase
+          .from("inventario")
+          .update({ cantidad: newTargetQuantity })
+          .eq("id", targetInventory.id);
+        
+        if (updateTargetError) throw updateTargetError;
+      } else {
+        // Create new inventory record
+        const { error: insertTargetError } = await supabase
+          .from("inventario")
+          .insert({
+            producto_id: data.productId,
+            almacen_id: data.targetStoreId,
+            cantidad: data.quantity
+          });
+        
+        if (insertTargetError) throw insertTargetError;
+      }
+      
+      // 6. Record the transfer in the movements table
+      const { error: movementError } = await supabase
+        .from("movimientos")
+        .insert({
+          tipo: "transferencia",
+          producto_id: data.productId,
+          almacen_origen_id: data.sourceStoreId,
+          almacen_destino_id: data.targetStoreId,
+          cantidad: data.quantity,
+          notas: data.notes || null
+        });
+      
+      if (movementError) throw movementError;
+      
+      // Success
+      toast.success("Transferencia completada con éxito");
+      form.reset();
+      onTransferComplete();
+    } catch (error: any) {
+      console.error("Error en la transferencia:", error);
+      toast.error("Error al realizar la transferencia", {
+        description: error.message || "Ha ocurrido un error inesperado"
+      });
     } finally {
-      setIsTransferring(false);
+      setIsLoading(false);
     }
   };
 
@@ -172,7 +217,7 @@ export function StockTransferForm({ onTransferComplete, onTransferSuccess }: Sto
           render={({ field }) => (
             <FormItem>
               <FormLabel>Almacén de Origen</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona un almacén" />
@@ -196,7 +241,7 @@ export function StockTransferForm({ onTransferComplete, onTransferSuccess }: Sto
           render={({ field }) => (
             <FormItem>
               <FormLabel>Almacén de Destino</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona un almacén" />
@@ -204,7 +249,7 @@ export function StockTransferForm({ onTransferComplete, onTransferSuccess }: Sto
                 </FormControl>
                 <SelectContent>
                   {stores.map((store) => (
-                    <SelectItem key={store.id} value={store.id}>
+                    <SelectItem key={store.id} value={store.id} disabled={store.id === sourceStoreId}>
                       {store.nombre}
                     </SelectItem>
                   ))}
@@ -220,18 +265,30 @@ export function StockTransferForm({ onTransferComplete, onTransferSuccess }: Sto
           render={({ field }) => (
             <FormItem>
               <FormLabel>Producto</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select 
+                onValueChange={field.onChange} 
+                value={field.value}
+                disabled={!sourceStoreId || products.length === 0}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona un producto" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.nombre} ({product.unidad}) - Stock: {product.stock}
+                  {products.length === 0 ? (
+                    <SelectItem disabled value="no-products">
+                      {sourceStoreId 
+                        ? "No hay productos con stock en esta sucursal" 
+                        : "Selecciona primero una sucursal de origen"}
                     </SelectItem>
-                  ))}
+                  ) : (
+                    products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.nombre} ({product.stock} {product.unidad})
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -245,7 +302,12 @@ export function StockTransferForm({ onTransferComplete, onTransferSuccess }: Sto
             <FormItem>
               <FormLabel>Cantidad a Transferir</FormLabel>
               <FormControl>
-                <Input type="number" placeholder="Cantidad" {...field} />
+                <Input 
+                  type="number" 
+                  min="1" 
+                  {...field} 
+                  disabled={!sourceStoreId || !form.getValues("productId")}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -258,14 +320,21 @@ export function StockTransferForm({ onTransferComplete, onTransferSuccess }: Sto
             <FormItem>
               <FormLabel>Notas (opcional)</FormLabel>
               <FormControl>
-                <Textarea placeholder="Notas adicionales" {...field} />
+                <Textarea 
+                  placeholder="Notas adicionales sobre la transferencia" 
+                  {...field} 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={isTransferring}>
-          {isTransferring ? "Transfiriendo..." : "Transferir"}
+        <Button 
+          type="submit" 
+          disabled={isLoading || !sourceStoreId} 
+          className="w-full"
+        >
+          {isLoading ? "Procesando..." : "Realizar Transferencia"}
         </Button>
       </form>
     </Form>

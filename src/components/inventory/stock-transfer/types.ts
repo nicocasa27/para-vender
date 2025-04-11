@@ -18,18 +18,9 @@ export interface TransferRecord {
   destino: string;
   producto: string;
   cantidad: number;
-  notas: string | null;
-}
-
-export interface StockTransferFormData {
-  sourceStoreId: string;
-  targetStoreId: string;
-  productId: string;
-  quantity: number;
-  notes?: string;
+  notas?: string | null;
 }
 
 export interface StockTransferFormProps {
   onTransferComplete: () => void;
-  onTransferSuccess?: () => void; // Adding backward compatibility
 }

@@ -4,8 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductsView } from "@/components/inventory/ProductsView";
 import { CategoriesView } from "@/components/inventory/CategoriesView";
 import { StoresView } from "@/components/inventory/StoresView";
-import { TransfersView } from "@/components/inventory/TransfersView";
-import { AlertCircle, Info } from "lucide-react";
+import { StockTransferManager } from "@/components/inventory/stock-transfer/StockTransferManager";
+import { AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useProducts } from "@/hooks/useProducts";
@@ -95,7 +95,7 @@ export function Inventory() {
             </TabsContent>
 
             <TabsContent value="transfers" className="mt-6">
-              <TransfersView onRefresh={handleRefresh} />
+              <StockTransferManager />
             </TabsContent>
           </Tabs>
         </>

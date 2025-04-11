@@ -33,7 +33,7 @@ export function TransferHistory() {
           created_at,
           cantidad,
           notas,
-          producto:productos(nombre),
+          productos(nombre),
           almacen_origen:almacenes!movimientos_almacen_origen_id_fkey(nombre),
           almacen_destino:almacenes!movimientos_almacen_destino_id_fkey(nombre)
         `)
@@ -48,7 +48,7 @@ export function TransferHistory() {
         fecha: item.created_at ? format(parseISO(item.created_at), 'dd/MM/yyyy HH:mm', { locale: es }) : "Fecha desconocida",
         origen: item.almacen_origen?.nombre || "N/A",
         destino: item.almacen_destino?.nombre || "N/A",
-        producto: item.producto?.nombre || "N/A",
+        producto: item.productos?.nombre || "N/A",
         cantidad: Number(item.cantidad),
         notas: item.notas
       }));
