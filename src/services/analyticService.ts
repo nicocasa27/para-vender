@@ -1,7 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ItemSalesTrendDataPoint } from "@/types/analytics";
+import { ItemSalesTrendDataPoint, StoreMonthlySalesDataPoint } from "@/types/analytics";
 
 export async function fetchItemSalesTrend(storeIds: string[] = [], timeRange: string = "month") {
   try {
@@ -136,7 +136,7 @@ export async function fetchStoreMonthlySales(storeIds: string[] = []) {
       const monthKey = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
       const monthName = monthDate.toLocaleString('es-MX', { month: 'short' });
       const displayKey = `${monthName} ${monthDate.getFullYear()}`;
-      months.unshift({ key: monthKey, display: displayKey });
+      months.unshift(displayKey); // Fix: using string instead of object
       
       if (!monthlyData[displayKey]) {
         monthlyData[displayKey] = {};
@@ -151,7 +151,6 @@ export async function fetchStoreMonthlySales(storeIds: string[] = []) {
     // Sum sales by month and store
     data.forEach(sale => {
       const saleDate = new Date(sale.created_at);
-      const monthKey = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
       const monthName = saleDate.toLocaleString('es-MX', { month: 'short' });
       const displayKey = `${monthName} ${saleDate.getFullYear()}`;
       
