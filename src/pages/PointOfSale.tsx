@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { ProductGrid } from "@/components/pos/ProductGrid";
 import { Cart } from "@/components/pos/Cart";
 import { useStores } from "@/hooks/useStores";
+import { useCurrentStores } from "@/hooks/useCurrentStores";
 import { Product } from "@/types/inventory";
 import { CartItem, productToCartItem } from "@/types/cart";
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 import { useSales } from "@/hooks/useSales";
-import { ShoppingCart, CreditCard, Banknote } from "lucide-react";
+import { ShoppingCart, CreditCard, Banknote, AlertCircle } from "lucide-react";
 
 export default function PointOfSale() {
   const [selectedStore, setSelectedStore] = useState<string | undefined>(undefined);
@@ -21,22 +22,52 @@ export default function PointOfSale() {
   const [paymentMethod, setPaymentMethod] = useState<string>("efectivo");
   const [cashReceived, setCashReceived] = useState<string>("");
   const { stores } = useStores();
+  const { stores: userStores, hasStores } = useCurrentStores();
   const { user, hasRole } = useAuth();
   const [isSales, setIsSales] = useState(false);
+  const [isViewer, setIsViewer] = useState(false);
   const { processNewSale, loading } = useSales();
 
+  // Check user roles
   useEffect(() => {
     if (user) {
       setIsSales(hasRole("sales", selectedStore));
+      setIsViewer(hasRole("viewer"));
     }
   }, [user, hasRole, selectedStore]);
 
+  // Set available stores based on user role
+  const availableStores = hasRole("admin") || hasRole("manager") 
+    ? stores 
+    : userStores;
+
+  // Clear selected store if it's not in available stores
+  useEffect(() => {
+    if (selectedStore && availableStores.length > 0) {
+      const storeExists = availableStores.some(store => store.id === selectedStore);
+      if (!storeExists) {
+        setSelectedStore(undefined);
+      }
+    }
+  }, [availableStores, selectedStore]);
+
   const handleProductSelect = (product: Product) => {
+    // Prevent viewers from adding products
+    if (isViewer) {
+      toast.error("No tienes permiso para realizar ventas", {
+        description: "Tu rol de 'viewer' solo permite visualizar información"
+      });
+      return;
+    }
+    
     setSelectedProduct(product);
     addProductToCart(product);
   };
 
   const addProductToCart = (product: Product) => {
+    // Double check viewer restriction
+    if (isViewer) return;
+    
     const existingCartItemIndex = cartItems.findIndex((item) => item.id === product.id);
 
     if (existingCartItemIndex !== -1) {
@@ -50,6 +81,9 @@ export default function PointOfSale() {
   };
 
   const updateCartItemQuantity = (itemId: string, newQuantity: number) => {
+    // Prevent viewers from modifying cart
+    if (isViewer) return;
+    
     const updatedCartItems = cartItems.map((item) =>
       item.id === itemId ? { ...item, cantidad: newQuantity } : item
     );
@@ -57,11 +91,17 @@ export default function PointOfSale() {
   };
 
   const removeCartItem = (itemId: string) => {
+    // Prevent viewers from modifying cart
+    if (isViewer) return;
+    
     const updatedCartItems = cartItems.filter((item) => item.id !== itemId);
     setCartItems(updatedCartItems);
   };
 
   const clearCart = () => {
+    // Prevent viewers from modifying cart
+    if (isViewer) return;
+    
     setCartItems([]);
     setPaymentMethod("efectivo");
     setCashReceived("");
@@ -87,6 +127,14 @@ export default function PointOfSale() {
   };
 
   const handleConfirmSale = async () => {
+    // Prevent viewers from confirming sales
+    if (isViewer) {
+      toast.error("No tienes permiso para realizar ventas", {
+        description: "Tu rol de 'viewer' solo permite visualizar información"
+      });
+      return;
+    }
+    
     if (cartItems.length === 0) {
       toast.error("El carrito está vacío");
       return;
@@ -135,13 +183,23 @@ export default function PointOfSale() {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {isViewer && (
+            <div className="mb-6 p-4 border border-yellow-300 bg-yellow-50 rounded-lg flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-yellow-600" />
+              <div>
+                <h3 className="font-medium text-yellow-800">Modo Vista Previa</h3>
+                <p className="text-sm text-yellow-700">Tu rol de 'viewer' solo permite visualizar información. No puedes realizar ventas.</p>
+              </div>
+            </div>
+          )}
+          
           <div className="mb-4">
             <Select onValueChange={(value) => setSelectedStore(value)} value={selectedStore}>
               <SelectTrigger className="w-full sm:w-[300px]">
                 <SelectValue placeholder="Seleccionar Sucursal" />
               </SelectTrigger>
               <SelectContent>
-                {stores.map((store) => (
+                {availableStores.map((store) => (
                   <SelectItem key={store.id} value={store.id}>
                     {store.nombre}
                   </SelectItem>
@@ -167,13 +225,14 @@ export default function PointOfSale() {
                   removeCartItem={removeCartItem}
                   clearCart={clearCart}
                   calculateTotal={calculateTotal}
+                  disabled={isViewer}
                 />
                 
                 {cartItems.length > 0 && (
                   <div className="mt-6 p-4 border rounded-lg space-y-4">
                     <div>
                       <h3 className="font-medium mb-2">Método de Pago</h3>
-                      <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                      <Select value={paymentMethod} onValueChange={setPaymentMethod} disabled={isViewer}>
                         <SelectTrigger id="paymentMethod">
                           <SelectValue placeholder="Seleccionar método de pago" />
                         </SelectTrigger>
@@ -206,6 +265,7 @@ export default function PointOfSale() {
                               onChange={handleCashReceivedChange}
                               placeholder="0.00"
                               className="text-lg"
+                              disabled={isViewer}
                             />
                           </div>
                         </div>
@@ -225,9 +285,9 @@ export default function PointOfSale() {
                     <Button 
                       className="w-full mt-4" 
                       onClick={handleConfirmSale} 
-                      disabled={loading || (paymentMethod === "efectivo" && (parseFloat(cashReceived) < calculateTotal() || isNaN(parseFloat(cashReceived))))}
+                      disabled={isViewer || loading || (paymentMethod === "efectivo" && (parseFloat(cashReceived) < calculateTotal() || isNaN(parseFloat(cashReceived))))}
                     >
-                      {loading ? "Procesando..." : "Confirmar Venta"}
+                      {loading ? "Procesando..." : isViewer ? "Modo Vista Previa" : "Confirmar Venta"}
                     </Button>
                   </div>
                 )}

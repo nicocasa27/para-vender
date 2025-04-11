@@ -1,16 +1,17 @@
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Minus, Plus } from "lucide-react";
 import { CartItem } from "@/types/cart";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Plus, Minus, Trash2 } from "lucide-react";
 
-export interface CartProps {
+interface CartProps {
   cartItems: CartItem[];
   updateCartItemQuantity: (itemId: string, newQuantity: number) => void;
   removeCartItem: (itemId: string) => void;
   clearCart: () => void;
   calculateTotal: () => number;
+  disabled?: boolean;
 }
 
 export function Cart({
@@ -18,100 +19,106 @@ export function Cart({
   updateCartItemQuantity,
   removeCartItem,
   clearCart,
-  calculateTotal
+  calculateTotal,
+  disabled = false
 }: CartProps) {
-  const handleQuantityChange = (itemId: string, newValue: string) => {
-    const newQuantity = parseInt(newValue);
-    if (!isNaN(newQuantity) && newQuantity > 0) {
-      updateCartItemQuantity(itemId, newQuantity);
-    }
-  };
-
-  const incrementQuantity = (itemId: string, currentQuantity: number) => {
-    updateCartItemQuantity(itemId, currentQuantity + 1);
-  };
-
-  const decrementQuantity = (itemId: string, currentQuantity: number) => {
-    if (currentQuantity > 1) {
-      updateCartItemQuantity(itemId, currentQuantity - 1);
-    }
-  };
+  if (cartItems.length === 0) {
+    return (
+      <div className="text-center p-6 bg-muted/20 rounded-lg">
+        <p className="text-muted-foreground">El carrito está vacío</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4">
-      {cartItems.length === 0 ? (
-        <div className="text-center py-8 bg-gray-50 rounded-lg text-muted-foreground">
-          <p className="text-lg">El carrito está vacío</p>
-          <p className="text-sm mt-2">Seleccione productos para agregar al carrito</p>
-        </div>
-      ) : (
-        <>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[40%]">Producto</TableHead>
-                  <TableHead className="w-[15%]">Precio</TableHead>
-                  <TableHead className="w-[20%]">Cantidad</TableHead>
-                  <TableHead className="w-[15%]">Subtotal</TableHead>
-                  <TableHead className="w-[10%]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {cartItems.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.nombre}</TableCell>
-                    <TableCell>${item.precio.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-1">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => decrementQuantity(item.id, item.cantidad)}
-                          disabled={item.cantidad <= 1}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <Input
-                          type="text"
-                          min="1"
-                          value={item.cantidad}
-                          onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                          className="w-12 text-center h-8 p-0"
-                        />
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => incrementQuantity(item.id, item.cantidad)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">${(item.precio * item.cantidad).toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => removeCartItem(item.id)}>
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className="flex justify-between items-center pt-4">
-            <Button variant="outline" onClick={clearCart}>
-              Vaciar Carrito
-            </Button>
-            <div className="text-xl font-bold">
-              Total: ${calculateTotal().toFixed(2)}
-            </div>
-          </div>
-        </>
-      )}
+    <div className="border rounded-lg">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Producto</TableHead>
+            <TableHead className="text-center">Cantidad</TableHead>
+            <TableHead className="text-right">Precio</TableHead>
+            <TableHead className="text-right">Subtotal</TableHead>
+            <TableHead className="w-[50px]"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {cartItems.map((item) => (
+            <TableRow key={item.id}>
+              <TableCell className="font-medium">{item.nombre}</TableCell>
+              <TableCell>
+                <div className="flex items-center justify-center">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => updateCartItemQuantity(item.id, Math.max(1, item.cantidad - 1))}
+                    disabled={disabled}
+                  >
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={item.cantidad}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (!isNaN(value) && value >= 1) {
+                        updateCartItemQuantity(item.id, value);
+                      }
+                    }}
+                    className="h-8 w-16 mx-2 text-center"
+                    disabled={disabled}
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => updateCartItemQuantity(item.id, item.cantidad + 1)}
+                    disabled={disabled}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+              </TableCell>
+              <TableCell className="text-right">${item.precio.toFixed(2)}</TableCell>
+              <TableCell className="text-right font-medium">
+                ${(item.precio * item.cantidad).toFixed(2)}
+              </TableCell>
+              <TableCell>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeCartItem(item.id)}
+                  className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                  disabled={disabled}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+          <TableRow>
+            <TableCell colSpan={3} className="text-right font-bold">
+              Total:
+            </TableCell>
+            <TableCell className="text-right font-bold text-lg">
+              ${calculateTotal().toFixed(2)}
+            </TableCell>
+            <TableCell>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearCart}
+                className="text-red-500 hover:text-red-700"
+                disabled={disabled}
+              >
+                Vaciar
+              </Button>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
     </div>
   );
 }
