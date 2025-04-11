@@ -24,19 +24,25 @@ export default function PointOfSale() {
   const { stores } = useStores();
   const { stores: userStores, hasStores } = useCurrentStores();
   const { user, hasRole } = useAuth();
-  const [isSales, setIsSales] = useState(false);
   const [isViewer, setIsViewer] = useState(false);
   const { processNewSale, loading } = useSales();
 
   // Check user roles
   useEffect(() => {
     if (user) {
-      setIsSales(hasRole("sales", selectedStore));
-      setIsViewer(hasRole("viewer"));
+      // Un usuario es considerado viewer SOLO si tiene el rol de viewer
+      // Y NO tiene roles de mayor privilegio (admin o manager)
+      const isAdmin = hasRole("admin");
+      const isManager = hasRole("manager");
+      const hasViewerRole = hasRole("viewer");
+      
+      // Solo configurar como viewer si SOLO tiene ese rol y no los otros
+      setIsViewer(hasViewerRole && !isAdmin && !isManager);
     }
-  }, [user, hasRole, selectedStore]);
+  }, [user, hasRole]);
 
   // Set available stores based on user role
+  // Admin y manager pueden ver todas las sucursales, los demás solo las asignadas
   const availableStores = hasRole("admin") || hasRole("manager") 
     ? stores 
     : userStores;
