@@ -2,7 +2,7 @@
 import { UserRolesTable } from "@/components/users/UserRolesTable";
 import { useUsersAndRoles } from "@/hooks/useUsersAndRoles";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Shield, Trash2, UsersRound, Loader2, Broom } from "lucide-react";
+import { RefreshCw, Shield, Trash2, UsersRound, Loader2, Eraser } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 import { useEffect } from "react";
@@ -139,7 +139,7 @@ const UserRoles = () => {
             disabled={syncing || loading}
             className="flex items-center gap-2"
           >
-            <Broom className="h-4 w-4" />
+            <Eraser className="h-4 w-4" />
             Eliminar Huérfanos
           </Button>
           <Button
