@@ -20,32 +20,38 @@ export interface ProductDataPoint {
   total: number;
 }
 
-// Tipo para la tendencia de ventas por ítem por tienda
-export interface ItemSalesTrendDataPoint {
-  fecha: string;
-  producto: string;
-  almacen: string;
-  almacen_id: string;
-  cantidad: number;
-}
-
-// Tipo para ventas mensuales por sucursal
-export interface StoreMonthlySalesDataPoint {
-  month: string;
-  [storeId: string]: string | number;
-}
-
-// Tipo para ventas totales por sucursal
-export interface TotalSalesByStoreDataPoint {
-  id: string;
-  nombre: string;
+export interface StoreDataPoint {
+  store_id: string;
+  store_name: string;
   total: number;
 }
 
-// Tipo para productos sin ventas
-export interface NonSellingProductDataPoint {
+export interface SaleTrendDataPoint {
+  date: string;
+  [key: string]: any; // For dynamic product names as keys
+}
+
+export interface HourlyDataPoint {
+  hour: string;
+  sales: number;
+}
+
+export interface LowStockProduct {
   id: string;
-  nombre: string;
-  dias_sin_venta: number;
-  ultima_venta: string | null;
+  name: string;
+  current_stock: number;
+  min_stock: number;
+  status: 'warning' | 'critical';
+}
+
+export interface AverageTicketDataPoint {
+  date: string;
+  [storeId: string]: number | string;
+}
+
+export interface MarginDataPoint {
+  category: string;
+  sales: number;
+  costs: number;
+  margin: number;
 }
