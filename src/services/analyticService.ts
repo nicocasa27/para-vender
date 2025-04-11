@@ -39,7 +39,7 @@ export async function fetchItemSalesTrend(storeIds: string[] = [], timeRange: st
         precio_unitario,
         created_at,
         productos:producto_id(id, nombre),
-        ventas:venta_id(id, created_at, almacen_id, almacenes(id, nombre))
+        ventas:venta_id(id, created_at, almacen_id, almacenes:almacen_id(id, nombre))
       `)
       .gte('created_at', startDateStr)
       .lte('created_at', endDateStr);
@@ -62,15 +62,18 @@ export async function fetchItemSalesTrend(storeIds: string[] = [], timeRange: st
     
     // Procesar los datos en el formato requerido
     const processedData: ItemSalesTrendDataPoint[] = data.map(item => {
+      const venta = item.ventas as any;
+      const producto = item.productos as any;
+      
       // Formatear fecha como YYYY-MM-DD
-      const date = new Date(item.ventas.created_at);
+      const date = new Date(venta.created_at);
       const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       
       return {
         fecha: formattedDate,
-        producto: item.productos?.nombre || 'Producto desconocido',
-        almacen: item.ventas.almacenes?.nombre || 'Tienda desconocida',
-        almacen_id: item.ventas.almacen_id,
+        producto: producto?.nombre || 'Producto desconocido',
+        almacen: venta.almacenes?.nombre || 'Tienda desconocida',
+        almacen_id: venta.almacen_id,
         cantidad: Number(item.cantidad)
       };
     });

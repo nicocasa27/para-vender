@@ -183,11 +183,11 @@ export function ItemSalesTrendChart({ data, loading }: Props) {
               }}
             />
             <YAxis
-              tickFormatter={(value) => `${value}`}
+              tickFormatter={(value) => `${value.toFixed(1)}`}
               label={{ value: 'Cantidad vendida', angle: -90, position: 'insideLeft' }}
             />
             <Tooltip
-              formatter={(value) => [`${Number(value).toFixed(1)}`, 'Cantidad']}
+              formatter={(value: any) => [`${Number(value).toFixed(1)}`, 'Cantidad']}
               labelFormatter={(label) => {
                 const date = new Date(label);
                 return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
