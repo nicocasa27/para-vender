@@ -11,7 +11,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Store,
-  Users
+  Users,
+  BarChart2
 } from "lucide-react";
 
 interface SideNavProps {
@@ -42,6 +43,11 @@ export const SideNav: React.FC<SideNavProps> = ({ open, setOpen }) => {
       title: "Análisis",
       href: "/analytics",
       icon: BarChart4,
+    },
+    {
+      title: "Analíticas 2",
+      href: "/analiticas2",
+      icon: BarChart2,
     },
     {
       title: "Roles de Usuario",

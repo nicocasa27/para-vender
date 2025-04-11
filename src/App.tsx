@@ -12,13 +12,14 @@ import { AdminInitializer } from "./components/admin/AdminInitializer";
 import Dashboard from "./pages/Dashboard";
 import PointOfSale from "./pages/PointOfSale";
 import Analytics from "./pages/Analytics";
+import Analiticas2 from "./pages/Analiticas2"; // Importar la nueva página
 import UserRoles from "./pages/UserRoles";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
-import InventoryPage from "./pages/Inventory"; // Importamos la página de inventario
+import InventoryPage from "./pages/Inventory";
 
 // Create a client with default options
 const queryClient = new QueryClient({
@@ -49,9 +50,10 @@ const App = () => {
                 <Route element={<MainLayout />}>
                   <Route path="/" element={<Index />} />
                   <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/inventory" element={<InventoryPage />} /> {/* Agregamos la ruta de inventario */}
+                  <Route path="/inventory" element={<InventoryPage />} />
                   <Route path="/pos" element={<PointOfSale />} />
                   <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/analiticas2" element={<Analiticas2 />} /> {/* Añadir la ruta para Analiticas2 */}
                   
                   {/* User roles route */}
                   <Route path="/user-roles" element={<UserRoles />} />
