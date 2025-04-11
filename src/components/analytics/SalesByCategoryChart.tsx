@@ -23,15 +23,9 @@ export function SalesByCategoryChart({ data, loading }: Props) {
     return <Skeleton className="h-[250px] w-full rounded-md" />;
   }
   
-  if (!data || data.length === 0) {
-    return <div className="flex items-center justify-center h-[250px] text-muted-foreground">
-      No hay datos de categorías disponibles
-    </div>;
-  }
-  
   // Preparar datos para el gráfico
   const chartData = data.map(item => ({
-    name: item.categoria || "Sin categoría",
+    name: item.categoria,
     value: Number(item.total)
   }));
 
@@ -48,7 +42,7 @@ export function SalesByCategoryChart({ data, loading }: Props) {
           dataKey="value"
           nameKey="name"
           label={({ name, percent }) => 
-            `${name}: ${(Number(percent) * 100).toFixed(1)}%`
+            `${name}: ${(percent * 100).toFixed(0)}%`
           }
         >
           {chartData.map((entry, index) => (
@@ -56,7 +50,7 @@ export function SalesByCategoryChart({ data, loading }: Props) {
           ))}
         </Pie>
         <Tooltip
-          formatter={(value) => [`$${Number(value).toFixed(1)}`, 'Ventas']}
+          formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Ventas']}
         />
         <Legend />
       </PieChart>
