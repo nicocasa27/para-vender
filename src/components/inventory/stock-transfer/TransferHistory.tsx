@@ -26,29 +26,68 @@ export function TransferHistory() {
   const loadTransfers = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Get the transfers
+      const { data: transfersData, error: transfersError } = await supabase
         .from('movimientos')
         .select(`
           id,
           created_at,
           cantidad,
           notas,
-          productos(nombre),
-          almacen_origen:almacenes!movimientos_almacen_origen_id_fkey(nombre),
-          almacen_destino:almacenes!movimientos_almacen_destino_id_fkey(nombre)
+          producto_id,
+          almacen_origen_id,
+          almacen_destino_id
         `)
         .eq('tipo', 'transferencia')
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (error) throw error;
+      if (transfersError) throw transfersError;
       
-      const formattedTransfers: TransferRecord[] = (data || []).map((item: any) => ({
+      // Get product names
+      const productIds = transfersData.map(t => t.producto_id).filter(Boolean);
+      const { data: productsData, error: productsError } = await supabase
+        .from('productos')
+        .select('id, nombre')
+        .in('id', productIds);
+        
+      if (productsError) {
+        console.error("Error fetching product details:", productsError);
+      }
+      
+      // Get store names
+      const storeIds = [
+        ...transfersData.map(t => t.almacen_origen_id).filter(Boolean),
+        ...transfersData.map(t => t.almacen_destino_id).filter(Boolean)
+      ];
+      
+      const { data: storesData, error: storesError } = await supabase
+        .from('almacenes')
+        .select('id, nombre')
+        .in('id', storeIds);
+        
+      if (storesError) {
+        console.error("Error fetching store details:", storesError);
+      }
+      
+      // Create maps for easy lookup
+      const productMap = new Map();
+      if (productsData) {
+        productsData.forEach(p => productMap.set(p.id, p.nombre));
+      }
+      
+      const storeMap = new Map();
+      if (storesData) {
+        storesData.forEach(s => storeMap.set(s.id, s.nombre));
+      }
+      
+      // Format transfer records
+      const formattedTransfers: TransferRecord[] = (transfersData || []).map((item: any) => ({
         id: item.id,
         fecha: item.created_at ? format(parseISO(item.created_at), 'dd/MM/yyyy HH:mm', { locale: es }) : "Fecha desconocida",
-        origen: item.almacen_origen?.nombre || "N/A",
-        destino: item.almacen_destino?.nombre || "N/A",
-        producto: item.productos?.nombre || "N/A",
+        origen: storeMap.get(item.almacen_origen_id) || "N/A",
+        destino: storeMap.get(item.almacen_destino_id) || "N/A",
+        producto: productMap.get(item.producto_id) || "N/A",
         cantidad: Number(item.cantidad),
         notas: item.notas
       }));

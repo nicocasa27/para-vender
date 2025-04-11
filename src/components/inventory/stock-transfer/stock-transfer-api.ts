@@ -28,34 +28,85 @@ export const getStores = async (): Promise<StoreData[]> => {
 
 export const getProductsInStore = async (storeId: string): Promise<ProductStock[]> => {
   try {
-    const { data, error } = await supabase
+    // First get inventory items
+    const { data: inventoryData, error: inventoryError } = await supabase
       .from("inventario")
       .select(`
+        id,
         cantidad,
-        productos!inner(
-          id,
-          nombre,
-          unidades(nombre, abreviatura)
-        )
+        producto_id,
+        almacen_id
       `)
       .eq("almacen_id", storeId)
       .gt("cantidad", 0);
 
-    if (error) {
-      console.error("Error fetching products:", error);
-      toast.error("Error al cargar los productos", {
-        description: error.message
+    if (inventoryError) {
+      console.error("Error fetching inventory:", inventoryError);
+      toast.error("Error al cargar el inventario", {
+        description: inventoryError.message
       });
-      throw error;
+      throw inventoryError;
     }
 
-    // Transform the data to match our ProductStock interface
-    return (data || []).map((item: any) => ({
-      id: item.productos.id,
-      nombre: item.productos.nombre,
-      unidad: item.productos.unidades?.abreviatura || "u",
-      stock: Number(item.cantidad),
-    }));
+    if (!inventoryData || inventoryData.length === 0) {
+      return [];
+    }
+
+    // Extract product IDs
+    const productIds = inventoryData.map(item => item.producto_id);
+
+    // Get product details separately
+    const { data: productsData, error: productsError } = await supabase
+      .from("productos")
+      .select(`
+        id,
+        nombre,
+        unidad_id
+      `)
+      .in("id", productIds);
+
+    if (productsError) {
+      console.error("Error fetching products:", productsError);
+      toast.error("Error al cargar los productos", {
+        description: productsError.message
+      });
+      throw productsError;
+    }
+
+    // Get units separately
+    const { data: unitsData, error: unitsError } = await supabase
+      .from("unidades")
+      .select("id, abreviatura, nombre");
+
+    if (unitsError) {
+      console.error("Error fetching units:", unitsError);
+      // Continue without units information
+    }
+
+    // Create a map for units
+    const unitsMap = new Map();
+    if (unitsData) {
+      unitsData.forEach(unit => {
+        unitsMap.set(unit.id, unit);
+      });
+    }
+
+    // Create a map for inventory quantities
+    const inventoryMap = new Map();
+    inventoryData.forEach(item => {
+      inventoryMap.set(item.producto_id, Number(item.cantidad));
+    });
+
+    // Combine data to match our ProductStock interface
+    return (productsData || []).map(product => {
+      const unit = product.unidad_id ? unitsMap.get(product.unidad_id) : null;
+      return {
+        id: product.id,
+        nombre: product.nombre,
+        unidad: unit ? unit.abreviatura || unit.nombre : "u",
+        stock: inventoryMap.get(product.id) || 0,
+      };
+    });
   } catch (error) {
     console.error("Error fetching products:", error);
     toast.error("Error al cargar los productos");
@@ -73,9 +124,9 @@ export const getRecentTransfers = async (limit = 10): Promise<TransferRecord[]> 
         tipo,
         cantidad,
         notas,
-        productos(nombre),
-        origen:almacenes!movimientos_almacen_origen_id_fkey(nombre),
-        destino:almacenes!movimientos_almacen_destino_id_fkey(nombre)
+        producto_id,
+        almacen_origen_id,
+        almacen_destino_id
       `)
       .eq("tipo", "transferencia")
       .order("created_at", { ascending: false })
@@ -89,13 +140,54 @@ export const getRecentTransfers = async (limit = 10): Promise<TransferRecord[]> 
       throw error;
     }
 
+    // Get relevant product names
+    const productIds = data.map(item => item.producto_id).filter(Boolean);
+    const { data: productsData, error: productsError } = await supabase
+      .from("productos")
+      .select("id, nombre")
+      .in("id", productIds);
+
+    if (productsError) {
+      console.error("Error fetching product names:", productsError);
+    }
+
+    // Get store names
+    const storeIds = [...new Set([
+      ...data.map(item => item.almacen_origen_id).filter(Boolean),
+      ...data.map(item => item.almacen_destino_id).filter(Boolean)
+    ])];
+    
+    const { data: storesData, error: storesError } = await supabase
+      .from("almacenes")
+      .select("id, nombre")
+      .in("id", storeIds);
+
+    if (storesError) {
+      console.error("Error fetching store names:", storesError);
+    }
+
+    // Create maps for easy lookups
+    const productMap = new Map();
+    if (productsData) {
+      productsData.forEach(product => {
+        productMap.set(product.id, product.nombre);
+      });
+    }
+
+    const storeMap = new Map();
+    if (storesData) {
+      storesData.forEach(store => {
+        storeMap.set(store.id, store.nombre);
+      });
+    }
+
     // Transform the data to match our TransferRecord interface
     return (data || []).map((item: any) => ({
       id: item.id,
       fecha: new Date(item.created_at).toLocaleDateString(),
-      origen: item.origen?.nombre || "N/A",
-      destino: item.destino?.nombre || "N/A",
-      producto: item.productos?.nombre || "N/A",
+      origen: storeMap.get(item.almacen_origen_id) || "N/A",
+      destino: storeMap.get(item.almacen_destino_id) || "N/A",
+      producto: productMap.get(item.producto_id) || "N/A",
       cantidad: Number(item.cantidad),
       notas: item.notas,
     }));

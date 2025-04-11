@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -84,34 +83,83 @@ export function StockTransferForm({ onTransferComplete }: StockTransferFormProps
       }
 
       try {
-        const { data, error } = await supabase
+        // First get inventory items for the store
+        const { data: inventoryData, error: inventoryError } = await supabase
           .from("inventario")
           .select(`
+            id,
             cantidad,
-            productos!inner(
-              id,
-              nombre,
-              unidades(nombre, abreviatura)
-            )
+            producto_id,
+            almacen_id
           `)
           .eq("almacen_id", sourceStoreId)
           .gt("cantidad", 0);
 
-        if (error) throw error;
+        if (inventoryError) throw inventoryError;
+
+        if (!inventoryData || inventoryData.length === 0) {
+          setProducts([]);
+          return;
+        }
+
+        // Extract product IDs
+        const productIds = inventoryData.map(item => item.producto_id);
+
+        // Get product details separately
+        const { data: productsData, error: productsError } = await supabase
+          .from("productos")
+          .select(`
+            id,
+            nombre,
+            unidad_id
+          `)
+          .in("id", productIds);
+
+        if (productsError) throw productsError;
+
+        // Get units separately
+        const { data: unitsData, error: unitsError } = await supabase
+          .from("unidades")
+          .select("id, abreviatura, nombre");
+
+        if (unitsError) {
+          console.error("Error fetching units:", unitsError);
+          // Continue without units information
+        }
+
+        // Create a map for units
+        const unitsMap = new Map();
+        if (unitsData) {
+          unitsData.forEach(unit => {
+            unitsMap.set(unit.id, unit);
+          });
+        }
+
+        // Create a map for inventory quantities
+        const inventoryMap = new Map();
+        inventoryData.forEach(item => {
+          inventoryMap.set(item.producto_id, Number(item.cantidad));
+        });
 
         // Transform the data to match our ProductStock interface
-        const productsData = (data || []).map((item: any) => ({
-          id: item.productos.id,
-          nombre: item.productos.nombre,
-          stock: Number(item.cantidad),
-          unidad: item.productos.unidades?.abreviatura || "u",
-        }));
+        const productsStock = (productsData || []).map(product => {
+          const unit = product.unidad_id ? unitsMap.get(product.unidad_id) : null;
+          return {
+            id: product.id,
+            nombre: product.nombre,
+            unidad: unit ? unit.abreviatura || unit.nombre : "u",
+            stock: inventoryMap.get(product.id) || 0,
+          };
+        });
 
-        setProducts(productsData);
+        setProducts(productsStock);
         setValue("productId", ""); // Reset product selection when store changes
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error al cargar productos:", error);
-        toast.error("Error al cargar los productos");
+        toast.error("Error al cargar los productos", {
+          description: error.message || "Hubo un problema cargando productos"
+        });
+        setProducts([]);
       }
     };
 
