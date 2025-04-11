@@ -12,7 +12,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchStoreMonthlySales } from "@/services/analyticService";
+import { fetchStoreMonthlySales } from "@/services/analytics";
 import { useStores } from "@/hooks/useStores";
 
 interface StoreMonthlySalesChartProps {

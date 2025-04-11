@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   BarChart,
@@ -12,7 +11,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchNonSellingProducts } from "@/services/analyticService";
+import { fetchNonSellingProducts } from "@/services/analytics";
 
 interface NonSellingProductsChartProps {
   storeIds: string[];

@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from "react";
+import { fetchItemSalesTrend } from "@/services/analytics";
 import {
   LineChart,
   Line,
@@ -28,7 +28,6 @@ export function ItemSalesTrendChart({ data, loading }: Props) {
   const [availableProducts, setAvailableProducts] = useState<string[]>([]);
   const [filteredData, setFilteredData] = useState<any[]>([]);
 
-  // Extraer productos únicos de los datos
   useEffect(() => {
     if (data && data.length > 0) {
       const uniqueProducts = Array.from(new Set(data.map(item => item.producto)));
@@ -39,21 +38,17 @@ export function ItemSalesTrendChart({ data, loading }: Props) {
     }
   }, [data, selectedProduct]);
 
-  // Filtrar datos según la tienda y producto seleccionados
   useEffect(() => {
     if (!data || data.length === 0 || !selectedProduct) return;
 
     let filtered = [...data];
 
-    // Filtrar por tienda si no es "todas"
     if (selectedStore !== "all") {
       filtered = filtered.filter(item => item.almacen_id === selectedStore);
     }
 
-    // Filtrar por producto seleccionado
     filtered = filtered.filter(item => item.producto === selectedProduct);
 
-    // Agrupar por fecha y tienda
     const groupedData: { [key: string]: any } = {};
     filtered.forEach(item => {
       const key = `${item.fecha}-${item.almacen}`;
@@ -67,7 +62,6 @@ export function ItemSalesTrendChart({ data, loading }: Props) {
       groupedData[key].cantidad += Number(item.cantidad);
     });
 
-    // Convertir a array y ordenar por fecha
     const result = Object.values(groupedData).sort((a, b) => 
       new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
     );
@@ -79,7 +73,6 @@ export function ItemSalesTrendChart({ data, loading }: Props) {
     return <Skeleton className="h-[400px] w-full rounded-md" />;
   }
 
-  // Obtener colores únicos para cada tienda
   const getStoreColors = () => {
     const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F'];
     const storeColors: { [key: string]: string } = {};
@@ -94,7 +87,6 @@ export function ItemSalesTrendChart({ data, loading }: Props) {
 
   const storeColors = getStoreColors();
 
-  // Si no hay datos disponibles después del filtrado
   if (filteredData.length === 0) {
     return (
       <Card className="col-span-full">
@@ -135,7 +127,6 @@ export function ItemSalesTrendChart({ data, loading }: Props) {
     );
   }
 
-  // Agrupar datos por tienda para mostrar múltiples líneas
   const uniqueStores = Array.from(new Set(filteredData.map(item => item.almacen)));
 
   return (
@@ -196,7 +187,6 @@ export function ItemSalesTrendChart({ data, loading }: Props) {
             <Legend />
             
             {uniqueStores.map((store) => {
-              // Filtrar datos solo para esta tienda
               const storeData = filteredData.filter(item => item.almacen === store);
               
               return (
