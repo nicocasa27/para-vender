@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -109,13 +110,6 @@ export default function Analytics() {
               ))}
             </SelectContent>
           </Select>
-          
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="advanced">Avanzado</TabsTrigger>
-            </TabsList>
-          </Tabs>
         </div>
         
         <div className="flex items-center gap-2">
@@ -152,35 +146,84 @@ export default function Analytics() {
         </div>
       </div>
       
-      <TabsContent value="general" className="mt-0">
-        <div className="grid grid-cols-1 gap-6 mb-6">
-          <Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="advanced">Avanzado</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="general">
+          <div className="grid grid-cols-1 gap-6 mb-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg font-medium">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    <span>Ventas diarias (últimos 30 días)</span>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RevenueOverTimeChart data={revenueOverTime} loading={loading} />
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg font-medium">
+                  <div className="flex items-center gap-2">
+                    <ShoppingBag className="h-5 w-5" />
+                    <span>Ventas por Categoría</span>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SalesByCategoryChart data={salesByCategory} loading={loading} />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg font-medium">
+                  <div className="flex items-center gap-2">
+                    <BarChart3Icon className="h-5 w-5" />
+                    <span>Top 10 Productos</span>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TopProductsChart data={topProducts} loading={loading} />
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="mb-6">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-medium">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  <span>Ventas diarias (últimos 30 días)</span>
+                  <DollarSign className="h-5 w-5" />
+                  <span>Ventas totales por sucursal (comparativa mensual)</span>
                 </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <RevenueOverTimeChart data={revenueOverTime} loading={loading} />
+              <SalesByStoreChart storeIds={selectedStoreIds} period={dateRange} />
             </CardContent>
           </Card>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <Card>
+          
+          <Card className="mb-6">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-medium">
                 <div className="flex items-center gap-2">
-                  <ShoppingBag className="h-5 w-5" />
-                  <span>Ventas por Categoría</span>
+                  <Clock className="h-5 w-5" />
+                  <span>Horarios de mayor venta</span>
                 </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <SalesByCategoryChart data={salesByCategory} loading={loading} />
+              <SalesByHourChart storeId={selectedStore} period={dateRange} />
             </CardContent>
           </Card>
           
@@ -188,117 +231,75 @@ export default function Analytics() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-medium">
                 <div className="flex items-center gap-2">
-                  <BarChart3Icon className="h-5 w-5" />
-                  <span>Top 10 Productos</span>
+                  <AlertCircle className="h-5 w-5" />
+                  <span>Productos con inventario crítico</span>
                 </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <TopProductsChart data={topProducts} loading={loading} />
+              <LowStockTable storeId={selectedStore} />
             </CardContent>
           </Card>
-        </div>
-
-        <Card className="mb-6">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-medium">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                <span>Ventas totales por sucursal (comparativa mensual)</span>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <SalesByStoreChart storeIds={selectedStoreIds} period={dateRange} />
-          </CardContent>
-        </Card>
+        </TabsContent>
         
-        <Card className="mb-6">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-medium">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                <span>Horarios de mayor venta</span>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <SalesByHourChart storeId={selectedStore} period={dateRange} />
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-medium">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5" />
-                <span>Productos con inventario crítico</span>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <LowStockTable storeId={selectedStore} />
-          </CardContent>
-        </Card>
-      </TabsContent>
-      
-      <TabsContent value="advanced" className="mt-0">
-        <Card className="mb-6">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-medium">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                <span>Tendencia de ventas por ítem</span>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <SalesTrendByItemChart storeId={selectedStore} period={dateRange} />
-          </CardContent>
-        </Card>
-        
-        <Card className="mb-6">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-medium">
-              <div className="flex items-center gap-2">
-                <TrendingDown className="h-5 w-5" />
-                <span>Productos que han dejado de venderse</span>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ProductsNotSoldChart storeId={selectedStore} period={dateRange} />
-          </CardContent>
-        </Card>
-        
-        <Card className="mb-6">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-medium">
-              <div className="flex items-center gap-2">
-                <Receipt className="h-5 w-5" />
-                <span>Ticket promedio por tienda</span>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AverageTicketChart storeIds={selectedStoreIds} period={dateRange} />
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-medium">
-              <div className="flex items-center gap-2">
-                <PercentIcon className="h-5 w-5" />
-                <span>Margen de ganancia por categoría</span>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <MarginByCategory storeId={selectedStore} period={dateRange} />
-          </CardContent>
-        </Card>
-      </TabsContent>
+        <TabsContent value="advanced">
+          <Card className="mb-6">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-medium">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  <span>Tendencia de ventas por ítem</span>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SalesTrendByItemChart storeId={selectedStore} period={dateRange} />
+            </CardContent>
+          </Card>
+          
+          <Card className="mb-6">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-medium">
+                <div className="flex items-center gap-2">
+                  <TrendingDown className="h-5 w-5" />
+                  <span>Productos que han dejado de venderse</span>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProductsNotSoldChart storeId={selectedStore} period={dateRange} />
+            </CardContent>
+          </Card>
+          
+          <Card className="mb-6">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-medium">
+                <div className="flex items-center gap-2">
+                  <Receipt className="h-5 w-5" />
+                  <span>Ticket promedio por tienda</span>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AverageTicketChart storeIds={selectedStoreIds} period={dateRange} />
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-medium">
+                <div className="flex items-center gap-2">
+                  <PercentIcon className="h-5 w-5" />
+                  <span>Margen de ganancia por categoría</span>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MarginByCategory storeId={selectedStore} period={dateRange} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
