@@ -43,54 +43,49 @@ export function useAuthOperations({
         throw error;
       }
 
-      if (data.user) {
-        console.log("Auth: Sign in successful for user:", data.user.id);
+      if (!data.user) {
+        throw new Error("No se encontró información de usuario en Supabase");
+      }
+
+      console.log("Auth: Sign in successful for user:", data.user.id);
+      
+      // Verify user exists in Supabase profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', data.user.id)
+        .single();
         
-        // Verificar que el usuario exista en profiles
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', data.user.id)
-          .single();
-          
-        if (profileError || !profile) {
-          console.error("Auth: User found in auth but not in profiles");
-          
-          // Crear el perfil que falta
-          console.log("Auth: Creating missing profile for user:", data.user.id);
-          const { error: createProfileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: data.user.id,
-              email: data.user.email,
-              full_name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || "Usuario sin nombre"
-            });
-            
-          if (createProfileError) {
-            console.error("Auth: Error creating profile:", createProfileError);
-            await supabase.auth.signOut();
-            throw new Error("No se pudo crear el perfil del usuario. Por favor contacte al administrador.");
-          }
-          
-          console.log("Auth: Profile created successfully, now creating default role");
-          
-          // Forzar sincronización para garantizar que el usuario se cree correctamente
-          await forceUserSync(data.user.id);
-        }
+      if (profileError || !profile) {
+        console.error("Auth: User found in auth but not in profiles, not allowing login");
+        await supabase.auth.signOut();
+        throw new Error("Tu cuenta no existe en el sistema. Por favor contacta al administrador.");
+      }
+      
+      // Verify user has roles in Supabase
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('user_id', data.user.id);
         
-        // Asegurarse de que el usuario tenga un rol por defecto
+      if (rolesError) {
+        console.error("Auth: Error checking roles:", rolesError);
+      }
+      
+      if (!roles || roles.length === 0) {
+        console.warn("Auth: No roles found for user, creating default role");
         await createDefaultRole(data.user.id);
-        
-        const roles = await refreshUserRoles();
-        
-        if (roles.length === 0) {
-          console.warn("Auth: No roles found after sign in");
-          sonnerToast.warning("No se encontraron roles asignados", {
-            description: "Es posible que necesites contactar a un administrador para obtener permisos"
-          });
-        } else {
-          console.log("Auth: Successfully loaded roles after sign in:", roles);
-        }
+      }
+      
+      const userRoles = await refreshUserRoles();
+      
+      if (userRoles.length === 0) {
+        console.warn("Auth: No roles found after sign in");
+        sonnerToast.warning("No se encontraron roles asignados", {
+          description: "Es posible que necesites contactar a un administrador para obtener permisos"
+        });
+      } else {
+        console.log("Auth: Successfully loaded roles after sign in:", userRoles);
       }
 
       sonnerToast.success("Inicio de sesión exitoso", {
@@ -117,28 +112,6 @@ export function useAuthOperations({
     }
   }, [navigate, refreshUserRoles]);
 
-  // Función auxiliar para forzar la sincronización de un usuario específico
-  const forceUserSync = async (userId: string) => {
-    try {
-      console.log("Auth: Forcing sync for user:", userId);
-      const { error: syncError } = await supabase.functions.invoke("sync-users", {
-        body: { 
-          forceUpdate: true,
-          forceSyncAll: false,
-          specificUserId: userId
-        },
-      });
-      
-      if (syncError) {
-        console.error("Auth: Error calling sync-users function:", syncError);
-      } else {
-        console.log("Auth: Successfully synchronized user:", userId);
-      }
-    } catch (error) {
-      console.error("Auth: Error during force sync:", error);
-    }
-  };
-
   /**
    * Registra un nuevo usuario
    */
@@ -151,7 +124,17 @@ export function useAuthOperations({
       localStorage.removeItem('supabase.auth.token');
       sessionStorage.removeItem('supabase.auth.token');
       
-      // Primero creamos el usuario en Supabase Auth
+      // Verificar primero si el usuario ya existe en Supabase Auth
+      const { data: checkData, error: checkError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (!checkError && checkData.user) {
+        throw new Error("Este usuario ya existe. Por favor inicia sesión en lugar de registrarte.");
+      }
+      
+      // Create user in Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -167,54 +150,32 @@ export function useAuthOperations({
         throw error;
       }
 
-      // Si el usuario se creó correctamente, creamos manualmente su perfil en la tabla profiles
-      if (data.user) {
-        console.log("Auth: User created successfully, creating profile:", data.user.id);
-        
-        try {
-          // Insertar el perfil del usuario directamente
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: data.user.id,
-              email: email,
-              full_name: fullName
-            });
-            
-          if (profileError) {
-            console.error("Auth: Error creating profile:", profileError);
-            throw profileError;
-          }
-          
-          console.log("Auth: Profile created successfully, now creating default role");
-          
-          // Crear un rol por defecto para el nuevo usuario directamente
-          const { error: roleError } = await supabase
-            .from('user_roles')
-            .insert({
-              user_id: data.user.id,
-              role: 'viewer' as UserRole,
-              almacen_id: null
-            });
-            
-          if (roleError) {
-            console.error("Auth: Error creating default role:", roleError);
-            throw roleError;
-          }
-          
-          console.log("Auth: Default role created for new user");
-          
-          // Forzar sincronización para garantizar que el usuario se cree correctamente
-          await forceUserSync(data.user.id);
-          
-        } catch (err) {
-          console.error("Auth: Exception during profile/role creation:", err);
-          // Intentamos llamar a la función de sincronización como fallback
-          await forceUserSync(data.user.id);
-        }
+      if (!data.user) {
+        throw new Error("No se pudo crear el usuario en Supabase");
       }
       
-      console.log("Auth: Sign up successful, profile and role have been assigned");
+      console.log("Auth: User created successfully in Supabase Auth:", data.user.id);
+      
+      // Immediately call the sync-users function to ensure the user is created in all tables
+      const { error: syncError } = await supabase.functions.invoke("sync-users", {
+        body: { 
+          forceUpdate: true,
+          forceSyncAll: false,
+          specificUserId: data.user.id
+        },
+      });
+      
+      if (syncError) {
+        console.error("Auth: Error calling sync-users function:", syncError);
+        sonnerToast.warning("El usuario se creó pero podría no tener todos los permisos", {
+          description: "Por favor contacta al administrador"
+        });
+      } else {
+        console.log("Auth: User successfully synchronized with all tables");
+      }
+      
+      // Now sign out so they can log in properly
+      await supabase.auth.signOut();
       
       sonnerToast.success("Registro exitoso", {
         description: "Tu cuenta ha sido creada correctamente. Ya puedes iniciar sesión."

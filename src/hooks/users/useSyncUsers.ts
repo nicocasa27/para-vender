@@ -33,65 +33,7 @@ export function useSyncUsers() {
         specificUserId: specificUserId || null
       };
       
-      // Primero, intentar una sincronización directa mediante operaciones en la base de datos
-      if (specificUserId) {
-        try {
-          // 1. Verificar si el usuario existe en auth
-          const { data: authData, error: authError } = await supabase.auth.getUser(specificUserId);
-          
-          if (authError) {
-            console.error("Error verificando usuario en auth:", authError);
-          } else if (authData.user) {
-            console.log("Usuario encontrado en auth, sincronizando manualmente");
-            
-            // 2. Insertar/actualizar perfil
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .upsert({
-                id: specificUserId,
-                email: authData.user.email,
-                full_name: authData.user.user_metadata?.full_name || authData.user.email?.split('@')[0] || "Usuario"
-              });
-              
-            if (profileError) {
-              console.error("Error creando/actualizando perfil:", profileError);
-            } else {
-              console.log("Perfil creado/actualizado correctamente");
-            }
-            
-            // 3. Verificar si ya tiene roles
-            const { data: existingRoles, error: rolesError } = await supabase
-              .from('user_roles')
-              .select('id')
-              .eq('user_id', specificUserId);
-              
-            if (rolesError) {
-              console.error("Error verificando roles existentes:", rolesError);
-            } else if (!existingRoles || existingRoles.length === 0) {
-              // 4. Crear rol por defecto si no tiene
-              const { error: roleError } = await supabase
-                .from('user_roles')
-                .insert({
-                  user_id: specificUserId,
-                  role: 'viewer',
-                  almacen_id: null
-                });
-                
-              if (roleError) {
-                console.error("Error creando rol por defecto:", roleError);
-              } else {
-                console.log("Rol por defecto creado correctamente");
-              }
-            } else {
-              console.log(`Usuario ya tiene ${existingRoles.length} roles asignados`);
-            }
-          }
-        } catch (directSyncError) {
-          console.error("Error en sincronización directa:", directSyncError);
-        }
-      }
-      
-      // Llamar a la función edge como respaldo o para sincronización completa
+      // Llamar a la función edge
       const { data, error } = await supabase.functions.invoke("sync-users", {
         body: params,
       });
@@ -155,6 +97,17 @@ export function useSyncUsers() {
         toast.success(`Usuario ${data.specific_user_processed} sincronizado correctamente`);
       }
       
+      // Verificar si hay usuarios en la base de datos que no estén en Supabase Auth
+      if (data.orphaned_profiles > 0 && data.orphaned_profile_details) {
+        // Eliminar perfiles huérfanos si se solicita
+        const orphanedIds = data.orphaned_profile_details.map((p: any) => p.id);
+        
+        console.log("Perfiles huérfanos que podrían ser eliminados:", orphanedIds);
+        toast.warning(`Se detectaron ${orphanedIds.length} perfiles huérfanos`, {
+          description: "Estos perfiles no existen en Supabase Auth"
+        });
+      }
+      
       return data;
     } catch (error: any) {
       console.error("Error al sincronizar usuarios:", error);
@@ -167,8 +120,68 @@ export function useSyncUsers() {
     }
   };
 
+  /**
+   * Elimina usuarios huérfanos que no existen en Supabase Auth
+   */
+  const cleanupOrphanedUsers = async () => {
+    try {
+      setSyncing(true);
+      toast.info("Iniciando limpieza de usuarios huérfanos...");
+      
+      // Primero obtener todos los perfiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name');
+        
+      if (profilesError) {
+        throw profilesError;
+      }
+      
+      if (!profiles || profiles.length === 0) {
+        toast.info("No hay perfiles para verificar");
+        return;
+      }
+      
+      console.log(`Verificando ${profiles.length} perfiles contra Supabase Auth...`);
+      
+      // Llamar a la función de sincronización con un parámetro especial para limpieza
+      const { data, error } = await supabase.functions.invoke("sync-users", {
+        body: { 
+          forceUpdate: true,
+          forceSyncAll: true,
+          cleanupOrphaned: true
+        },
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      console.log("Resultado de limpieza:", data);
+      
+      if (data.removed_orphans && data.removed_orphans > 0) {
+        toast.success(`Se eliminaron ${data.removed_orphans} perfiles huérfanos`, {
+          description: "Los perfiles sin usuario en Auth han sido eliminados"
+        });
+      } else {
+        toast.success("No se encontraron perfiles huérfanos para eliminar");
+      }
+      
+      return data;
+    } catch (error: any) {
+      console.error("Error al limpiar usuarios huérfanos:", error);
+      toast.error("Error al limpiar usuarios", {
+        description: error.message || "Intenta nuevamente en unos momentos"
+      });
+      return null;
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return {
     syncUsers,
+    cleanupOrphanedUsers,
     syncing
   };
 }
