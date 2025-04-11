@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
@@ -25,7 +26,10 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
     loading,
     searchTerm,
     setSearchTerm,
+    categoryFilter,
+    setCategoryFilter,
     storeFilter,
+    setStoreFilter,
     refreshProducts,
     addProduct,
     editProduct,
@@ -143,6 +147,12 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
         onSearchChange={setSearchTerm}
         onRefresh={handleRefresh}
         onAddNew={() => setIsAddModalOpen(true)}
+        categories={categories}
+        stores={stores}
+        categoryFilter={categoryFilter}
+        onCategoryChange={setCategoryFilter}
+        storeFilter={storeFilter}
+        onStoreChange={setStoreFilter}
       />
 
       <StoreFilterNotice 

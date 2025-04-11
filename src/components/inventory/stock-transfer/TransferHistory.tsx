@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowRight, RefreshCw } from "lucide-react";
+import { ArrowRight, RefreshCw, Warehouse } from "lucide-react";
 import { TransferRecord } from "./types";
 
 export function TransferHistory() {
