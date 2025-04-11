@@ -69,7 +69,6 @@ export function useSales() {
     }
   }, []);
 
-  // Solo una definición de processNewSale
   const processNewSale = useCallback(async (
     products: Product[], 
     storeId: string, 
@@ -94,7 +93,7 @@ export function useSales() {
       const saleData = {
         almacen_id: storeId,
         metodo_pago: paymentMethod,
-        cliente: customerName || null,
+        cliente: null, // Ya no se guarda el nombre del cliente
         total,
         detalles: saleDetails
       };
