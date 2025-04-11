@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchNonSellingProducts } from "@/services/analytics";
+import { fetchNonSellingProducts } from "@/services/analyticService";
 
 interface NonSellingProductsChartProps {
   storeIds: string[];

@@ -12,7 +12,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchTotalSalesByStore } from "@/services/analytics";
+import { fetchTotalSalesByStore } from "@/services/analyticService";
 import { useStores } from "@/hooks/useStores";
 
 interface TotalSalesByStoreChartProps {

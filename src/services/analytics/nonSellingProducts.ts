@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { NonSellingProductDataPoint } from "@/types/analytics";
-import { calculateDateRange } from "./utils";
+import { calculateDateRange, handleAnalyticsError } from "./utils";
 
 export async function fetchNonSellingProducts(storeIds: string[] = [], timeRange: string = "month"): Promise<NonSellingProductDataPoint[]> {
   try {
@@ -83,8 +83,10 @@ export async function fetchNonSellingProducts(storeIds: string[] = [], timeRange
         continue;
       }
       
-      // Access created_at from the ventas object of the first item
-      const lastSaleDate = new Date(lastSale[0].ventas.created_at);
+      // Fixed: Access created_at from the correct path
+      const lastSaleDate = lastSale[0] && lastSale[0].ventas 
+        ? new Date(lastSale[0].ventas.created_at) 
+        : new Date(0);
       
       if (lastSaleDate < startDate) {
         const diasSinVenta = Math.floor((endDate.getTime() - lastSaleDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -101,7 +103,6 @@ export async function fetchNonSellingProducts(storeIds: string[] = [], timeRange
     nonSellingProducts.sort((a, b) => b.dias_sin_venta - a.dias_sin_venta);
     
     console.log(`Se encontraron ${nonSellingProducts.length} productos sin ventas en el período seleccionado`);
-    console.log("Datos procesados para el gráfico de productos sin venta:", nonSellingProducts);
     
     return nonSellingProducts;
     

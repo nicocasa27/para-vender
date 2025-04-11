@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from "react";
-import { fetchItemSalesTrend } from "@/services/analytics";
+import { fetchItemSalesTrend } from "@/services/analyticService";
 import {
   LineChart,
   Line,
