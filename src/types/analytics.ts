@@ -34,3 +34,18 @@ export interface StoreMonthlySalesDataPoint {
   month: string;
   [storeId: string]: string | number;
 }
+
+// Tipo para ventas totales por sucursal
+export interface TotalSalesByStoreDataPoint {
+  id: string;
+  nombre: string;
+  total: number;
+}
+
+// Tipo para productos sin ventas
+export interface NonSellingProductDataPoint {
+  id: string;
+  nombre: string;
+  dias_sin_venta: number;
+  ultima_venta: string | null;
+}

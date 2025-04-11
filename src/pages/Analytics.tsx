@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
 import { SalesChart } from "@/components/dashboard";
 import { StoreMonthlySalesChart } from "@/components/analytics/StoreMonthlySalesChart";
+import { TotalSalesByStoreChart } from "@/components/analytics/TotalSalesByStoreChart";
+import { NonSellingProductsChart } from "@/components/analytics/NonSellingProductsChart";
 
 export default function Analytics() {
   const { stores, isLoading: loadingStores } = useCurrentStores();
@@ -68,6 +70,16 @@ export default function Analytics() {
       {/* Monthly Store Sales Comparison */}
       {selectedStoreIds.length > 0 && (
         <StoreMonthlySalesChart storeIds={selectedStoreIds} />
+      )}
+      
+      {/* Total Sales by Store */}
+      {selectedStoreIds.length > 0 && (
+        <TotalSalesByStoreChart storeIds={selectedStoreIds} dateRange={dateRange} />
+      )}
+      
+      {/* Non-Selling Products */}
+      {selectedStoreIds.length > 0 && (
+        <NonSellingProductsChart storeIds={selectedStoreIds} dateRange={dateRange} />
       )}
     </div>
   );
