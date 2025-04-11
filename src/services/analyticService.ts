@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ItemSalesTrendDataPoint, StoreMonthlySalesDataPoint, TotalSalesByStoreDataPoint, NonSellingProductDataPoint } from "@/types/analytics";
@@ -365,6 +366,7 @@ export async function fetchNonSellingProducts(storeIds: string[] = [], timeRange
         continue;
       }
       
+      // Fix: Access created_at from the first item's ventas property
       const lastSaleDate = new Date(lastSale[0].ventas.created_at);
       
       if (lastSaleDate < startDate) {

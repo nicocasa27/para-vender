@@ -9,7 +9,7 @@ import { NonSellingProductsChart } from "@/components/analytics/NonSellingProduc
 
 export default function Analytics() {
   const { stores, isLoading: loadingStores } = useCurrentStores();
-  const [dateRange, setDateRange] = useState("week");
+  const [dateRange, setDateRange] = useState("month");
   const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
 
   useEffect(() => {
@@ -64,23 +64,31 @@ export default function Analytics() {
         </div>
       </div>
       
-      {/* SalesChart */}
-      <SalesChart storeIds={selectedStoreIds} />
+      {/* Top Products Chart */}
+      <div className="mb-8">
+        <SalesChart storeIds={selectedStoreIds} />
+      </div>
       
       {/* Monthly Store Sales Comparison */}
-      {selectedStoreIds.length > 0 && (
-        <StoreMonthlySalesChart storeIds={selectedStoreIds} />
-      )}
+      <div className="mb-8">
+        {selectedStoreIds.length > 0 && (
+          <StoreMonthlySalesChart storeIds={selectedStoreIds} />
+        )}
+      </div>
       
       {/* Total Sales by Store */}
-      {selectedStoreIds.length > 0 && (
-        <TotalSalesByStoreChart storeIds={selectedStoreIds} dateRange={dateRange} />
-      )}
+      <div className="mb-8">
+        {selectedStoreIds.length > 0 && (
+          <TotalSalesByStoreChart storeIds={selectedStoreIds} dateRange={dateRange} />
+        )}
+      </div>
       
       {/* Non-Selling Products */}
-      {selectedStoreIds.length > 0 && (
-        <NonSellingProductsChart storeIds={selectedStoreIds} dateRange={dateRange} />
-      )}
+      <div className="mb-8">
+        {selectedStoreIds.length > 0 && (
+          <NonSellingProductsChart storeIds={selectedStoreIds} dateRange={dateRange} />
+        )}
+      </div>
     </div>
   );
 }
