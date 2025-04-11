@@ -19,3 +19,12 @@ export interface ProductDataPoint {
   producto: string;
   total: number;
 }
+
+// Tipo para la tendencia de ventas por ítem por tienda
+export interface ItemSalesTrendDataPoint {
+  fecha: string;
+  producto: string;
+  almacen: string;
+  almacen_id: string;
+  cantidad: number;
+}

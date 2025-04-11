@@ -4,19 +4,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
+import { SalesChart } from "@/components/dashboard";
 import { SalesByCategoryChart } from "@/components/analytics/SalesByCategoryChart";
 import { TopProductsChart } from "@/components/analytics/TopProductsChart";
 import { RevenueOverTimeChart } from "@/components/analytics/RevenueOverTimeChart";
-import { SalesDataPoint, CategoryDataPoint, ProductDataPoint } from "@/types/analytics";
+import { SalesDataPoint, CategoryDataPoint, ProductDataPoint, ItemSalesTrendDataPoint } from "@/types/analytics";
 import { toast } from "sonner";
+import { ItemSalesTrendChart } from "@/components/analytics/ItemSalesTrendChart";
+import { fetchItemSalesTrend } from "@/services/analyticService";
 
 export default function Analytics() {
   const { stores, isLoading: loadingStores } = useCurrentStores();
   const [salesByCategory, setSalesByCategory] = useState<CategoryDataPoint[]>([]);
   const [topProducts, setTopProducts] = useState<ProductDataPoint[]>([]);
   const [revenueOverTime, setRevenueOverTime] = useState<SalesDataPoint[]>([]);
+  const [itemSalesTrend, setItemSalesTrend] = useState<ItemSalesTrendDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState("week");
+  const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (stores && stores.length > 0) {
+      setSelectedStoreIds(stores.map(store => store.id));
+    }
+  }, [stores]);
 
   const fetchAnalytics = async (period = "week") => {
     if (!stores || stores.length === 0) return;
@@ -52,6 +63,10 @@ export default function Analytics() {
       if (salesTimeError) throw salesTimeError;
       setRevenueOverTime(salesTimeData || []);
       
+      // Tendencia de ventas por ítem (nueva)
+      const itemTrendData = await fetchItemSalesTrend(storeIds, period);
+      setItemSalesTrend(itemTrendData);
+      
     } catch (error) {
       console.error("Error fetching analytics:", error);
       toast.error("Error al cargar los datos analíticos");
@@ -67,10 +82,10 @@ export default function Analytics() {
   }, [stores, loadingStores, dateRange]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Analíticas</h2>
-        <p className="text-muted-foreground mt-2">
+        <h2 className="text-3xl font-bold tracking-tight mb-2">Analíticas</h2>
+        <p className="text-muted-foreground">
           Visualiza el rendimiento de ventas e inventario
         </p>
       </div>
@@ -114,7 +129,13 @@ export default function Analytics() {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* SalesChart */}
+      <SalesChart storeIds={selectedStoreIds} />
+
+      {/* Nueva gráfica de tendencia de ventas por ítem */}
+      <ItemSalesTrendChart data={itemSalesTrend} loading={loading} />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Ventas por Categoría</CardTitle>
