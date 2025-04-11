@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { UserRole } from "@/types/auth";
+import { UserRole, UserRoleWithStore } from "@/types/auth";
 
 /**
  * Verifica que el usuario tenga un rol por defecto y lo crea si no existe
@@ -152,3 +152,108 @@ export async function createDefaultRole(userId: string): Promise<boolean> {
     }
   }
 }
+
+/**
+ * Obtiene los roles de un usuario con información de sus almacenes asociados
+ */
+export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[]> {
+  if (!userId) {
+    console.error("fetchUserRoles: No user ID provided");
+    return [];
+  }
+  
+  console.log(`fetchUserRoles: Fetching roles for user ${userId}`);
+  
+  try {
+    // Primero intentemos usar la vista optimizada que incluye nombres de almacenes
+    let { data: viewRoles, error: viewError } = await supabase
+      .from('user_roles_with_name')
+      .select('*')
+      .eq('user_id', userId);
+      
+    if (viewError) {
+      console.error("fetchUserRoles: Error fetching from view:", viewError);
+      
+      // Si hay error con la vista, intentamos directamente con la tabla principal
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('*, almacenes(*)')
+        .eq('user_id', userId);
+        
+      if (rolesError) {
+        console.error("fetchUserRoles: Error fetching from table:", rolesError);
+        throw rolesError;
+      }
+      
+      console.log(`fetchUserRoles: Retrieved ${roles.length} roles from table`);
+      
+      // Mapear resultado a formato esperado
+      const mappedRoles: UserRoleWithStore[] = roles.map(role => ({
+        id: role.id,
+        user_id: role.user_id,
+        role: role.role,
+        almacen_id: role.almacen_id,
+        created_at: role.created_at,
+        almacen_nombre: role.almacenes?.nombre || null
+      }));
+      
+      return mappedRoles;
+    }
+    
+    if (!viewRoles || viewRoles.length === 0) {
+      console.log(`fetchUserRoles: No roles found for user ${userId}`);
+      return [];
+    }
+    
+    console.log(`fetchUserRoles: Retrieved ${viewRoles.length} roles from view`);
+    
+    // Mapear resultado de la vista a formato esperado
+    const mappedRoles: UserRoleWithStore[] = viewRoles.map(role => ({
+      id: role.id,
+      user_id: role.user_id,
+      role: role.role,
+      almacen_id: role.almacen_id,
+      created_at: role.created_at,
+      almacen_nombre: role.almacen_nombre || null
+    }));
+    
+    return mappedRoles;
+  } catch (error) {
+    console.error("fetchUserRoles: Error:", error);
+    return [];
+  }
+}
+
+/**
+ * Verifica si un usuario tiene un rol específico
+ */
+export function checkHasRole(
+  userRoles: UserRoleWithStore[], 
+  role: UserRole, 
+  storeId?: string
+): boolean {
+  if (!userRoles || userRoles.length === 0) {
+    return false;
+  }
+  
+  // Los administradores tienen acceso a todo
+  if (userRoles.some(r => r.role === 'admin')) {
+    return true;
+  }
+  
+  // Para roles que requieren almacén específico
+  if (role === 'sales' && storeId) {
+    return userRoles.some(r => 
+      r.role === role && r.almacen_id === storeId
+    );
+  }
+  
+  // Los managers tienen acceso a todo excepto funciones admin
+  if (role !== 'admin' && userRoles.some(r => r.role === 'manager')) {
+    return true;
+  }
+  
+  // Verificación general de rol
+  return userRoles.some(r => r.role === role);
+}
+
