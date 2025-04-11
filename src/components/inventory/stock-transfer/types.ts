@@ -33,3 +33,7 @@ export interface StockTransferFormProps {
   onTransferComplete: () => void;
   onTransferSuccess?: () => void; // Adding backward compatibility
 }
+
+export interface StockTransferManagerProps {
+  onRefreshComplete?: () => void;
+}

@@ -11,11 +11,18 @@ import {
 import { StockTransferForm } from "./StockTransferForm";
 import { TransferHistory } from "./TransferHistory";
 
-export function StockTransferManager() {
+interface StockTransferManagerProps {
+  onRefreshComplete?: () => void;
+}
+
+export function StockTransferManager({ onRefreshComplete }: StockTransferManagerProps) {
   const [refreshHistoryToggle, setRefreshHistoryToggle] = useState(false);
 
   const handleTransferComplete = () => {
     setRefreshHistoryToggle(!refreshHistoryToggle);
+    if (onRefreshComplete) {
+      onRefreshComplete();
+    }
   };
 
   return (

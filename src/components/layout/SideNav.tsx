@@ -1,142 +1,78 @@
-
-import React from "react";
-import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import {
-  Home,
-  BarChart3,
-  Store,
-  ShoppingCart,
-  Users,
-  Settings,
-  LineChart
-} from "lucide-react";
-import { useRoleVerification } from "@/contexts/auth/hooks/useRoleVerification";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/auth";
 
-export type SideNavProps = React.HTMLAttributes<HTMLDivElement>;
+export interface SideNavProps {
+  className?: string;
+}
 
-export function SideNav({ className, ...props }: SideNavProps) {
-  const { hasRole } = useRoleVerification();
+export function SideNav({ className }: SideNavProps) {
+  const { pathname } = useLocation();
+  const { hasRole } = useAuth();
+
   const isAdmin = hasRole('admin');
+  const isManager = hasRole('manager');
 
   return (
-    <div className={cn("pb-12", className)} {...props}>
-      <div className="space-y-4 py-4">
-        <div className="px-4 py-2">
-          <h2 className="mb-2 px-2 text-xl font-semibold tracking-tight">
-            Menu
-          </h2>
-          <div className="space-y-1">
-            <NavLink
-              to="/dashboard"
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
-                  isActive
-                    ? "bg-primary text-primary-foreground hover:text-primary-foreground"
-                    : "hover:bg-muted"
-                )
-              }
-            >
-              <Home className="h-4 w-4" />
-              <span>Inicio</span>
-            </NavLink>
-            <NavLink
-              to="/inventory"
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
-                  isActive
-                    ? "bg-primary text-primary-foreground hover:text-primary-foreground"
-                    : "hover:bg-muted"
-                )
-              }
-            >
-              <Store className="h-4 w-4" />
-              <span>Inventario</span>
-            </NavLink>
-            <NavLink
-              to="/pos"
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
-                  isActive
-                    ? "bg-primary text-primary-foreground hover:text-primary-foreground"
-                    : "hover:bg-muted"
-                )
-              }
-            >
-              <ShoppingCart className="h-4 w-4" />
-              <span>Punto de Venta</span>
-            </NavLink>
-            <NavLink
-              to="/analytics"
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
-                  isActive
-                    ? "bg-primary text-primary-foreground hover:text-primary-foreground"
-                    : "hover:bg-muted"
-                )
-              }
-            >
-              <BarChart3 className="h-4 w-4" />
-              <span>Analíticas</span>
-            </NavLink>
-            <NavLink
-              to="/analiticas2"
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
-                  isActive
-                    ? "bg-primary text-primary-foreground hover:text-primary-foreground"
-                    : "hover:bg-muted"
-                )
-              }
-            >
-              <LineChart className="h-4 w-4" />
-              <span>Analíticas 2</span>
-            </NavLink>
-          </div>
+    <div className={cn("flex flex-col space-y-1", className)}>
+      <ScrollArea className="flex-1 px-3">
+        <div className="mb-4">
+          <Link to="/">
+            <Button variant="ghost" className="justify-start w-full">
+              Dashboard
+            </Button>
+          </Link>
         </div>
-        {isAdmin && (
-          <div className="px-4 py-2">
-            <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight">
-              Administración
-            </h2>
-            <div className="space-y-1">
-              <NavLink
-                to="/user-roles"
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
-                    isActive
-                      ? "bg-primary text-primary-foreground hover:text-primary-foreground"
-                      : "hover:bg-muted"
-                  )
-                }
+        <div className="space-y-1">
+          {(isAdmin || isManager || hasRole('sales') || hasRole('viewer')) && (
+            <Link to="/inventory">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "justify-start w-full",
+                  pathname.startsWith("/inventory")
+                    ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                    : ""
+                )}
               >
-                <Users className="h-4 w-4" />
-                <span>Usuarios y Roles</span>
-              </NavLink>
-              <NavLink
-                to="/profile"
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
-                    isActive
-                      ? "bg-primary text-primary-foreground hover:text-primary-foreground"
-                      : "hover:bg-muted"
-                  )
-                }
+                Inventario
+              </Button>
+            </Link>
+          )}
+          {(isAdmin || isManager || hasRole('viewer')) && (
+            <Link to="/analytics">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "justify-start w-full",
+                  pathname.startsWith("/analytics")
+                    ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                    : ""
+                )}
               >
-                <Settings className="h-4 w-4" />
-                <span>Mi perfil</span>
-              </NavLink>
-            </div>
-          </div>
-        )}
-      </div>
+                Analíticas
+              </Button>
+            </Link>
+          )}
+          {(isAdmin || isManager) && (
+            <Link to="/admin">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "justify-start w-full",
+                  pathname.startsWith("/admin")
+                    ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                    : ""
+                )}
+              >
+                Administración
+              </Button>
+            </Link>
+          )}
+        </div>
+      </ScrollArea>
     </div>
   );
 }
