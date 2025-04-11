@@ -64,17 +64,17 @@ const ProductTableHeader = ({
       <div className="flex flex-wrap gap-4">
         <div className="w-full sm:w-auto">
           <Select
-            value={categoryFilter || ""}
-            onValueChange={(value) => setCategoryFilter(value === "" ? null : value)}
+            value={categoryFilter || "all"}
+            onValueChange={(value) => setCategoryFilter(value === "all" ? null : value)}
           >
             <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="Todas las categorías" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas las categorías</SelectItem>
+              <SelectItem value="all">Todas las categorías</SelectItem>
               {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.nombre}
+                <SelectItem key={category.id} value={category.id || "category-sin-id"}>
+                  {category.nombre || "Sin nombre"}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -83,8 +83,8 @@ const ProductTableHeader = ({
 
         <div className="w-full sm:w-auto">
           <Select
-            value={storeFilter || ""}
-            onValueChange={(value) => setStoreFilter(value === "" ? null : value)}
+            value={storeFilter || "all"}
+            onValueChange={(value) => setStoreFilter(value === "all" ? null : value)}
           >
             <SelectTrigger className="w-full sm:w-[200px]">
               <span className="flex items-center">
@@ -93,10 +93,10 @@ const ProductTableHeader = ({
               </span>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas las sucursales</SelectItem>
+              <SelectItem value="all">Todas las sucursales</SelectItem>
               {stores.map((store) => (
-                <SelectItem key={store.id} value={store.id}>
-                  {store.nombre}
+                <SelectItem key={store.id} value={store.id || "store-sin-id"}>
+                  {store.nombre || "Sin nombre"}
                 </SelectItem>
               ))}
             </SelectContent>

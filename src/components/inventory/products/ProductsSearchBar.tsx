@@ -66,17 +66,17 @@ export function ProductsSearchBar({
           {categories.length > 0 && onCategoryChange && (
             <div className="w-full sm:w-auto">
               <Select
-                value={categoryFilter || ""}
-                onValueChange={(value) => onCategoryChange(value === "" ? null : value)}
+                value={categoryFilter || "all"}
+                onValueChange={(value) => onCategoryChange(value === "all" ? null : value)}
               >
                 <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue placeholder="Todas las categorías" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas las categorías</SelectItem>
+                  <SelectItem value="all">Todas las categorías</SelectItem>
                   {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.nombre}
+                    <SelectItem key={category.id} value={category.id || "categoria-sin-id"}>
+                      {category.nombre || "Sin nombre"}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -87,8 +87,8 @@ export function ProductsSearchBar({
           {stores.length > 0 && onStoreChange && (
             <div className="w-full sm:w-auto">
               <Select
-                value={storeFilter || ""}
-                onValueChange={(value) => onStoreChange(value === "" ? null : value)}
+                value={storeFilter || "all"}
+                onValueChange={(value) => onStoreChange(value === "all" ? null : value)}
               >
                 <SelectTrigger className="w-full sm:w-[200px]">
                   <span className="flex items-center">
@@ -97,10 +97,10 @@ export function ProductsSearchBar({
                   </span>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas las sucursales</SelectItem>
+                  <SelectItem value="all">Todas las sucursales</SelectItem>
                   {stores.map((store) => (
-                    <SelectItem key={store.id} value={store.id}>
-                      {store.nombre}
+                    <SelectItem key={store.id} value={store.id || "store-sin-id"}>
+                      {store.nombre || "Sin nombre"}
                     </SelectItem>
                   ))}
                 </SelectContent>

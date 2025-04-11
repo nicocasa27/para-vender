@@ -364,7 +364,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
-                    value={field.value}
+                    value={field.value || undefined}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -496,7 +496,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
-                        value={field.value}
+                        value={field.value || undefined}
                       >
                         <FormControl>
                           <SelectTrigger>

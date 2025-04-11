@@ -194,14 +194,14 @@ export default function PointOfSale() {
           )}
           
           <div className="mb-4">
-            <Select onValueChange={(value) => setSelectedStore(value)} value={selectedStore}>
+            <Select onValueChange={(value) => setSelectedStore(value)} value={selectedStore || ""}>
               <SelectTrigger className="w-full sm:w-[300px]">
                 <SelectValue placeholder="Seleccionar Sucursal" />
               </SelectTrigger>
               <SelectContent>
                 {availableStores.map((store) => (
-                  <SelectItem key={store.id} value={store.id}>
-                    {store.nombre}
+                  <SelectItem key={store.id} value={store.id || "store-sin-id"}>
+                    {store.nombre || "Sin nombre"}
                   </SelectItem>
                 ))}
               </SelectContent>
