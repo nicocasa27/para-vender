@@ -44,7 +44,7 @@ export function TopProductsChart({ data, loading }: Props) {
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis 
           type="number"
-          tickFormatter={(value) => `$${value.toFixed(1)}`}
+          tickFormatter={(value) => `$${Number(value).toFixed(1)}`}
         />
         <YAxis 
           dataKey="name" 

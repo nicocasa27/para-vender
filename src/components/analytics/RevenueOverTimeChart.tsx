@@ -43,7 +43,7 @@ export function RevenueOverTimeChart({ data, loading }: Props) {
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="name" />
         <YAxis 
-          tickFormatter={(value) => `$${value.toFixed(1)}`}
+          tickFormatter={(value) => `$${Number(value).toFixed(1)}`}
         />
         <Tooltip 
           formatter={(value) => [`$${Number(value).toFixed(1)}`, 'Ingresos']}

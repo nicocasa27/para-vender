@@ -48,7 +48,7 @@ export function SalesByCategoryChart({ data, loading }: Props) {
           dataKey="value"
           nameKey="name"
           label={({ name, percent }) => 
-            `${name}: ${(percent * 100).toFixed(1)}%`
+            `${name}: ${(Number(percent) * 100).toFixed(1)}%`
           }
         >
           {chartData.map((entry, index) => (

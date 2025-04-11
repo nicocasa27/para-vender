@@ -175,16 +175,16 @@ export function MarginByCategory({ storeId, period }: Props) {
         <YAxis 
           yAxisId="left" 
           orientation="left" 
-          tickFormatter={(value) => `$${(value/1000).toFixed(1)}K`} 
+          tickFormatter={(value) => `$${(Number(value)/1000).toFixed(1)}K`} 
         />
         <YAxis 
           yAxisId="right" 
           orientation="right" 
-          tickFormatter={(value) => `${value.toFixed(1)}%`} 
+          tickFormatter={(value) => `${Number(value).toFixed(1)}%`} 
         />
         <Tooltip 
           formatter={(value, name) => {
-            if (name === "margin") return [`${value.toFixed(1)}%`, "Margen"];
+            if (name === "margin") return [`${Number(value).toFixed(1)}%`, "Margen"];
             return [`$${Number(value).toFixed(1)}`, name === "sales" ? "Ventas" : "Costo"];
           }}
         />
