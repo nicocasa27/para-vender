@@ -28,3 +28,9 @@ export interface ItemSalesTrendDataPoint {
   almacen_id: string;
   cantidad: number;
 }
+
+// Tipo para ventas mensuales por sucursal
+export interface StoreMonthlySalesDataPoint {
+  month: string;
+  [storeId: string]: string | number;
+}

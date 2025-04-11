@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
 import { SalesChart } from "@/components/dashboard";
+import { StoreMonthlySalesChart } from "@/components/analytics/StoreMonthlySalesChart";
 
 export default function Analytics() {
   const { stores, isLoading: loadingStores } = useCurrentStores();
@@ -62,6 +63,9 @@ export default function Analytics() {
       
       {/* SalesChart */}
       <SalesChart storeIds={selectedStoreIds} />
+      
+      {/* Monthly Store Sales Comparison */}
+      <StoreMonthlySalesChart storeIds={selectedStoreIds} />
     </div>
   );
 }

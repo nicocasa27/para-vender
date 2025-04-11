@@ -86,3 +86,106 @@ export async function fetchItemSalesTrend(storeIds: string[] = [], timeRange: st
     return [];
   }
 }
+
+export async function fetchStoreMonthlySales(storeIds: string[] = []) {
+  try {
+    if (!storeIds || storeIds.length === 0) {
+      return [];
+    }
+
+    // Get sales data for the last 12 months
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setMonth(now.getMonth() - 11); // Last 12 months
+    startDate.setDate(1); // First day of the month
+    startDate.setHours(0, 0, 0, 0);
+    
+    const startDateStr = startDate.toISOString();
+    const endDateStr = now.toISOString();
+    
+    // Fetch all sales for the selected stores in the date range
+    const { data, error } = await supabase
+      .from('ventas')
+      .select(`
+        id, 
+        total,
+        created_at,
+        almacen_id
+      `)
+      .gte('created_at', startDateStr)
+      .lte('created_at', endDateStr)
+      .in('almacen_id', storeIds);
+    
+    if (error) {
+      throw error;
+    }
+    
+    if (!data || data.length === 0) {
+      console.log("No hay datos de ventas disponibles para el período seleccionado");
+      return [];
+    }
+    
+    // Process data to group by month and store
+    const monthlyData: Record<string, Record<string, number>> = {};
+    
+    // Initialize all months for all stores with zero
+    const months: string[] = [];
+    for (let i = 0; i < 12; i++) {
+      const monthDate = new Date(now);
+      monthDate.setMonth(now.getMonth() - i);
+      const monthKey = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+      const monthName = monthDate.toLocaleString('es-MX', { month: 'short' });
+      const displayKey = `${monthName} ${monthDate.getFullYear()}`;
+      months.unshift({ key: monthKey, display: displayKey });
+      
+      if (!monthlyData[displayKey]) {
+        monthlyData[displayKey] = {};
+      }
+      
+      // Initialize each store with 0
+      storeIds.forEach(storeId => {
+        monthlyData[displayKey][storeId] = 0;
+      });
+    }
+    
+    // Sum sales by month and store
+    data.forEach(sale => {
+      const saleDate = new Date(sale.created_at);
+      const monthKey = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
+      const monthName = saleDate.toLocaleString('es-MX', { month: 'short' });
+      const displayKey = `${monthName} ${saleDate.getFullYear()}`;
+      
+      if (monthlyData[displayKey] && sale.almacen_id) {
+        monthlyData[displayKey][sale.almacen_id] = 
+          (monthlyData[displayKey][sale.almacen_id] || 0) + Number(sale.total);
+      }
+    });
+    
+    // Convert to array format for the chart
+    const chartData = Object.entries(monthlyData)
+      .map(([month, stores]) => ({
+        month,
+        ...stores
+      }))
+      .sort((a, b) => {
+        // Extract year and month for proper sorting
+        const [monthA, yearA] = a.month.split(' ');
+        const [monthB, yearB] = b.month.split(' ');
+        
+        if (yearA !== yearB) {
+          return Number(yearA) - Number(yearB);
+        }
+        
+        // Convert month names to numbers for sorting
+        const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+        return monthNames.indexOf(monthA.toLowerCase()) - monthNames.indexOf(monthB.toLowerCase());
+      });
+    
+    return chartData;
+    
+  } catch (error) {
+    console.error('Error al obtener ventas mensuales por sucursal:', error);
+    toast.error('Error al cargar los datos de ventas mensuales');
+    return [];
+  }
+}
