@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
-import { SalesChart } from "@/components/dashboard";
 import { SalesByCategoryChart } from "@/components/analytics/SalesByCategoryChart";
 import { TopProductsChart } from "@/components/analytics/TopProductsChart";
 import { RevenueOverTimeChart } from "@/components/analytics/RevenueOverTimeChart";
@@ -18,13 +17,6 @@ export default function Analytics() {
   const [revenueOverTime, setRevenueOverTime] = useState<SalesDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState("week");
-  const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (stores && stores.length > 0) {
-      setSelectedStoreIds(stores.map(store => store.id));
-    }
-  }, [stores]);
 
   const fetchAnalytics = async (period = "week") => {
     if (!stores || stores.length === 0) return;
@@ -75,10 +67,10 @@ export default function Analytics() {
   }, [stores, loadingStores, dateRange]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight mb-2">Analíticas</h2>
-        <p className="text-muted-foreground">
+        <h2 className="text-3xl font-bold tracking-tight">Analíticas</h2>
+        <p className="text-muted-foreground mt-2">
           Visualiza el rendimiento de ventas e inventario
         </p>
       </div>
@@ -122,10 +114,7 @@ export default function Analytics() {
         </div>
       </div>
       
-      {/* Added SalesChart here, moved from dashboard */}
-      <SalesChart storeIds={selectedStoreIds} />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Ventas por Categoría</CardTitle>

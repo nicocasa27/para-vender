@@ -162,29 +162,29 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
     return Array(itemsPerPage).fill(0).map((_, i) => (
       <TableRow key={`skeleton-${i}`}>
         <TableCell>
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <Skeleton className="h-5 w-32" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-4 w-32" />
           </div>
         </TableCell>
         <TableCell>
           <div className="flex flex-col space-y-1">
-            <Skeleton className="h-5 w-36" />
             <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-16" />
           </div>
         </TableCell>
+        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
         <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-        <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-        <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-        <TableCell className="text-right"><Skeleton className="h-9 w-9 ml-auto rounded-full" /></TableCell>
+        <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-full" /></TableCell>
       </TableRow>
     ));
   };
 
   return (
-    <Card className="transition-all duration-300 hover:shadow-md h-full flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-xl font-medium">Ventas Recientes</CardTitle>
+    <Card className="transition-all duration-300 hover:shadow-elevation h-full flex flex-col">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-base font-medium">Ventas Recientes</CardTitle>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleRefresh}>
             <RefreshCw className="h-4 w-4 mr-1" />
@@ -195,7 +195,7 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col pt-4">
+      <CardContent className="flex-1 flex flex-col">
         <div className="overflow-x-auto flex-1">
           <Table>
             <TableHeader>
@@ -240,9 +240,9 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
                 currentPageItems.map((sale) => (
                   <TableRow key={sale.id} className="animate-fade-in">
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-primary/10 text-primary text-base">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-primary/10 text-primary">
                             {sale.customerInitial}
                           </AvatarFallback>
                         </Avatar>
@@ -260,10 +260,8 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
                     <TableCell>
                       {formatDate(sale.date)}
                     </TableCell>
-                    <TableCell>
-                      <div className="font-semibold text-lg text-primary">
-                        ${sale.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      </div>
+                    <TableCell className="font-medium">
+                      ${sale.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -278,7 +276,7 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-5 w-5" />
+                            <MoreHorizontal className="h-4 w-4" />
                             <span className="sr-only">Acciones</span>
                           </Button>
                         </DropdownMenuTrigger>
