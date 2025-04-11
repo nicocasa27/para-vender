@@ -20,7 +20,8 @@ serve(async (req) => {
     // Get request body if available
     let requestBody = {
       forceUpdate: false,
-      forceSyncAll: false
+      forceSyncAll: false,
+      specificUserId: null
     };
     
     try {
@@ -37,7 +38,8 @@ serve(async (req) => {
     
     const forceUpdate = requestBody.forceUpdate === true;
     const forceSyncAll = requestBody.forceSyncAll === true;
-    console.log(`Force update mode: ${forceUpdate}, Force sync all: ${forceSyncAll}`);
+    const specificUserId = requestBody.specificUserId;
+    console.log(`Force update mode: ${forceUpdate}, Force sync all: ${forceSyncAll}, Specific user ID: ${specificUserId || "none"}`);
 
     // Create Supabase admin client
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -53,20 +55,42 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get all users from auth with increased page size
-    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers({
-      perPage: 1000,  // Increased to handle more users
-    });
+    // Get users from auth - either a specific user or all users
+    let authUsers;
     
-    if (authError) {
-      console.error("Error obteniendo usuarios de auth:", authError);
-      return new Response(
-        JSON.stringify({ error: authError.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (specificUserId) {
+      console.log(`Getting specific user from auth: ${specificUserId}`);
+      const { data, error } = await supabase.auth.admin.getUserById(specificUserId);
+      
+      if (error) {
+        console.error("Error obteniendo usuario específico de auth:", error);
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Create an array with just this user to reuse existing logic
+      authUsers = { users: data.user ? [data.user] : [] };
+      console.log(`Found ${authUsers.users.length} users in auth system (specific user)`);
+    } else {
+      // Get all users from auth with increased page size
+      const { data, error } = await supabase.auth.admin.listUsers({
+        perPage: 1000,  // Increased to handle more users
+      });
+      
+      if (error) {
+        console.error("Error obteniendo usuarios de auth:", error);
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      authUsers = data;
+      console.log(`Found ${authUsers.users.length} users in auth system`);
     }
-
-    console.log(`Found ${authUsers.users.length} users in auth system`);
+    
     console.log("User list:", authUsers.users.map(u => ({
       id: u.id,
       email: u.email,
@@ -269,7 +293,8 @@ serve(async (req) => {
         created_profile_details: createdProfileDetails,
         auth_users_count: authUsers.users.length,
         existing_profiles_count: profiles?.length || 0,
-        message: `Created ${createdProfiles} profiles, updated ${updatedProfiles} profiles, and created ${createdRoles} roles`
+        message: `Created ${createdProfiles} profiles, updated ${updatedProfiles} profiles, and created ${createdRoles} roles`,
+        specific_user_processed: specificUserId || null
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

@@ -1,106 +1,154 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { UserRoleWithStore } from "@/types/auth";
+import { UserRole } from "@/types/auth";
 
 /**
- * Obtiene los roles de un usuario desde la base de datos
- */
-export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[]> {
-  try {
-    console.log(`Fetching roles for user ${userId}`);
-    const { data, error } = await supabase
-      .from('user_roles_with_name')
-      .select('*')
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error("Error fetching user roles:", error);
-      return [];
-    }
-
-    if (!data || data.length === 0) {
-      console.log(`No roles found for user ${userId}`);
-      return [];
-    }
-
-    console.log(`Found ${data.length} roles for user ${userId}:`, data);
-    return data as UserRoleWithStore[];
-  } catch (error) {
-    console.error("Exception fetching user roles:", error);
-    return [];
-  }
-}
-
-/**
- * Verifica si un usuario tiene un rol específico
- */
-export function checkHasRole(
-  userRoles: UserRoleWithStore[],
-  role: string,
-  storeId?: string
-): boolean {
-  // Si el usuario tiene el rol de administrador, tiene acceso a todo
-  if (userRoles.some(r => r.role === 'admin')) {
-    return true;
-  }
-
-  // Si se requiere un storeId específico, verificar para ese almacén
-  if (storeId) {
-    return userRoles.some(
-      r => r.role === role && r.almacen_id === storeId
-    );
-  }
-
-  // Verificar si tiene el rol asignado (sin importar el almacén)
-  return userRoles.some(r => r.role === role);
-}
-
-/**
- * Crea un rol predeterminado 'viewer' para el usuario si no tiene ninguno
+ * Verifica que el usuario tenga un rol por defecto y lo crea si no existe
  */
 export async function createDefaultRole(userId: string): Promise<boolean> {
   try {
-    console.log(`Checking default role for user ${userId}`);
-    
-    // Verificar si ya tiene roles
-    const { data: existingRoles, error: checkError } = await supabase
-      .from('user_roles')
-      .select('id')
-      .eq('user_id', userId);
-      
-    if (checkError) {
-      console.error("Error checking existing roles:", checkError);
+    if (!userId) {
+      console.error("createDefaultRole: No user ID provided");
       return false;
     }
     
-    // Si ya tiene roles, no crear uno nuevo
+    console.log(`createDefaultRole: Checking roles for user ${userId}`);
+    
+    // Verificar si el usuario ya tiene roles
+    const { data: existingRoles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('id, role')
+      .eq('user_id', userId);
+      
+    if (rolesError) {
+      console.error("createDefaultRole: Error checking existing roles:", rolesError);
+      throw rolesError;
+    }
+    
+    // Si el usuario ya tiene roles, no hacemos nada
     if (existingRoles && existingRoles.length > 0) {
-      console.log(`User ${userId} already has ${existingRoles.length} roles, skipping default role creation`);
+      console.log(`createDefaultRole: User ${userId} already has ${existingRoles.length} roles, no action needed`);
       return true;
     }
     
-    // Crear rol de visualizador por defecto
-    console.log(`Creating default viewer role for user ${userId}`);
-    const defaultRoleId = `default-viewer-${userId.substring(0, 8)}`;
-    
-    const { error: insertError } = await supabase
-      .from('user_roles')
-      .insert({
-        id: defaultRoleId,
-        user_id: userId,
-        role: 'viewer',
-        almacen_id: null // Rol global sin almacén específico
-      });
+    // Crear perfil si no existe
+    const { data: profileExists, error: profileCheckError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
       
-    if (insertError) {
-      console.error("Error creating default role:", insertError);
-      return false;
+    if (profileCheckError) {
+      console.error("createDefaultRole: Error checking profile:", profileCheckError);
     }
     
-    console.log(`Default viewer role created successfully for user ${userId}`);
+    if (!profileExists) {
+      console.log(`createDefaultRole: Profile for user ${userId} does not exist, creating it`);
+      
+      // Obtener datos del usuario para crear el perfil
+      const { data: userData, error: userDataError } = await supabase.auth.admin.getUserById(userId);
+      
+      if (userDataError) {
+        console.error("createDefaultRole: Error getting user data:", userDataError);
+        
+        // Intentemos obtener los datos básicos del usuario a través de la sesión actual
+        const { data: sessionData } = await supabase.auth.getSession();
+        const currentUser = sessionData.session?.user;
+        
+        // Si estamos creando el rol para el usuario actual
+        if (currentUser && currentUser.id === userId) {
+          console.log("createDefaultRole: Using current user data to create profile");
+          
+          const { error: insertProfileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              email: currentUser.email,
+              full_name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || "Usuario sin nombre"
+            });
+            
+          if (insertProfileError) {
+            console.error("createDefaultRole: Error creating profile from session data:", insertProfileError);
+            throw insertProfileError;
+          }
+        } else {
+          // Si no podemos obtener los datos del usuario, creamos un perfil básico
+          console.log("createDefaultRole: Creating basic profile without user data");
+          
+          const { error: insertProfileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              full_name: "Usuario sin nombre"
+            });
+            
+          if (insertProfileError) {
+            console.error("createDefaultRole: Error creating basic profile:", insertProfileError);
+            throw insertProfileError;
+          }
+        }
+      } else if (userData.user) {
+        console.log("createDefaultRole: Creating profile with user data");
+        
+        const { error: insertProfileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            email: userData.user.email,
+            full_name: userData.user.user_metadata?.full_name || userData.user.email?.split('@')[0] || "Usuario sin nombre"
+          });
+          
+        if (insertProfileError) {
+          console.error("createDefaultRole: Error creating profile from user data:", insertProfileError);
+          throw insertProfileError;
+        }
+      }
+    }
+    
+    // Crear rol por defecto
+    console.log(`createDefaultRole: Creating default viewer role for user ${userId}`);
+    
+    const { error: insertRoleError } = await supabase
+      .from('user_roles')
+      .insert({
+        user_id: userId,
+        role: 'viewer' as UserRole,
+        almacen_id: null
+      });
+      
+    if (insertRoleError) {
+      console.error("createDefaultRole: Error creating default role:", insertRoleError);
+      throw insertRoleError;
+    }
+    
+    console.log(`createDefaultRole: Successfully created default role for user ${userId}`);
     return true;
+    
   } catch (error) {
-    console.error("Exception creating default role:", error);
-    return false;
+    console.error("createDefaultRole: Unhandled error:", error);
+    
+    // Intentar llamar a la función de sincronización como última opción
+    try {
+      console.log(`createDefaultRole: Attempting to use sync-users function as fallback for user ${userId}`);
+      
+      const { error: syncError } = await supabase.functions.invoke("sync-users", {
+        body: { 
+          forceUpdate: true,
+          forceSyncAll: true,
+          specificUserId: userId
+        },
+      });
+      
+      if (syncError) {
+        console.error("createDefaultRole: Error calling sync-users function:", syncError);
+        return false;
+      }
+      
+      console.log("createDefaultRole: Successfully used sync-users as fallback");
+      return true;
+    } catch (syncErr) {
+      console.error("createDefaultRole: Exception calling sync-users function:", syncErr);
+      return false;
+    }
   }
 }

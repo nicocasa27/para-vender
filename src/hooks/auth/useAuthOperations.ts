@@ -55,8 +55,24 @@ export function useAuthOperations({
           
         if (profileError || !profile) {
           console.error("Auth: User found in auth but not in profiles");
-          await supabase.auth.signOut();
-          throw new Error("Usuario no encontrado en el sistema. Por favor contacte al administrador.");
+          
+          // Crear el perfil que falta en lugar de cerrar sesión
+          console.log("Auth: Creating missing profile for user:", data.user.id);
+          const { error: createProfileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              email: data.user.email,
+              full_name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || "Usuario sin nombre"
+            });
+            
+          if (createProfileError) {
+            console.error("Auth: Error creating profile:", createProfileError);
+            await supabase.auth.signOut();
+            throw new Error("No se pudo crear el perfil del usuario. Por favor contacte al administrador.");
+          }
+          
+          console.log("Auth: Profile created successfully, now creating default role");
         }
         
         // Asegurarse de que el usuario tenga un rol por defecto
@@ -141,20 +157,51 @@ export function useAuthOperations({
             
           if (profileError) {
             console.error("Auth: Error creating profile:", profileError);
-            // No fallamos completamente si el perfil no se crea, porque puede ser debido al trigger
+            throw profileError;
           }
           
+          console.log("Auth: Profile created successfully, now creating default role");
+          
           // Crear un rol por defecto para el nuevo usuario
-          await createDefaultRole(data.user.id);
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: data.user.id,
+              role: 'viewer' as UserRole,
+              almacen_id: null
+            });
+            
+          if (roleError) {
+            console.error("Auth: Error creating default role:", roleError);
+            throw roleError;
+          }
+          
           console.log("Auth: Default role created for new user");
           
-        } catch (profileError) {
-          console.error("Auth: Exception creating profile:", profileError);
-          // No fallamos completamente si el perfil no se crea
+        } catch (err) {
+          console.error("Auth: Exception during profile/role creation:", err);
+          // Intentamos llamar a la función de sincronización como fallback
+          try {
+            const { error: syncError } = await supabase.functions.invoke("sync-users", {
+              body: { 
+                forceUpdate: true,
+                forceSyncAll: true,
+                specificUserId: data.user.id // Añadimos el ID específico del usuario
+              },
+            });
+            
+            if (syncError) {
+              console.error("Auth: Error calling sync-users function:", syncError);
+            } else {
+              console.log("Auth: Successfully used sync-users as fallback");
+            }
+          } catch (syncErr) {
+            console.error("Auth: Exception calling sync-users function:", syncErr);
+          }
         }
       }
       
-      console.log("Auth: Sign up successful, role has been assigned");
+      console.log("Auth: Sign up successful, profile and role have been assigned");
       
       sonnerToast.success("Registro exitoso", {
         description: "Tu cuenta ha sido creada correctamente. Ya puedes iniciar sesión."

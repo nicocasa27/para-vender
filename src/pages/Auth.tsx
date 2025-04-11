@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Store } from "lucide-react";
+import { Store, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -20,6 +20,7 @@ export default function Auth() {
   const [registerFullName, setRegisterFullName] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [isCleaningSession, setIsCleaningSession] = useState(true);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
@@ -121,6 +122,35 @@ export default function Auth() {
     }
   };
 
+  // Forzar sincronización del usuario después del registro
+  const syncNewUser = async (userId: string) => {
+    if (!userId) return;
+    
+    try {
+      setIsSyncing(true);
+      
+      console.log("Auth: Llamando a función de sincronización para nuevo usuario:", userId);
+      const { data, error } = await supabase.functions.invoke("sync-users", {
+        body: { 
+          forceUpdate: true,
+          forceSyncAll: false,
+          specificUserId: userId
+        },
+      });
+      
+      if (error) {
+        console.error("Error llamando a la función sync-users:", error);
+        return;
+      }
+      
+      console.log("Resultado de sincronización para nuevo usuario:", data);
+    } catch (error) {
+      console.error("Error al sincronizar nuevo usuario:", error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -131,7 +161,13 @@ export default function Auth() {
     
     try {
       setIsRegistering(true);
-      await signUp(registerEmail, registerPassword, registerFullName);
+      const result = await signUp(registerEmail, registerPassword, registerFullName);
+      
+      if (result?.user?.id) {
+        // Forzar sincronización del usuario recién creado
+        await syncNewUser(result.user.id);
+      }
+      
       toast.success("Cuenta creada exitosamente", {
         description: "Ya puedes iniciar sesión con tus credenciales."
       });
@@ -228,7 +264,14 @@ export default function Auth() {
                     className="w-full" 
                     disabled={isLoggingIn}
                   >
-                    {isLoggingIn ? "Iniciando sesión..." : "Iniciar sesión"}
+                    {isLoggingIn ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Iniciando sesión...
+                      </>
+                    ) : (
+                      "Iniciar sesión"
+                    )}
                   </Button>
                 </CardFooter>
               </form>
@@ -281,14 +324,26 @@ export default function Auth() {
                     </p>
                   </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="flex flex-col gap-2">
                   <Button 
                     type="submit" 
                     className="w-full" 
-                    disabled={isRegistering}
+                    disabled={isRegistering || isSyncing}
                   >
-                    {isRegistering ? "Registrando..." : "Registrarse"}
+                    {isRegistering || isSyncing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {isRegistering ? "Registrando..." : "Sincronizando usuario..."}
+                      </>
+                    ) : (
+                      "Registrarse"
+                    )}
                   </Button>
+                  {isSyncing && (
+                    <p className="text-xs text-muted-foreground">
+                      Esto puede tomar unos segundos. Estamos preparando tu cuenta...
+                    </p>
+                  )}
                 </CardFooter>
               </form>
             </Card>
