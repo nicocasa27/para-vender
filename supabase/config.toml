@@ -6,3 +6,4 @@ verify_jwt = true
 
 [functions.sync-users]
 verify_jwt = false
+

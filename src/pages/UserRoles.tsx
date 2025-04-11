@@ -68,10 +68,14 @@ const UserRoles = () => {
 
   const handleSyncUsers = async () => {
     try {
+      toast.info("Iniciando sincronización completa...", {
+        description: "Esto actualizará todos los usuarios, incluyendo los recién creados"
+      });
+      
       const result = await syncUsers();
       if (result) {
         await fetchUsers();
-        toast.success("¡Sincronización completa! Actualizando lista de usuarios...");
+        toast.success("¡Sincronización completa! Lista de usuarios actualizada");
       }
     } catch (error) {
       console.error("Error en sincronización:", error);
@@ -107,10 +111,10 @@ const UserRoles = () => {
             size="sm"
             onClick={handleSyncUsers}
             disabled={syncing || loading}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 animate-pulse"
           >
             <Loader2 className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-            {syncing ? "Sincronizando..." : "Sincronizar usuarios"}
+            {syncing ? "Sincronizando..." : "SINCRONIZAR USUARIOS"}
           </Button>
           <Button
             variant="outline"
@@ -152,14 +156,28 @@ const UserRoles = () => {
         Total de usuarios cargados: {users.length}
       </div>
 
-      {/* Mensaje de ayuda para sincronizar usuarios */}
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
-        <h3 className="font-medium text-blue-800 mb-1">¿No ves todos los usuarios?</h3>
+      {/* Mensaje destacado para sincronizar usuarios */}
+      <div className="p-4 bg-blue-100 border-l-4 border-blue-500 rounded-md">
+        <h3 className="font-medium text-blue-800 text-lg mb-1 flex items-center gap-2">
+          <UsersRound className="h-4 w-4" />
+          ¿No ves todos los usuarios recién creados?
+        </h3>
         <p className="text-sm text-blue-700">
           Si acabas de crear nuevos usuarios y no aparecen en la lista, 
-          haz clic en el botón <strong>"Sincronizar usuarios"</strong> arriba.
-          Este proceso sincronizará todos los usuarios entre Auth y las tablas de perfiles/roles.
+          haz clic en el botón <strong>"SINCRONIZAR USUARIOS"</strong> arriba.
+          Este proceso sincronizará todos los usuarios entre Auth y las tablas de perfiles/roles,
+          incluyendo los usuarios recién creados.
         </p>
+        <Button
+            variant="default"
+            size="sm"
+            onClick={handleSyncUsers}
+            disabled={syncing}
+            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 mt-2"
+          >
+            <Loader2 className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Sincronizando..." : "Sincronizar Ahora"}
+        </Button>
       </div>
 
       <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>

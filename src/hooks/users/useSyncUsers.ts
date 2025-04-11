@@ -17,13 +17,16 @@ export function useSyncUsers() {
   const syncUsers = async () => {
     try {
       setSyncing(true);
-      toast.info("Iniciando sincronización de usuarios...");
+      toast.info("Iniciando sincronización completa de usuarios...");
       
-      console.log("Calling sync-users edge function");
+      console.log("Calling sync-users edge function with forceUpdate=true");
       
-      // Llamar a la función sync-users (ahora sin requerir autenticación)
+      // Siempre llamar con forceUpdate=true para garantizar que todos los usuarios se sincronicen
       const { data, error } = await supabase.functions.invoke("sync-users", {
-        body: { forceUpdate: true }, // Agregar opción para forzar actualización de todos los usuarios
+        body: { 
+          forceUpdate: true,
+          forceSyncAll: true // Agregamos este parámetro para sincronizar todos los usuarios
+        },
       });
 
       if (error) {
@@ -42,6 +45,12 @@ export function useSyncUsers() {
         // Mostrar detalles de los perfiles creados
         if (data.created_profile_details && data.created_profile_details.length > 0) {
           console.log("Perfiles creados:", data.created_profile_details);
+          
+          // Mostrar nombres de usuarios creados en el toast
+          const userNames = data.created_profile_details.map(p => p.email || p.full_name).join(", ");
+          toast.success(`Usuarios creados: ${userNames}`, {
+            duration: 5000
+          });
         }
       }
       
@@ -85,13 +94,6 @@ export function useSyncUsers() {
     } finally {
       setSyncing(false);
     }
-  };
-
-  // Método alternativo si edge function falla (no implementado por ahora)
-  const manualSyncUsers = async (): Promise<number> => {
-    // Implementación de fallback mantenida como referencia
-    console.log("Fallback synchronization not needed anymore");
-    return 0;
   };
 
   return {

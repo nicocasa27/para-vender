@@ -18,7 +18,11 @@ serve(async (req) => {
     console.log("Starting user synchronization process");
     
     // Get request body if available
-    let requestBody = {};
+    let requestBody = {
+      forceUpdate: false,
+      forceSyncAll: false
+    };
+    
     try {
       if (req.body) {
         const bodyText = await req.text();
@@ -32,7 +36,8 @@ serve(async (req) => {
     }
     
     const forceUpdate = requestBody.forceUpdate === true;
-    console.log(`Force update mode: ${forceUpdate}`);
+    const forceSyncAll = requestBody.forceSyncAll === true;
+    console.log(`Force update mode: ${forceUpdate}, Force sync all: ${forceSyncAll}`);
 
     // Create Supabase admin client
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -48,7 +53,7 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get all users from auth
+    // Get all users from auth with increased page size
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers({
       perPage: 1000,  // Increased to handle more users
     });
@@ -62,6 +67,11 @@ serve(async (req) => {
     }
 
     console.log(`Found ${authUsers.users.length} users in auth system`);
+    console.log("User list:", authUsers.users.map(u => ({
+      id: u.id,
+      email: u.email,
+      created_at: u.created_at
+    })));
 
     // Get existing profiles
     const { data: profiles, error: profilesError } = await supabase
@@ -77,6 +87,10 @@ serve(async (req) => {
     }
 
     console.log(`Found ${profiles?.length || 0} existing profiles`);
+    console.log("Existing profiles:", profiles?.map(p => ({
+      id: p.id,
+      email: p.email
+    })));
 
     // Create map of existing profiles
     const profileMap = new Map();
@@ -88,6 +102,12 @@ serve(async (req) => {
     const usersToCreate = authUsers.users.filter(user => !profileMap.has(user.id));
     
     console.log(`Found ${usersToCreate.length} users that need profiles created`);
+    if (usersToCreate.length > 0) {
+      console.log("Users needing profiles:", usersToCreate.map(u => ({
+        id: u.id,
+        email: u.email
+      })));
+    }
     
     // Create profiles and default roles for each missing user
     let createdProfiles = 0;
@@ -141,8 +161,9 @@ serve(async (req) => {
     }
     
     // If in force update mode, update existing profiles with latest metadata
-    if (forceUpdate) {
-      console.log("Force update mode: Updating existing profiles with latest metadata");
+    // or if forceSyncAll is true, sync all users regardless
+    if (forceUpdate || forceSyncAll) {
+      console.log("Force update/sync mode: Updating existing profiles with latest metadata");
       
       for (const user of authUsers.users) {
         if (profileMap.has(user.id)) {
@@ -151,8 +172,12 @@ serve(async (req) => {
                             user.user_metadata?.name || 
                             existingProfile.full_name;
           
-          // Only update if there's a difference
-          if (newFullName && newFullName !== existingProfile.full_name) {
+          // If force sync all, update all profiles, otherwise only update if there's a difference
+          const shouldUpdate = forceSyncAll || 
+                              (newFullName && newFullName !== existingProfile.full_name) ||
+                              (user.email && user.email !== existingProfile.email);
+          
+          if (shouldUpdate) {
             console.log(`Updating profile for user: ${user.email} (${user.id})`);
             
             const { error: updateError } = await supabase
@@ -232,7 +257,7 @@ serve(async (req) => {
 
     console.log(`Found ${profilesWithoutAuth.length} orphaned profiles without auth users`);
 
-    // Return summary
+    // Return summary with detailed information
     return new Response(
       JSON.stringify({
         success: true,
@@ -242,6 +267,8 @@ serve(async (req) => {
         orphaned_profiles: profilesWithoutAuth.length,
         orphaned_profile_details: profilesWithoutAuth,
         created_profile_details: createdProfileDetails,
+        auth_users_count: authUsers.users.length,
+        existing_profiles_count: profiles?.length || 0,
         message: `Created ${createdProfiles} profiles, updated ${updatedProfiles} profiles, and created ${createdRoles} roles`
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -250,7 +277,10 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in sync-users function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        stack: error.stack
+      }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
