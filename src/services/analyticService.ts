@@ -334,7 +334,7 @@ export async function fetchNonSellingProducts(storeIds: string[] = [], timeRange
           created_at,
           producto_id,
           productos(id, nombre),
-          ventas(id, created_at, almacen_id)
+          ventas!inner(id, created_at, almacen_id)
         `)
         .eq('producto_id', productId)
         .in('ventas.almacen_id', storeIds)
