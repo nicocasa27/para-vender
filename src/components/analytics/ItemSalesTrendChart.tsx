@@ -183,7 +183,7 @@ export function ItemSalesTrendChart({ data, loading }: Props) {
               }}
             />
             <YAxis
-              tickFormatter={(value) => `${value.toFixed(1)}`}
+              tickFormatter={(value: any) => `${Number(value).toFixed(1)}`}
               label={{ value: 'Cantidad vendida', angle: -90, position: 'insideLeft' }}
             />
             <Tooltip

@@ -1,21 +1,18 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
 import { SalesChart } from "@/components/dashboard";
-import { SalesByCategoryChart } from "@/components/analytics/SalesByCategoryChart";
-import { TopProductsChart } from "@/components/analytics/TopProductsChart";
 import { RevenueOverTimeChart } from "@/components/analytics/RevenueOverTimeChart";
-import { SalesDataPoint, CategoryDataPoint, ProductDataPoint, ItemSalesTrendDataPoint } from "@/types/analytics";
+import { SalesDataPoint, ItemSalesTrendDataPoint } from "@/types/analytics";
 import { toast } from "sonner";
 import { ItemSalesTrendChart } from "@/components/analytics/ItemSalesTrendChart";
 import { fetchItemSalesTrend } from "@/services/analyticService";
 
 export default function Analytics() {
   const { stores, isLoading: loadingStores } = useCurrentStores();
-  const [salesByCategory, setSalesByCategory] = useState<CategoryDataPoint[]>([]);
-  const [topProducts, setTopProducts] = useState<ProductDataPoint[]>([]);
   const [revenueOverTime, setRevenueOverTime] = useState<SalesDataPoint[]>([]);
   const [itemSalesTrend, setItemSalesTrend] = useState<ItemSalesTrendDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,24 +32,6 @@ export default function Analytics() {
     setLoading(true);
     
     try {
-      // Ventas por categoría
-      const { data: salesCategoryData, error: salesCategoryError } = await supabase.rpc(
-        "get_ventas_por_categoria",
-        { store_ids: storeIds }
-      );
-      
-      if (salesCategoryError) throw salesCategoryError;
-      setSalesByCategory(salesCategoryData || []);
-      
-      // Productos más vendidos
-      const { data: topProductsData, error: topProductsError } = await supabase.rpc(
-        "get_top_productos",
-        { store_ids: storeIds }
-      );
-      
-      if (topProductsError) throw topProductsError;
-      setTopProducts(topProductsData || []);
-      
       // Ventas por día
       const { data: salesTimeData, error: salesTimeError } = await supabase.rpc(
         "get_ventas_por_dia",
@@ -62,7 +41,7 @@ export default function Analytics() {
       if (salesTimeError) throw salesTimeError;
       setRevenueOverTime(salesTimeData || []);
       
-      // Tendencia de ventas por ítem (nueva)
+      // Tendencia de ventas por ítem
       const itemTrendData = await fetchItemSalesTrend(storeIds, period);
       setItemSalesTrend(itemTrendData);
       
@@ -131,28 +110,8 @@ export default function Analytics() {
       {/* SalesChart */}
       <SalesChart storeIds={selectedStoreIds} />
 
-      {/* Nueva gráfica de tendencia de ventas por ítem */}
+      {/* Tendencia de ventas por ítem */}
       <ItemSalesTrendChart data={itemSalesTrend} loading={loading} />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Ventas por Categoría</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <SalesByCategoryChart data={salesByCategory} loading={loading} />
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Productos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TopProductsChart data={topProducts} loading={loading} />
-          </CardContent>
-        </Card>
-      </div>
       
       <Card>
         <CardHeader>
