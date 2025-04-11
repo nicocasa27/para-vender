@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import {
   LineChart,
@@ -10,10 +9,9 @@ import {
   Legend,
   ResponsiveContainer
 } from "recharts";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchItemSalesTrend } from "@/services/analyticService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Props {
   storeId: string | null;
