@@ -104,7 +104,7 @@ export default function Analytics() {
               <SelectValue placeholder="Seleccionar sucursal" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas las sucursales</SelectItem>
+              <SelectItem value="all">Todas las sucursales</SelectItem>
               {stores.map(store => (
                 <SelectItem key={store.id} value={store.id}>{store.nombre}</SelectItem>
               ))}
