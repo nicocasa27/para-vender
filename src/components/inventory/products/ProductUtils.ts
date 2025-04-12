@@ -19,3 +19,16 @@ export const getDisplayStock = (product: Product, storeFilter?: string) => {
 export const getProductStoreName = (product: Product) => {
   return product.sucursal_nombre || 'Sin sucursal';
 };
+
+// Función auxiliar para formatear los atributos de color/talla para mostrar
+export const formatProductAttributes = (product: Product) => {
+  const attributes = [];
+  if (product.color) attributes.push(`Color: ${product.color}`);
+  if (product.talla) attributes.push(`Talla: ${product.talla}`);
+  return attributes;
+};
+
+// Función auxiliar para determinar si un producto tiene atributos (color/talla)
+export const hasProductAttributes = (product: Product) => {
+  return !!(product.color || product.talla);
+};

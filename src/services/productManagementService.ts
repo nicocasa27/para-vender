@@ -86,21 +86,26 @@ export async function updateProduct(productData: any) {
   }
   
   try {
+    // Asegurarnos de que los campos color y talla se manejan explícitamente para permitir valores nulos
+    const updateData = {
+      nombre: productData.nombre,
+      descripcion: productData.descripcion,
+      categoria_id: productData.categoria_id,
+      unidad_id: productData.unidad_id,
+      precio_compra: productData.precio_compra || 0,
+      precio_venta: productData.precio_venta,
+      stock_minimo: productData.stock_minimo || 0,
+      stock_maximo: productData.stock_maximo || 0,
+      sucursal_id: productData.sucursal_id || null,
+      color: productData.color || null,
+      talla: productData.talla || null
+    };
+    
+    console.log("Datos efectivos para actualización:", updateData);
+    
     const { data: updatedProduct, error: updateError } = await supabase
       .from('productos')
-      .update({
-        nombre: productData.nombre,
-        descripcion: productData.descripcion,
-        categoria_id: productData.categoria_id,
-        unidad_id: productData.unidad_id,
-        precio_compra: productData.precio_compra || 0,
-        precio_venta: productData.precio_venta,
-        stock_minimo: productData.stock_minimo || 0,
-        stock_maximo: productData.stock_maximo || 0,
-        sucursal_id: productData.sucursal_id || null,
-        color: productData.color || null,
-        talla: productData.talla || null
-      })
+      .update(updateData)
       .eq('id', productData.id)
       .select()
       .single();

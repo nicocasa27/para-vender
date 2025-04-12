@@ -106,7 +106,15 @@ export function useProducts() {
 
   const editProduct = async (productData: any) => {
     try {
-      const result = await updateProduct(productData);
+      // Asegurarse de que todos los campos estén presentes
+      const completeProductData = {
+        ...productData,
+        color: productData.color || null,
+        talla: productData.talla || null
+      };
+      console.log("useProducts.editProduct - Datos completos:", completeProductData);
+      
+      const result = await updateProduct(completeProductData);
       if (result.success) {
         await refreshProducts();
         return result.data;

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { History, Edit, Trash2 } from "lucide-react";
 import { formatQuantityWithUnit } from "@/utils/inventory/formatters";
 import { useAuth } from "@/contexts/auth";
+import { formatProductAttributes, hasProductAttributes } from "./ProductUtils";
 
 interface ProductCardProps {
   product: Product;
@@ -34,6 +35,10 @@ export function ProductCard({
   
   // Sales users cannot see purchase prices, but admin and manager can
   const canViewPurchasePrice = !hasRole('sales') || hasRole('admin') || hasRole('manager');
+  
+  // Obtener atributos formateados (color, talla)
+  const productAttributes = formatProductAttributes(product);
+  const hasAttributes = hasProductAttributes(product);
 
   return (
     <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow">
@@ -56,7 +61,7 @@ export function ProductCard({
         </div>
         
         {/* Mostrar color y talla si existen */}
-        {(product.color || product.talla) && (
+        {hasAttributes && (
           <div className="flex flex-wrap gap-1 mt-2">
             {product.color && (
               <div className="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">

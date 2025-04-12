@@ -4,6 +4,8 @@ export interface SaleDetail {
   cantidad: number;
   precio_unitario: number;
   subtotal: number;
+  color?: string | null;
+  talla?: string | null;
 }
 
 export interface Sale {
