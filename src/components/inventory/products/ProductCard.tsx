@@ -31,6 +31,8 @@ export function ProductCard({
   onDelete
 }: ProductCardProps) {
   const { hasRole } = useAuth();
+  
+  // Sales users cannot see purchase prices, but admin and manager can
   const canViewPurchasePrice = !hasRole('sales') || hasRole('admin') || hasRole('manager');
 
   return (

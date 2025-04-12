@@ -18,7 +18,7 @@ interface ProductTableBodyProps {
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (productId: string) => void;
   selectedStore?: string;
-  canViewPurchasePrice?: boolean; // New prop to control price visibility
+  canViewPurchasePrice?: boolean; // Prop to control price visibility
 }
 
 export function ProductTableBody({

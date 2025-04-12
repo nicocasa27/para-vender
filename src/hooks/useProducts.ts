@@ -30,8 +30,8 @@ export function useProducts() {
   
   // Función para obtener los IDs de las sucursales asignadas al usuario
   const getUserStoreIds = useMemo(() => {
-    const isAdmin = userRoles.some(role => role.role === 'admin');
-    const isManager = userRoles.some(role => role.role === 'manager');
+    const isAdmin = hasRole('admin');
+    const isManager = hasRole('manager');
     
     // Administradores y gerentes pueden ver todo
     if (isAdmin || isManager) {
@@ -40,7 +40,7 @@ export function useProducts() {
     }
     
     // Si tiene sucursales asignadas como vendedor, obtenemos sus IDs
-    if (hasStores) {
+    if (hasRole('sales') && hasStores) {
       const storeIds = userStores.map(store => store.id);
       console.log("Usuario tiene sucursales asignadas:", storeIds);
       return storeIds;
@@ -145,7 +145,7 @@ export function useProducts() {
     if (!products.length) return [];
     
     return products.filter((product) => {
-      // Primero filtramos por las sucursales asignadas al usuario
+      // Primero filtramos por las sucursales asignadas al usuario (sales)
       if (getUserStoreIds && getUserStoreIds.length > 0) {
         // Si el producto no tiene stock en ninguna sucursal, saltarlo
         if (!product.stock_by_store || Object.keys(product.stock_by_store).length === 0) {
@@ -185,11 +185,27 @@ export function useProducts() {
     });
   }, [products, searchTerm, categoryFilter, storeFilter, getUserStoreIds]);
   
+  // Filters stores based on user role - only show stores the user has access to
+  const accessibleStores = useMemo(() => {
+    // Admin and manager can see all stores
+    if (hasRole('admin') || hasRole('manager')) {
+      return stores;
+    }
+    
+    // Sales users can only see their assigned stores
+    if (hasRole('sales') && hasStores) {
+      return userStores;
+    }
+    
+    // Viewer or others get all stores
+    return stores;
+  }, [stores, userStores, hasRole, hasStores]);
+  
   return {
     products: filteredProducts,
     allProducts: products,
     categories,
-    stores,
+    stores: accessibleStores,
     loading,
     error,
     searchTerm,
