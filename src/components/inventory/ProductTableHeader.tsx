@@ -1,25 +1,21 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { RefreshCw, Plus, Search, Building } from "lucide-react";
+import { RefreshCw, Search } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Category, Store } from "@/types/inventory";
+import { ExcelImportButton } from "./excel-import/ExcelImportButton";
+import { useAuth } from "@/contexts/auth";
 
 interface ProductTableHeaderProps {
   onAddProduct: () => void;
   onRefresh: () => void;
   searchTerm: string;
-  setSearchTerm: (value: string) => void;
+  setSearchTerm: (term: string) => void;
   categoryFilter: string | null;
-  setCategoryFilter: (value: string | null) => void;
+  setCategoryFilter: (categoryId: string | null) => void;
   storeFilter: string | null;
-  setStoreFilter: (value: string | null) => void;
+  setStoreFilter: (storeId: string | null) => void;
   categories: Category[];
   stores: Store[];
 }
@@ -36,72 +32,69 @@ const ProductTableHeader = ({
   categories,
   stores
 }: ProductTableHeaderProps) => {
+  const { hasRole } = useAuth();
+  const canAddProducts = hasRole('admin') || hasRole('manager');
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Buscar productos..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={onRefresh}>
+      <div className="flex flex-col sm:flex-row gap-2 justify-between">
+        <div className="flex flex-row gap-2">
+          {canAddProducts && (
+            <Button onClick={onAddProduct}>
+              Agregar Producto
+            </Button>
+          )}
+          <Button variant="outline" onClick={onRefresh}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Actualizar
           </Button>
-          <Button size="sm" onClick={onAddProduct}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Producto
-          </Button>
+          {canAddProducts && <ExcelImportButton />}
+        </div>
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar producto..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4">
-        <div className="w-full sm:w-auto">
-          <Select
-            value={categoryFilter || "all"}
-            onValueChange={(value) => setCategoryFilter(value === "all" ? null : value)}
-          >
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <SelectValue placeholder="Todas las categorías" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas las categorías</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id || "category-sin-id"}>
-                  {category.nombre || "Sin nombre"}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="flex flex-wrap gap-2">
+        <Select
+          value={categoryFilter || ""}
+          onValueChange={(value) => setCategoryFilter(value || null)}
+        >
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectValue placeholder="Todas las categorías" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Todas las categorías</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.nombre}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        <div className="w-full sm:w-auto">
-          <Select
-            value={storeFilter || "all"}
-            onValueChange={(value) => setStoreFilter(value === "all" ? null : value)}
-          >
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <span className="flex items-center">
-                <Building className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Todas las sucursales" />
-              </span>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas las sucursales</SelectItem>
-              {stores.map((store) => (
-                <SelectItem key={store.id} value={store.id || "store-sin-id"}>
-                  {store.nombre || "Sin nombre"}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Select
+          value={storeFilter || ""}
+          onValueChange={(value) => setStoreFilter(value || null)}
+        >
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectValue placeholder="Todas las sucursales" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Todas las sucursales</SelectItem>
+            {stores.map((store) => (
+              <SelectItem key={store.id} value={store.id}>
+                {store.nombre}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );
