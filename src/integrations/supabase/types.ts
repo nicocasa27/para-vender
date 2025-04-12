@@ -193,6 +193,7 @@ export type Database = {
       productos: {
         Row: {
           categoria_id: string | null
+          color: string | null
           created_at: string | null
           descripcion: string | null
           id: string
@@ -202,10 +203,12 @@ export type Database = {
           stock_maximo: number | null
           stock_minimo: number | null
           sucursal_id: string | null
+          talla: string | null
           unidad_id: string | null
         }
         Insert: {
           categoria_id?: string | null
+          color?: string | null
           created_at?: string | null
           descripcion?: string | null
           id?: string
@@ -215,10 +218,12 @@ export type Database = {
           stock_maximo?: number | null
           stock_minimo?: number | null
           sucursal_id?: string | null
+          talla?: string | null
           unidad_id?: string | null
         }
         Update: {
           categoria_id?: string | null
+          color?: string | null
           created_at?: string | null
           descripcion?: string | null
           id?: string
@@ -228,6 +233,7 @@ export type Database = {
           stock_maximo?: number | null
           stock_minimo?: number | null
           sucursal_id?: string | null
+          talla?: string | null
           unidad_id?: string | null
         }
         Relationships: [

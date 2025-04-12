@@ -12,10 +12,10 @@ export interface Product {
   unidad: string;
   unidad_id?: string;
   descripcion?: string;
-  sucursal_id?: string;  // Add the store ID field
-  sucursal_nombre?: string; // Add the store name field
-  color?: string;  // Nuevo campo de color
-  talla?: string;  // Nuevo campo de talla
+  sucursal_id?: string;  // Store ID field
+  sucursal_nombre?: string; // Store name field
+  color?: string;  // Campo de color
+  talla?: string;  // Campo de talla
   inventario: {
     almacen_id: string;
     cantidad: number;
