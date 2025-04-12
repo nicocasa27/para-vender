@@ -72,6 +72,7 @@ export function useProductsView(onRefresh?: () => void) {
   };
 
   const openEditModal = (product: Product) => {
+    console.log("Abriendo modal de edición para producto:", product);
     setCurrentProduct(product);
     setIsEditModalOpen(true);
   };
