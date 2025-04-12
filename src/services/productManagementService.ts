@@ -116,6 +116,55 @@ export async function updateProduct(productData: any) {
     }
     
     console.log("Product updated successfully:", updatedProduct);
+    
+    // Si hay un ajuste de stock, actualizar el inventario
+    if (productData.stockAdjustment && productData.stockAdjustment !== 0) {
+      // Necesitamos el almacén (sucursal) del producto para actualizar su inventario
+      const almacenId = productData.sucursal_id;
+      
+      if (!almacenId) {
+        console.warn("No se encontró el almacén del producto para ajustar el stock");
+        return { success: true, data: updatedProduct };
+      }
+      
+      console.log(`Ajustando inventario: ${productData.stockAdjustment} unidades en almacén ${almacenId}`);
+      
+      // Llamar a la función de actualización de inventario usando RPC
+      const { data: adjustmentResult, error: adjustmentError } = await supabase
+        .rpc('update_inventory', {
+          p_producto_id: productData.id,
+          p_almacen_id: almacenId,
+          p_cantidad: productData.stockAdjustment
+        });
+        
+      if (adjustmentError) {
+        console.error("Error adjusting inventory:", adjustmentError);
+        toast.error("Producto actualizado pero hubo un error al ajustar el inventario");
+      } else {
+        console.log("Inventario ajustado correctamente");
+        
+        // Registrar el movimiento en la tabla de movimientos
+        const movimientoTipo = productData.stockAdjustment > 0 ? 'entrada' : 'salida';
+        const cantidadAbs = Math.abs(productData.stockAdjustment);
+        
+        const { error: movimientoError } = await supabase
+          .from('movimientos')
+          .insert({
+            producto_id: productData.id,
+            almacen_origen_id: movimientoTipo === 'salida' ? almacenId : null,
+            almacen_destino_id: movimientoTipo === 'entrada' ? almacenId : null,
+            cantidad: cantidadAbs,
+            tipo: movimientoTipo,
+            notas: `Ajuste manual desde edición de producto`
+          });
+          
+        if (movimientoError) {
+          console.error("Error registering movement:", movimientoError);
+          toast.error("Inventario ajustado pero no se pudo registrar el movimiento");
+        }
+      }
+    }
+    
     return { success: true, data: updatedProduct };
   } catch (error) {
     console.error("Error in updateProduct:", error);

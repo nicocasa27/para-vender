@@ -54,6 +54,7 @@ const productFormSchema = z.object({
   location: z.string().optional(),
   color: z.string().optional(),
   talla: z.string().optional(),
+  stockAdjustment: z.coerce.number().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -63,6 +64,7 @@ interface ProductFormProps {
   onSubmit: (data: ProductFormValues) => void;
   isSubmitting?: boolean;
   isEditing?: boolean;
+  currentStock?: number;
 }
 
 export const ProductForm: React.FC<ProductFormProps> = ({
@@ -70,6 +72,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   onSubmit,
   isSubmitting = false,
   isEditing = false,
+  currentStock = 0,
 }) => {
   const { toast: uiToast } = useToast();
   const [formData, setFormData] = useState<ProductFormValues | null>(null);
@@ -135,6 +138,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     location: "",
     color: "",
     talla: "",
+    stockAdjustment: 0,
     ...initialData
   };
 
@@ -156,6 +160,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         initialStock: Number(initialData.initialStock) || 0,
         color: initialData.color || "",
         talla: initialData.talla || "",
+        stockAdjustment: 0, // Siempre inicializar en 0 para ajustes
       };
       
       form.reset(formattedData);
@@ -198,7 +203,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       salePrice: Number(data.salePrice) || 0,
       minStock: Number(data.minStock) || 0,
       maxStock: Number(data.maxStock) || 0,
-      initialStock: Number(data.initialStock) || 0
+      initialStock: Number(data.initialStock) || 0,
+      stockAdjustment: Number(data.stockAdjustment) || 0
     };
     
     toast("📨 Enviando...", { 
@@ -520,6 +526,38 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   </FormItem>
                 )}
               />
+            )}
+
+            {isEditing && (
+              <div className="sm:col-span-2 border p-4 rounded-md bg-gray-50">
+                <div className="mb-2">
+                  <h3 className="font-medium text-base">Stock Actual: {currentStock}</h3>
+                  <p className="text-sm text-muted-foreground">Ajuste la cantidad del producto en el inventario.</p>
+                </div>
+                <FormField
+                  control={form.control}
+                  name="stockAdjustment"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ajuste de Inventario</FormLabel>
+                      <div className="flex gap-1 items-center">
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="1"
+                            {...field}
+                            placeholder="0"
+                          />
+                        </FormControl>
+                        <span className="text-sm text-muted-foreground">
+                          (Use valores positivos para aumentar, negativos para disminuir)
+                        </span>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             )}
           </div>
 

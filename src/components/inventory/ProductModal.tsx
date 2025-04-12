@@ -27,6 +27,7 @@ interface ProductData {
   initialStock?: number;
   color?: string;
   talla?: string;
+  stockAdjustment?: number;
 }
 
 interface ProductModalProps {
@@ -35,6 +36,7 @@ interface ProductModalProps {
   onSubmit: (data: any) => Promise<void>;
   initialData?: any;
   isEditing?: boolean;
+  currentStock?: number;
 }
 
 export function ProductModal({
@@ -43,6 +45,7 @@ export function ProductModal({
   onSubmit,
   initialData,
   isEditing = false,
+  currentStock = 0,
 }: ProductModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [transformedData, setTransformedData] = useState<any>(null);
@@ -124,6 +127,11 @@ export function ProductModal({
       color: data.color || null,
       talla: data.talla || null
     };
+    
+    // Si estamos editando y hay un ajuste de stock, incluirlo
+    if (isEditing && typeof data.stockAdjustment === 'number' && data.stockAdjustment !== 0) {
+      productData.stockAdjustment = data.stockAdjustment;
+    }
     
     if (!isEditing && data.location && data.location !== "no-location" && data.initialStock > 0) {
       productData.initialStock = data.initialStock;
@@ -222,6 +230,7 @@ export function ProductModal({
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               isEditing={isEditing}
+              currentStock={currentStock}
             />
             
             {process.env.NODE_ENV === "development" && transformedData && (
