@@ -50,8 +50,9 @@ export function ProductModal({
     if (isOpen) {
       console.log("ProductModal abierto - isEditing:", isEditing);
       console.log("ProductModal - initialData:", initialData);
+      console.log("ProductModal - currentStock:", currentStock);
     }
-  }, [isOpen, isEditing, initialData]);
+  }, [isOpen, isEditing, initialData, currentStock]);
 
   useEffect(() => {
     if (
@@ -79,6 +80,7 @@ export function ProductModal({
 
   const handleSubmit = async (data: any) => {
     console.log("🧾 handleSubmit recibió:", data);
+    console.log("Stock actual:", currentStock);
     
     if (!validateFormData(data, categories, units)) {
       return;

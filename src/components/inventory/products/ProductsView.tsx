@@ -45,17 +45,12 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
     handleRefresh,
     getCategoryName,
     getStoreName,
+    getCurrentStock,
     hasMetadata
   } = useProductsView(onRefresh);
 
   const { isLoading: metadataLoading } = useProductMetadata();
   
-  // Obtener el stock actual del producto en edición
-  const getCurrentStock = () => {
-    if (!currentProduct) return 0;
-    return currentProduct.stock_total || 0;
-  };
-
   useEffect(() => {
     if (!hasMetadata && !metadataLoading) {
       toast.error("Faltan datos básicos", {

@@ -102,6 +102,12 @@ export function useProductsView(onRefresh?: () => void) {
     return store ? store.nombre : "Sucursal";
   };
 
+  // Obtener el stock actual del producto en edición
+  const getCurrentStock = () => {
+    if (!currentProduct) return 0;
+    return currentProduct.stock_total || 0;
+  };
+
   return {
     products,
     categories,
@@ -136,6 +142,7 @@ export function useProductsView(onRefresh?: () => void) {
     handleRefresh,
     getCategoryName,
     getStoreName,
+    getCurrentStock,
     hasMetadata
   };
 }

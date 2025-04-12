@@ -74,7 +74,9 @@ export function mapInventoryData(productsData: any[], inventoryData: any[]): Pro
       sucursal_nombre: sucursalNombre || 'Sin sucursal',
       inventario: inventoryItems,
       stock_by_store: stockByStore,
-      store_names: storeNames
+      store_names: storeNames,
+      color: product.color || '',
+      talla: product.talla || ''
     };
   });
 }
