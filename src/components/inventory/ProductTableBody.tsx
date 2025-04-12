@@ -47,6 +47,20 @@ export function ProductTableBody({
     return formatQuantityWithUnit(product.stock_total, product.unidad);
   };
 
+  // Función para mostrar color y talla si existen
+  const getColorTallaDisplay = (product: Product) => {
+    const parts = [];
+    if (product.color) parts.push(`Color: ${product.color}`);
+    if (product.talla) parts.push(`Talla: ${product.talla}`);
+    
+    if (parts.length === 0) return null;
+    return (
+      <div className="text-xs text-muted-foreground mt-1">
+        {parts.join(' | ')}
+      </div>
+    );
+  };
+
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -64,7 +78,12 @@ export function ProductTableBody({
         <TableBody>
           {products.map((product) => (
             <TableRow key={product.id}>
-              <TableCell>{product.nombre}</TableCell>
+              <TableCell>
+                <div>
+                  {product.nombre}
+                  {getColorTallaDisplay(product)}
+                </div>
+              </TableCell>
               <TableCell>{product.categoria}</TableCell>
               {canViewPurchasePrice && (
                 <TableCell>${product.precio_compra?.toFixed(2)}</TableCell>

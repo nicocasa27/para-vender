@@ -62,6 +62,18 @@ export function ProductDetailDialog({
                 <span className="text-muted-foreground">Unidad:</span>
                 <span>{product.unidad || "Unidad"}</span>
               </div>
+              {product.color && (
+                <div className="grid grid-cols-2 text-sm">
+                  <span className="text-muted-foreground">Color:</span>
+                  <span>{product.color}</span>
+                </div>
+              )}
+              {product.talla && (
+                <div className="grid grid-cols-2 text-sm">
+                  <span className="text-muted-foreground">Talla:</span>
+                  <span>{product.talla}</span>
+                </div>
+              )}
               {canViewPurchasePrice && (
                 <div className="grid grid-cols-2 text-sm">
                   <span className="text-muted-foreground">Precio compra:</span>

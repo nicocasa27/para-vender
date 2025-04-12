@@ -84,13 +84,30 @@ export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps
               <CardContent className="p-4 h-full flex flex-col justify-between">
                 <div className="space-y-2 mb-3">
                   <h3 className="font-medium text-base line-clamp-1">{product.nombre}</h3>
-                  <div className="flex items-center text-sm text-muted-foreground">
+                  <div className="flex flex-wrap items-center text-sm text-muted-foreground">
                     <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs">
                       {product.categoria || "Sin categoría"}
                     </span>
                     <span className="mx-2">•</span>
                     <span>{product.unidad || "unidad"}</span>
                   </div>
+                  
+                  {/* Mostrar color y talla si existen */}
+                  {(product.color || product.talla) && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {product.color && (
+                        <span className="bg-blue-50 text-blue-700 text-xs rounded-full px-2 py-0.5">
+                          Color: {product.color}
+                        </span>
+                      )}
+                      {product.talla && (
+                        <span className="bg-green-50 text-green-700 text-xs rounded-full px-2 py-0.5">
+                          Talla: {product.talla}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  
                   <p className="text-lg font-bold text-primary">${product.precio_venta.toFixed(2)}</p>
                   <p className="text-sm text-muted-foreground">
                     Stock: {product.stock_total || 0} {product.unidad || "unidades"}

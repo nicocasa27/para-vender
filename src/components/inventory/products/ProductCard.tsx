@@ -54,6 +54,22 @@ export function ProductCard({
             </div>
           )}
         </div>
+        
+        {/* Mostrar color y talla si existen */}
+        {(product.color || product.talla) && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {product.color && (
+              <div className="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">
+                Color: {product.color}
+              </div>
+            )}
+            {product.talla && (
+              <div className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+                Talla: {product.talla}
+              </div>
+            )}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="pb-2">
         <div className="grid grid-cols-2 gap-2 text-sm">
