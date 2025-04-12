@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { History, Edit, Trash2 } from "lucide-react";
 import { formatQuantityWithUnit } from "@/utils/inventory/formatters";
+import { useAuth } from "@/contexts/auth";
 
 interface ProductCardProps {
   product: Product;
@@ -29,6 +30,9 @@ export function ProductCard({
   onEdit,
   onDelete
 }: ProductCardProps) {
+  const { hasRole } = useAuth();
+  const canViewPurchasePrice = !hasRole('sales') || hasRole('admin') || hasRole('manager');
+
   return (
     <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow">
       <CardHeader className="pb-2">
@@ -51,11 +55,13 @@ export function ProductCard({
       </CardHeader>
       <CardContent className="pb-2">
         <div className="grid grid-cols-2 gap-2 text-sm">
-          <div>
-            <div className="text-muted-foreground">Precio compra:</div>
-            <div className="font-medium">${product.precio_compra?.toFixed(2)}</div>
-          </div>
-          <div>
+          {canViewPurchasePrice && (
+            <div>
+              <div className="text-muted-foreground">Precio compra:</div>
+              <div className="font-medium">${product.precio_compra?.toFixed(2)}</div>
+            </div>
+          )}
+          <div className={canViewPurchasePrice ? "" : "col-span-2"}>
             <div className="text-muted-foreground">Precio venta:</div>
             <div className="font-medium">${product.precio_venta.toFixed(2)}</div>
           </div>

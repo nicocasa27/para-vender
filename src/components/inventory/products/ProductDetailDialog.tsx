@@ -1,15 +1,10 @@
 
-import { Product } from "@/types/inventory";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription 
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Product } from "@/types/inventory";
 import { formatQuantityWithUnit } from "@/utils/inventory/formatters";
+import { useAuth } from "@/contexts/auth";
 
 interface ProductDetailDialogProps {
   productId: string | null;
@@ -28,10 +23,20 @@ export function ProductDetailDialog({
   onClose,
   onEdit
 }: ProductDetailDialogProps) {
-  const product = productId ? products.find(p => p.id === productId) : null;
-  
-  if (!product) return null;
-  
+  const { hasRole } = useAuth();
+  const canViewPurchasePrice = !hasRole('sales') || hasRole('admin') || hasRole('manager');
+
+  const getProductDetail = () => {
+    if (!productId) return null;
+    return products.find(p => p.id === productId) || null;
+  };
+
+  const product = getProductDetail();
+
+  if (!product) {
+    return null;
+  }
+
   return (
     <Dialog 
       open={!!productId} 
@@ -57,14 +62,12 @@ export function ProductDetailDialog({
                 <span className="text-muted-foreground">Unidad:</span>
                 <span>{product.unidad || "Unidad"}</span>
               </div>
-              <div className="grid grid-cols-2 text-sm">
-                <span className="text-muted-foreground">Sucursal:</span>
-                <span>{getProductStoreName(product)}</span>
-              </div>
-              <div className="grid grid-cols-2 text-sm">
-                <span className="text-muted-foreground">Precio compra:</span>
-                <span>${product.precio_compra?.toFixed(2)}</span>
-              </div>
+              {canViewPurchasePrice && (
+                <div className="grid grid-cols-2 text-sm">
+                  <span className="text-muted-foreground">Precio compra:</span>
+                  <span>${product.precio_compra?.toFixed(2)}</span>
+                </div>
+              )}
               <div className="grid grid-cols-2 text-sm">
                 <span className="text-muted-foreground">Precio venta:</span>
                 <span>${product.precio_venta.toFixed(2)}</span>
@@ -120,10 +123,7 @@ export function ProductDetailDialog({
           >
             Cerrar
           </Button>
-          <Button onClick={() => {
-            onEdit(product);
-            onClose();
-          }}>
+          <Button onClick={() => onEdit(product)}>
             Editar
           </Button>
         </div>

@@ -17,7 +17,8 @@ interface ProductTableBodyProps {
   onViewHistory: (productId: string) => void;
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (productId: string) => void;
-  selectedStore?: string; // Add selectedStore prop
+  selectedStore?: string;
+  canViewPurchasePrice?: boolean; // New prop to control price visibility
 }
 
 export function ProductTableBody({
@@ -25,7 +26,8 @@ export function ProductTableBody({
   onViewHistory,
   onEditProduct,
   onDeleteProduct,
-  selectedStore
+  selectedStore,
+  canViewPurchasePrice = true // Default to true for backward compatibility
 }: ProductTableBodyProps) {
   if (products.length === 0) {
     return (
@@ -52,7 +54,8 @@ export function ProductTableBody({
           <TableRow>
             <TableHead>Nombre</TableHead>
             <TableHead>Categoría</TableHead>
-            <TableHead>Precio</TableHead>
+            {canViewPurchasePrice && <TableHead>Precio Compra</TableHead>}
+            <TableHead>Precio Venta</TableHead>
             <TableHead>{selectedStore ? 'Stock en Sucursal' : 'Stock Total'}</TableHead>
             <TableHead>Stock Mínimo</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
@@ -63,6 +66,9 @@ export function ProductTableBody({
             <TableRow key={product.id}>
               <TableCell>{product.nombre}</TableCell>
               <TableCell>{product.categoria}</TableCell>
+              {canViewPurchasePrice && (
+                <TableCell>${product.precio_compra?.toFixed(2)}</TableCell>
+              )}
               <TableCell>${product.precio_venta.toFixed(2)}</TableCell>
               <TableCell>{getStockDisplay(product)}</TableCell>
               <TableCell>{formatQuantityWithUnit(product.stock_minimo, product.unidad)}</TableCell>

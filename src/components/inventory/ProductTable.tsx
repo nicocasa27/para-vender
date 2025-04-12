@@ -1,12 +1,13 @@
 
 import { useState } from "react";
 import { useProducts } from "@/hooks/useProducts";
-import { ProductTableHeader } from "./ProductTableHeader";
+import ProductTableHeader from "./ProductTableHeader";
 import { ProductTableBody } from "./ProductTableBody";
 import { ProductModal } from "./ProductModal";
 import { DeleteProductDialog } from "./DeleteProductDialog";
 import { ProductHistorySheet } from "./ProductHistorySheet";
 import { Product } from "@/types/inventory";
+import { useAuth } from "@/contexts/auth";
 
 const ProductTable = () => {
   const {
@@ -25,6 +26,9 @@ const ProductTable = () => {
     editProduct,
     deleteProduct
   } = useProducts();
+
+  const { hasRole } = useAuth();
+  const canViewPurchasePrice = !hasRole('sales') || hasRole('admin') || hasRole('manager');
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -95,6 +99,7 @@ const ProductTable = () => {
         onEditProduct={openEditModal}
         onDeleteProduct={setDeleteProductId}
         selectedStore={storeFilter}
+        canViewPurchasePrice={canViewPurchasePrice}
       />
 
       {isAddModalOpen && (
