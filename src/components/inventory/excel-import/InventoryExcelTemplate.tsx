@@ -19,7 +19,9 @@ export function InventoryExcelTemplate() {
         "Stock Mínimo*",
         "Stock Máximo",
         "Sucursal",
-        "Stock Inicial*"
+        "Stock Inicial*",
+        "Color",
+        "Talla"
       ],
       // Example row
       [
@@ -32,10 +34,12 @@ export function InventoryExcelTemplate() {
         "5", 
         "50", 
         "", 
-        "10"
+        "10",
+        "Negro",
+        "M"
       ],
       // Empty row for user to fill
-      ["", "", "", "", "", "", "", "", "", ""]
+      ["", "", "", "", "", "", "", "", "", "", "", ""]
     ];
 
     // Create a new workbook and add the template data
@@ -54,6 +58,8 @@ export function InventoryExcelTemplate() {
       { wch: 15 }, // Stock Máximo
       { wch: 20 }, // Sucursal
       { wch: 15 }, // Stock Inicial
+      { wch: 15 }, // Color
+      { wch: 15 }, // Talla
     ];
     
     ws['!cols'] = colWidths;
@@ -75,6 +81,8 @@ export function InventoryExcelTemplate() {
       ["- Descripción: Descripción del producto (texto)"],
       ["- Stock Máximo: Cantidad máxima de stock (número entero)"],
       ["- Sucursal: Nombre de la sucursal donde estará el producto (debe existir en el sistema)"],
+      ["- Color: Color del producto (texto)"],
+      ["- Talla: Talla o tamaño del producto (texto)"],
     ];
 
     const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsData);

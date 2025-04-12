@@ -52,6 +52,8 @@ const productFormSchema = z.object({
   }),
   warehouse: z.string().optional(),
   store: z.string().optional(),
+  color: z.string().optional(),
+  talla: z.string().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -132,6 +134,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     initialStock: 0,
     warehouse: "",
     store: "",
+    color: "",
+    talla: "",
     ...initialData
   };
 
@@ -151,6 +155,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         minStock: Number(initialData.minStock) || 0,
         maxStock: Number(initialData.maxStock) || 0,
         initialStock: Number(initialData.initialStock) || 0,
+        color: initialData.color || "",
+        talla: initialData.talla || "",
       };
       
       form.reset(formattedData);
@@ -380,6 +386,34 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="color"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Color (opcional)</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Ej: Rojo, Azul, Negro" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="talla"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Talla (opcional)</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Ej: S, M, L, XL, 38, 40" />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

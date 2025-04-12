@@ -22,7 +22,9 @@ export async function addProduct(productData: any) {
         precio_venta: productData.precio_venta,
         stock_minimo: productData.stock_minimo || 0,
         stock_maximo: productData.stock_maximo || 0,
-        sucursal_id: productData.sucursal_id || null, // Add the store field
+        sucursal_id: productData.sucursal_id || null,
+        color: productData.color || null,
+        talla: productData.talla || null
       })
       .select()
       .single();
@@ -80,7 +82,9 @@ export async function updateProduct(productData: any) {
         precio_venta: productData.precio_venta,
         stock_minimo: productData.stock_minimo || 0,
         stock_maximo: productData.stock_maximo || 0,
-        sucursal_id: productData.sucursal_id || null, // Add the store field
+        sucursal_id: productData.sucursal_id || null,
+        color: productData.color || null,
+        talla: productData.talla || null
       })
       .eq('id', productData.id)
       .select()

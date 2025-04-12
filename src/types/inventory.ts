@@ -14,6 +14,8 @@ export interface Product {
   descripcion?: string;
   sucursal_id?: string;  // Add the store ID field
   sucursal_nombre?: string; // Add the store name field
+  color?: string;  // Nuevo campo de color
+  talla?: string;  // Nuevo campo de talla
   inventario: {
     almacen_id: string;
     cantidad: number;
