@@ -1,8 +1,24 @@
 
 import { toast } from "sonner";
 
-export function transformProductFormData(data: any, isEditing: boolean, productId: string | null = null, currentStock: number = 0) {
-  const productData = {
+interface ProductFormData {
+  name: any;
+  description?: any;
+  category: any;
+  unit: any;
+  purchasePrice: any;
+  salePrice: any;
+  minStock: any;
+  maxStock: any;
+  location: any;
+  color?: any;
+  talla?: any;
+  stockAdjustment?: number;
+  initialStock?: number;
+}
+
+export function transformProductFormData(data: ProductFormData, isEditing: boolean, productId: string | null = null, currentStock: number = 0) {
+  const productData: any = {
     id: isEditing && productId ? productId : null,
     nombre: data.name,
     descripcion: data.description || null,
@@ -22,7 +38,7 @@ export function transformProductFormData(data: any, isEditing: boolean, productI
     productData.stockAdjustment = data.stockAdjustment;
   }
   
-  if (!isEditing && data.location && data.location !== "no-location" && data.initialStock > 0) {
+  if (!isEditing && data.location && data.location !== "no-location" && data.initialStock && data.initialStock > 0) {
     productData.initialStock = data.initialStock;
   }
   

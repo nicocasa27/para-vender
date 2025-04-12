@@ -2,6 +2,7 @@
 import React from 'react';
 import { Loader, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface ProductMetadataLoaderProps {
   metadataLoading: boolean;
