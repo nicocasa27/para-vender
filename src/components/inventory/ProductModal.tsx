@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ProductForm } from "./ProductForm";
 import {
@@ -168,7 +169,7 @@ export function ProductModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Editar Producto" : "Agregar Nuevo Producto"}

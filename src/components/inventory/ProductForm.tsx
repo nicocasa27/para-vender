@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -286,22 +287,24 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(handleFormSubmit)}
-          className="space-y-6 animate-fade-in"
+          className="space-y-4 animate-fade-in"
         >
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nombre del Producto</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Ingrese nombre del producto" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nombre del Producto</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Ingrese nombre del producto" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -377,7 +380,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                         <SelectValue placeholder="Seleccione una sucursal" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                       <SelectItem value="no-store">Sin sucursal asignada</SelectItem>
                       {warehouses.map((warehouse) => (
                         <SelectItem key={warehouse.id} value={warehouse.id || "store-sin-id"}>
@@ -537,7 +540,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                             <SelectValue placeholder="Seleccione un almacén" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="bg-white">
                           {warehouses.map((warehouse) => (
                             <SelectItem key={warehouse.id} value={warehouse.id || "warehouse-sin-id"}>
                               {warehouse.nombre || "Sin nombre"}
@@ -553,21 +556,21 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             )}
           </div>
 
-          <div className="flex justify-between space-x-2">
+          <div className="flex justify-between gap-3 mt-6">
             <Button
               variant="outline"
               type="button"
               onClick={() => form.reset(defaultValues)}
+              className="min-w-[120px]"
             >
               Restablecer
             </Button>
             
-            {isEditing && (
+            {isEditing ? (
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
                 className="min-w-[150px] bg-blue-600 hover:bg-blue-700"
-                aria-label="Guardar cambios del producto"
               >
                 {isSubmitting ? (
                   <>
@@ -581,14 +584,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   </>
                 )}
               </Button>
-            )}
-            
-            {!isEditing && (
+            ) : (
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
                 className="min-w-[150px]"
-                aria-label="Agregar nuevo producto"
               >
                 {isSubmitting ? (
                   <>
@@ -613,6 +613,15 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               <strong>Éxito:</strong> Los cambios han sido guardados correctamente.
             </div>
           )}
+          
+          {process.env.NODE_ENV === "development" && (
+            <div className="mt-4 p-4 bg-gray-100 rounded-md">
+              <h3 className="font-semibold mb-2">Valores actuales del formulario:</h3>
+              <pre className="text-xs overflow-auto max-h-40 p-2 bg-black text-green-400 rounded">
+                {JSON.stringify(form.watch(), null, 2)}
+              </pre>
+            </div>
+          )}
         </form>
       </Form>
       
@@ -621,15 +630,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           <h3 className="font-semibold mb-2">Datos que se enviarán a Supabase:</h3>
           <pre className="text-xs overflow-auto max-h-40 p-2 bg-black text-green-400 rounded">
             {JSON.stringify(formData, null, 2)}
-          </pre>
-        </div>
-      )}
-      
-      {process.env.NODE_ENV === "development" && (
-        <div className="mt-4 p-4 bg-gray-100 rounded-md">
-          <h3 className="font-semibold mb-2">Valores actuales del formulario:</h3>
-          <pre className="text-xs overflow-auto max-h-40 p-2 bg-black text-green-400 rounded">
-            {JSON.stringify(form.watch(), null, 2)}
           </pre>
         </div>
       )}
