@@ -1,7 +1,6 @@
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, Search } from "lucide-react";
+import { RefreshCw, Search, DownloadCloud, Upload } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Category, Store } from "@/types/inventory";
 import { ExcelImportButton } from "./excel-import/ExcelImportButton";
@@ -37,7 +36,7 @@ const ProductTableHeader = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-2 justify-between">
+      <div className="flex flex-col sm:flex-row gap-2 justify-between items-center">
         <div className="flex flex-row gap-2">
           {canAddProducts && (
             <Button onClick={onAddProduct}>
@@ -48,7 +47,12 @@ const ProductTableHeader = ({
             <RefreshCw className="h-4 w-4 mr-2" />
             Actualizar
           </Button>
-          {canAddProducts && <ExcelImportButton />}
+          
+          {canAddProducts && (
+            <div className="flex gap-2">
+              <ExcelImportButton />
+            </div>
+          )}
         </div>
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
