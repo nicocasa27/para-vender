@@ -46,18 +46,25 @@ export async function addProduct(productData: any) {
         return { success: true, data: newProduct };
       }
       
-      const { error: inventoryError } = await supabase
+      console.log(`Agregando inventario inicial: ${productData.initialStock} unidades en almacén ${almacenId}`);
+      
+      const { data: inventoryData, error: inventoryError } = await supabase
         .from('inventario')
         .insert({
           producto_id: newProduct.id,
           almacen_id: almacenId,
           cantidad: productData.initialStock
-        });
+        })
+        .select();
         
       if (inventoryError) {
         console.error("Error adding initial inventory:", inventoryError);
         toast.error("Producto creado pero hubo un error al añadir inventario inicial");
+      } else {
+        console.log("Inventario inicial agregado correctamente:", inventoryData);
       }
+    } else {
+      console.log("No se agregó inventario inicial (cantidad = 0 o ubicación no especificada)");
     }
     
     return { success: true, data: newProduct };

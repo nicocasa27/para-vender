@@ -18,6 +18,7 @@ interface ProductData {
   nombre: string;
   categoria_id: string;
   unidad_id: string;
+  descripcion?: string;
   precio_compra?: number;
   precio_venta: number;
   stock_minimo?: number;
@@ -112,6 +113,7 @@ export function ProductModal({
     const productData: ProductData = {
       id: productId,
       nombre: data.name,
+      descripcion: data.description || null,
       categoria_id: data.category,
       unidad_id: data.unit,
       precio_compra: data.purchasePrice,
@@ -123,7 +125,7 @@ export function ProductModal({
       talla: data.talla || null
     };
     
-    if (!isEditing && data.location && data.initialStock > 0) {
+    if (!isEditing && data.location && data.location !== "no-location" && data.initialStock > 0) {
       productData.initialStock = data.initialStock;
     }
     
