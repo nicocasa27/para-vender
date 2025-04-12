@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
 import { Product } from "@/types/inventory";
@@ -33,79 +33,46 @@ export function useProductsView(onRefresh?: () => void) {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [productDetailId, setProductDetailId] = useState<string | null>(null);
 
-  // Asegura que los datos estén actualizados cuando se abre el componente
-  useEffect(() => {
-    if (!loading) {
-      console.log("useProductsView - Datos de productos cargados:", products.length);
-    }
-  }, [loading, products]);
-
   const handleAddProduct = async (productData: any) => {
     try {
-      console.log("Agregando producto con datos:", productData);
       await addProduct(productData);
-      toast.success("Producto agregado exitosamente");
       setIsAddModalOpen(false);
       if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Error al añadir producto:", error);
-      toast.error("Error al añadir producto", {
-        description: error instanceof Error ? error.message : "Error desconocido"
-      });
+      toast.error("Error al añadir producto");
     }
   };
 
   const handleEditProduct = async (productData: any) => {
-    if (!currentProduct) {
-      toast.error("No hay producto seleccionado para editar");
-      return;
-    }
+    if (!currentProduct) return;
     
     try {
-      const dataWithId = {
+      await editProduct({
         ...productData,
         id: currentProduct.id
-      };
+      });
       
-      console.log("🔄 ProductsView.handleEditProduct: Datos enviados:", dataWithId);
-      toast.info("Iniciando proceso de actualización...");
-      
-      await editProduct(dataWithId);
-      
-      toast.success("Producto actualizado exitosamente");
       setIsEditModalOpen(false);
       setCurrentProduct(null);
-      
-      // Refrescar productos después de editar
-      await refreshProducts();
       if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Error al editar producto:", error);
-      toast.error("Error al editar producto", {
-        description: error instanceof Error ? error.message : "Error desconocido"
-      });
+      toast.error("Error al editar producto");
     }
   };
 
   const handleDeleteConfirm = async () => {
     if (!deleteProductId) return;
-    
-    try {
-      const success = await deleteProduct(deleteProductId);
-      if (success) {
-        setDeleteProductId(null);
-        if (onRefresh) onRefresh();
-      }
-    } catch (error) {
-      console.error("Error al eliminar producto:", error);
-      toast.error("Error al eliminar producto");
+    const success = await deleteProduct(deleteProductId);
+    if (success) {
+      setDeleteProductId(null);
+      if (onRefresh) onRefresh();
     }
   };
 
   const openEditModal = (product: Product) => {
-    console.log("🔍 openEditModal - Producto seleccionado:", product);
-    console.log("🔍 Stock del producto:", product.stock_total);
-    console.log("🔍 Stock por tienda:", product.stock_by_store);
+    console.log("Abriendo modal de edición para producto:", product);
     setCurrentProduct(product);
     setIsEditModalOpen(true);
   };
@@ -115,9 +82,8 @@ export function useProductsView(onRefresh?: () => void) {
     setIsHistoryOpen(true);
   };
 
-  const handleRefresh = async () => {
-    console.log("Actualizando lista de productos...");
-    await refreshProducts();
+  const handleRefresh = () => {
+    refreshProducts();
     if (onRefresh) onRefresh();
   };
 

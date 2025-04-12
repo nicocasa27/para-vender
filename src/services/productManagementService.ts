@@ -128,11 +128,7 @@ export async function updateProduct(productData: any) {
     console.log("Product updated successfully:", updatedProduct);
     
     // Manejar ajuste de inventario si es necesario
-    if (productData.stockAdjustment && productData.stockAdjustment !== 0) {
-      await handleInventoryAdjustment(productData);
-    } else {
-      console.log("No hay ajuste de inventario para realizar");
-    }
+    await handleInventoryAdjustment(productData);
     
     return { success: true, data: updatedProduct };
   } catch (error) {
@@ -145,8 +141,9 @@ export async function updateProduct(productData: any) {
  * Gestiona ajustes de inventario durante la actualización de productos
  */
 async function handleInventoryAdjustment(productData: any) {
-  console.log("Iniciando ajuste de inventario para producto:", productData.id);
-  console.log("Ajuste solicitado:", productData.stockAdjustment);
+  if (!(productData.stockAdjustment && productData.stockAdjustment !== 0)) {
+    return;
+  }
   
   // Necesitamos el almacén (sucursal) del producto para actualizar su inventario
   const almacenId = productData.sucursal_id;
@@ -159,72 +156,24 @@ async function handleInventoryAdjustment(productData: any) {
   console.log(`Ajustando inventario: ${productData.stockAdjustment} unidades en almacén ${almacenId}`);
   
   try {
-    // Verificar si ya existe un registro de inventario para este producto/almacén
-    const { data: existingInventory } = await supabase
-      .from('inventario')
-      .select('id, cantidad')
-      .eq('producto_id', productData.id)
-      .eq('almacen_id', almacenId)
-      .single();
-    
-    if (existingInventory) {
-      console.log("Registro de inventario existente:", existingInventory);
+    // Actualizar inventario usando RPC
+    const { data: adjustmentResult, error: adjustmentError } = await supabase
+      .rpc('update_inventory', {
+        p_producto_id: productData.id,
+        p_almacen_id: almacenId,
+        p_cantidad: productData.stockAdjustment
+      });
       
-      // Calcular la nueva cantidad
-      const nuevaCantidad = Number(existingInventory.cantidad) + Number(productData.stockAdjustment);
-      
-      // Verificar que no sea negativa
-      if (nuevaCantidad < 0) {
-        console.error("La cantidad resultante sería negativa");
-        toast.error("No se puede reducir más del stock disponible");
-        return;
-      }
-      
-      // Actualizar el registro existente
-      const { error: updateError } = await supabase
-        .from('inventario')
-        .update({ 
-          cantidad: nuevaCantidad,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingInventory.id);
-        
-      if (updateError) {
-        console.error("Error al actualizar inventario:", updateError);
-        toast.error("Error al actualizar inventario");
-        return;
-      }
-      
-      console.log(`Inventario actualizado: ${existingInventory.cantidad} -> ${nuevaCantidad}`);
-    } else {
-      // Si el ajuste es negativo y no hay inventario, no se puede crear
-      if (productData.stockAdjustment < 0) {
-        console.error("No se puede reducir stock de un producto sin inventario existente");
-        toast.error("No hay stock existente para reducir");
-        return;
-      }
-      
-      // Crear nuevo registro de inventario
-      const { error: insertError } = await supabase
-        .from('inventario')
-        .insert({
-          producto_id: productData.id,
-          almacen_id: almacenId,
-          cantidad: productData.stockAdjustment
-        });
-        
-      if (insertError) {
-        console.error("Error al crear inventario:", insertError);
-        toast.error("Error al crear registro de inventario");
-        return;
-      }
-      
-      console.log(`Nuevo registro de inventario creado con cantidad: ${productData.stockAdjustment}`);
+    if (adjustmentError) {
+      console.error("Error adjusting inventory:", adjustmentError);
+      toast.error("Producto actualizado pero hubo un error al ajustar el inventario");
+      return;
     }
+    
+    console.log("Inventario ajustado correctamente");
     
     // Registrar el movimiento
     await logInventoryMovement(productData, almacenId);
-    toast.success("Inventario actualizado correctamente");
   } catch (error) {
     console.error("Error al realizar ajuste de inventario:", error);
     toast.error("Error al ajustar inventario");
@@ -253,8 +202,6 @@ async function logInventoryMovement(productData: any, almacenId: string) {
     if (movimientoError) {
       console.error("Error registering movement:", movimientoError);
       toast.error("Inventario ajustado pero no se pudo registrar el movimiento");
-    } else {
-      console.log(`Movimiento de ${movimientoTipo} registrado correctamente`);
     }
   } catch (error) {
     console.error("Error al registrar movimiento:", error);

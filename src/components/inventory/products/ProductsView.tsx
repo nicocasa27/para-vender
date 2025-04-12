@@ -53,15 +53,6 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
   // Obtener el stock actual del producto en edición
   const getCurrentStock = () => {
     if (!currentProduct) return 0;
-    
-    // Si hay un filtro de tienda activo, usa ese stock específico
-    if (storeFilter && currentProduct.stock_by_store && currentProduct.stock_by_store[storeFilter] !== undefined) {
-      console.log(`Usando stock de tienda ${storeFilter}:`, currentProduct.stock_by_store[storeFilter]);
-      return currentProduct.stock_by_store[storeFilter];
-    }
-    
-    // Si no hay filtro, usa el stock total
-    console.log("Usando stock total:", currentProduct.stock_total);
     return currentProduct.stock_total || 0;
   };
 
