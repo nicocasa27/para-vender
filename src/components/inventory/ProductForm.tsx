@@ -51,8 +51,7 @@ const productFormSchema = z.object({
   initialStock: z.coerce.number().nonnegative({
     message: "La cantidad inicial debe ser un número no negativo.",
   }),
-  warehouse: z.string().optional(),
-  store: z.string().optional(),
+  location: z.string().optional(),
   color: z.string().optional(),
   talla: z.string().optional(),
 });
@@ -86,12 +85,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   } = useProductMetadata();
   
   const { 
-    stores: warehouses, 
-    isLoading: warehousesLoading, 
-    refetch: refetchWarehouses 
+    stores: locations, 
+    isLoading: locationsLoading, 
+    refetch: refetchLocations 
   } = useStores();
   
-  const isLoading = metadataLoading || warehousesLoading;
+  const isLoading = metadataLoading || locationsLoading;
 
   useEffect(() => {
     console.log("ProductForm montado - isEditing:", isEditing);
@@ -106,23 +105,23 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       });
     }
     
-    if (warehouses.length === 0 && !isEditing) {
-      console.log("ProductForm - Recargando almacenes...");
-      refetchWarehouses().catch(error => {
-        console.error("Error al recargar almacenes:", error);
+    if (locations.length === 0 && !isEditing) {
+      console.log("ProductForm - Recargando ubicaciones...");
+      refetchLocations().catch(error => {
+        console.error("Error al recargar ubicaciones:", error);
       });
     }
-  }, [hasMetadata, categories.length, units.length, warehouses.length, isEditing, refetchMetadata, refetchWarehouses]);
+  }, [hasMetadata, categories.length, units.length, locations.length, isEditing, refetchMetadata, refetchLocations]);
 
   useEffect(() => {
     console.log("ProductForm - Estado actual:", { 
       categoriesCount: categories.length, 
       unitsCount: units.length,
-      warehousesCount: warehouses.length,
+      locationsCount: locations.length,
       hasMetadata,
       isLoading
     });
-  }, [categories.length, units.length, warehouses.length, hasMetadata, isLoading]);
+  }, [categories.length, units.length, locations.length, hasMetadata, isLoading]);
 
   const defaultValues: Partial<ProductFormValues> = {
     name: "",
@@ -133,8 +132,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     minStock: 0,
     maxStock: 0,
     initialStock: 0,
-    warehouse: "",
-    store: "",
+    location: "",
     color: "",
     talla: "",
     ...initialData
@@ -180,11 +178,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       return;
     }
     
-    if (!isEditing && !data.warehouse && warehouses.length > 0) {
-      const errorMsg = "Por favor seleccione un almacén";
+    if (!isEditing && !data.location && locations.length > 0) {
+      const errorMsg = "Por favor seleccione una ubicación";
       setSubmitError(errorMsg);
-      toast.error("❌ Almacén requerido", {
-        description: "Debes seleccionar un almacén para productos nuevos"
+      toast.error("❌ Ubicación requerida", {
+        description: "Debes seleccionar una ubicación para productos nuevos"
       });
       return;
     }
@@ -259,20 +257,20 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     );
   }
 
-  if (!isEditing && warehouses.length === 0) {
+  if (!isEditing && locations.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-8 space-y-4">
         <div className="text-center text-destructive font-medium">
-          No se pudieron cargar los almacenes
+          No se pudieron cargar las ubicaciones
         </div>
         <p className="text-sm text-center text-muted-foreground max-w-md">
-          Se necesitan almacenes para agregar inventario inicial.
+          Se necesitan ubicaciones para agregar inventario inicial.
         </p>
         <Button 
           variant="outline" 
           onClick={() => {
-            refetchWarehouses().then(() => {
-              toast.success("Almacenes actualizados");
+            refetchLocations().then(() => {
+              toast.success("Ubicaciones actualizadas");
             });
           }}
         >
@@ -366,10 +364,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
             <FormField
               control={form.control}
-              name="store"
+              name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Sucursal del Producto</FormLabel>
+                  <FormLabel>Ubicación del Producto</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
@@ -377,14 +375,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Seleccione una sucursal" />
+                        <SelectValue placeholder="Seleccione una ubicación" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="bg-white">
-                      <SelectItem value="no-store">Sin sucursal asignada</SelectItem>
-                      {warehouses.map((warehouse) => (
-                        <SelectItem key={warehouse.id} value={warehouse.id || "store-sin-id"}>
-                          {warehouse.nombre || "Sin nombre"}
+                      <SelectItem value="no-location">Sin ubicación asignada</SelectItem>
+                      {locations.map((location) => (
+                        <SelectItem key={location.id} value={location.id || "location-sin-id"}>
+                          {location.nombre || "Sin nombre"}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -503,56 +501,25 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             />
 
             {!isEditing && (
-              <>
-                <FormField
-                  control={form.control}
-                  name="initialStock"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cantidad Inicial</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="1"
-                          min="0"
-                          {...field}
-                          placeholder="0"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="warehouse"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Almacén</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        value={field.value || undefined}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione un almacén" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="bg-white">
-                          {warehouses.map((warehouse) => (
-                            <SelectItem key={warehouse.id} value={warehouse.id || "warehouse-sin-id"}>
-                              {warehouse.nombre || "Sin nombre"}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
+              <FormField
+                control={form.control}
+                name="initialStock"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cantidad Inicial</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="1"
+                        min="0"
+                        {...field}
+                        placeholder="0"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             )}
           </div>
 

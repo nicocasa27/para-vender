@@ -23,7 +23,6 @@ interface ProductData {
   stock_minimo?: number;
   stock_maximo?: number;
   sucursal_id?: string;
-  warehouse?: string;
   initialStock?: number;
   color?: string;
   talla?: string;
@@ -119,13 +118,12 @@ export function ProductModal({
       precio_venta: data.salePrice,
       stock_minimo: data.minStock,
       stock_maximo: data.maxStock,
-      sucursal_id: data.store || null,
+      sucursal_id: data.location === "no-location" ? null : data.location,
       color: data.color || null,
       talla: data.talla || null
     };
     
-    if (!isEditing && data.warehouse && data.initialStock > 0) {
-      productData.warehouse = data.warehouse;
+    if (!isEditing && data.location && data.initialStock > 0) {
       productData.initialStock = data.initialStock;
     }
     

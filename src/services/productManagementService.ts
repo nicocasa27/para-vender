@@ -37,12 +37,20 @@ export async function addProduct(productData: any) {
     console.log("Product added successfully:", newProduct);
     
     // 2. Si se proporcionó inventario inicial, añadirlo
-    if (productData.warehouse && productData.initialStock > 0 && newProduct) {
+    if (productData.initialStock > 0 && newProduct) {
+      // Usar sucursal_id como almacén para inventario inicial
+      const almacenId = productData.sucursal_id;
+      
+      if (!almacenId) {
+        console.warn("No se especificó ubicación para el inventario inicial");
+        return { success: true, data: newProduct };
+      }
+      
       const { error: inventoryError } = await supabase
         .from('inventario')
         .insert({
           producto_id: newProduct.id,
-          almacen_id: productData.warehouse,
+          almacen_id: almacenId,
           cantidad: productData.initialStock
         });
         
