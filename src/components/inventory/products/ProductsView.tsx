@@ -49,6 +49,12 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
   } = useProductsView(onRefresh);
 
   const { isLoading: metadataLoading } = useProductMetadata();
+  
+  // Obtener el stock actual del producto en edición
+  const getCurrentStock = () => {
+    if (!currentProduct) return 0;
+    return currentProduct.stock_total || 0;
+  };
 
   useEffect(() => {
     if (!hasMetadata && !metadataLoading) {
@@ -57,12 +63,6 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
       });
     }
   }, [hasMetadata, metadataLoading]);
-
-  // Obtener el stock actual del producto en edición
-  const getCurrentStock = () => {
-    if (!currentProduct) return 0;
-    return currentProduct.stock_total || 0;
-  };
 
   return (
     <div className="space-y-4">

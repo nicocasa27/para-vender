@@ -13,6 +13,7 @@ import {
 import { mapInventoryData } from "@/utils/inventory/mappers";
 import { useAuth } from "@/contexts/auth";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
+import { useProductsFiltering } from "./product/useProductsFiltering";
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -25,28 +26,22 @@ export function useProducts() {
   const [error, setError] = useState<string | null>(null);
   
   // Obtener información del usuario y sus sucursales asignadas
-  const { user, userRoles, hasRole } = useAuth();
+  const { hasRole } = useAuth();
   const { stores: userStores, hasStores, isLoading: storesLoading } = useCurrentStores();
   
   // Función para obtener los IDs de las sucursales asignadas al usuario
   const getUserStoreIds = useMemo(() => {
-    const isAdmin = hasRole('admin');
-    const isManager = hasRole('manager');
-    
-    // Administradores y gerentes pueden ver todo
-    if (isAdmin || isManager) {
+    if (hasRole('admin') || hasRole('manager')) {
       console.log("Usuario es admin o gerente, puede ver todas las sucursales");
       return null;
     }
     
-    // Si tiene sucursales asignadas como vendedor, obtenemos sus IDs
     if (hasRole('sales') && hasStores) {
       const storeIds = userStores.map(store => store.id);
       console.log("Usuario tiene sucursales asignadas:", storeIds);
       return storeIds;
     }
     
-    // Si es viewer sin sucursales asignadas, puede ver todo
     if (hasRole('viewer')) {
       console.log("Usuario es viewer sin sucursales específicas, muestra todo");
       return null;
@@ -54,13 +49,13 @@ export function useProducts() {
     
     console.log("Usuario sin roles específicos o sucursales asignadas");
     return [];
-  }, [userRoles, userStores, hasStores, hasRole]);
+  }, [userStores, hasStores, hasRole]);
 
-  // Function to get a product by ID
-  const getProductById = (id: string) => {
-    return products.find((product) => product.id === id);
-  };
+  // Obtener producto por ID
+  const getProductById = (id: string) => 
+    products.find((product) => product.id === id);
 
+  // Cargar datos de productos, categorías y tiendas
   const refreshProducts = async () => {
     setLoading(true);
     setError(null);
@@ -80,7 +75,6 @@ export function useProducts() {
       setStores(storeData || []);
       
       console.log(`Loaded ${mappedProducts.length} products, ${categoryData?.length} categories, ${storeData?.length} stores`);
-      console.log('User store IDs:', getUserStoreIds);
     } catch (error: any) {
       console.error("Error fetching products:", error);
       setError(error.message || "Error al cargar productos");
@@ -90,6 +84,7 @@ export function useProducts() {
     }
   };
 
+  // Operaciones de CRUD de productos
   const addProduct = async (productData: any) => {
     try {
       const result = await addProductService(productData);
@@ -106,13 +101,11 @@ export function useProducts() {
 
   const editProduct = async (productData: any) => {
     try {
-      // Asegurarse de que todos los campos estén presentes
       const completeProductData = {
         ...productData,
         color: productData.color || null,
         talla: productData.talla || null
       };
-      console.log("useProducts.editProduct - Datos completos:", completeProductData);
       
       const result = await updateProduct(completeProductData);
       if (result.success) {
@@ -147,65 +140,21 @@ export function useProducts() {
     if (!storesLoading) {
       refreshProducts();
     }
-  }, [storesLoading, userRoles.length, getUserStoreIds]);
+  }, [storesLoading]);
 
-  const filteredProducts = useMemo(() => {
-    if (!products.length) return [];
-    
-    return products.filter((product) => {
-      // Primero filtramos por las sucursales asignadas al usuario (sales)
-      if (getUserStoreIds && getUserStoreIds.length > 0) {
-        // Si el producto no tiene stock en ninguna sucursal, saltarlo
-        if (!product.stock_by_store || Object.keys(product.stock_by_store).length === 0) {
-          return false;
-        }
-        
-        // Verificar si el producto tiene stock en alguna de las sucursales del usuario
-        const hasStockInUserStore = getUserStoreIds.some(storeId => 
-          product.stock_by_store && 
-          product.stock_by_store[storeId] !== undefined
-        );
-        
-        // Si no tiene stock en ninguna sucursal del usuario, no mostrar
-        if (!hasStockInUserStore) {
-          return false;
-        }
-      }
-      
-      // Aplicar filtro de búsqueda
-      const matchesSearch = searchTerm 
-        ? product.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-        : true;
-      
-      // Aplicar filtro de categoría
-      const matchesCategory = categoryFilter 
-        ? product.categoria_id === categoryFilter
-        : true;
-      
-      // Aplicar filtro de sucursal seleccionada por el usuario en la UI
-      const matchesStore = storeFilter
-        ? (product.stock_by_store && 
-           product.stock_by_store[storeFilter] !== undefined && 
-           product.stock_by_store[storeFilter] > 0)
-        : true;
-      
-      return matchesSearch && matchesCategory && matchesStore;
-    });
-  }, [products, searchTerm, categoryFilter, storeFilter, getUserStoreIds]);
+  // Aplicar filtros para productos
+  const { filteredProducts } = useProductsFiltering({
+    products,
+    searchTerm,
+    categoryFilter,
+    storeFilter,
+    getUserStoreIds
+  });
   
-  // Filters stores based on user role - only show stores the user has access to
+  // Filtrar tiendas según el rol del usuario
   const accessibleStores = useMemo(() => {
-    // Admin and manager can see all stores
-    if (hasRole('admin') || hasRole('manager')) {
-      return stores;
-    }
-    
-    // Sales users can only see their assigned stores
-    if (hasRole('sales') && hasStores) {
-      return userStores;
-    }
-    
-    // Viewer or others get all stores
+    if (hasRole('admin') || hasRole('manager')) return stores;
+    if (hasRole('sales') && hasStores) return userStores;
     return stores;
   }, [stores, userStores, hasRole, hasStores]);
   

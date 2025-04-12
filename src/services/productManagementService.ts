@@ -4,13 +4,12 @@ import { toast } from "sonner";
 
 /**
  * Añade un nuevo producto a la base de datos
- * @param productData Datos del producto a agregar
  */
 export async function addProduct(productData: any) {
   console.log("Adding product to Supabase:", productData);
 
-  // 1. Insertar producto en tabla productos
   try {
+    // 1. Insertar producto en tabla productos
     const { data: newProduct, error: productError } = await supabase
       .from('productos')
       .insert({
@@ -36,36 +35,8 @@ export async function addProduct(productData: any) {
     
     console.log("Product added successfully:", newProduct);
     
-    // 2. Si se proporcionó inventario inicial, añadirlo
-    if (productData.initialStock > 0 && newProduct) {
-      // Usar sucursal_id como almacén para inventario inicial
-      const almacenId = productData.sucursal_id;
-      
-      if (!almacenId) {
-        console.warn("No se especificó ubicación para el inventario inicial");
-        return { success: true, data: newProduct };
-      }
-      
-      console.log(`Agregando inventario inicial: ${productData.initialStock} unidades en almacén ${almacenId}`);
-      
-      const { data: inventoryData, error: inventoryError } = await supabase
-        .from('inventario')
-        .insert({
-          producto_id: newProduct.id,
-          almacen_id: almacenId,
-          cantidad: productData.initialStock
-        })
-        .select();
-        
-      if (inventoryError) {
-        console.error("Error adding initial inventory:", inventoryError);
-        toast.error("Producto creado pero hubo un error al añadir inventario inicial");
-      } else {
-        console.log("Inventario inicial agregado correctamente:", inventoryData);
-      }
-    } else {
-      console.log("No se agregó inventario inicial (cantidad = 0 o ubicación no especificada)");
-    }
+    // 2. Manejar inventario inicial si está presente
+    await handleInitialInventory(productData, newProduct);
     
     return { success: true, data: newProduct };
   } catch (error) {
@@ -75,8 +46,49 @@ export async function addProduct(productData: any) {
 }
 
 /**
+ * Gestiona el inventario inicial de un producto nuevo
+ */
+async function handleInitialInventory(productData: any, newProduct: any) {
+  if (!(productData.initialStock > 0 && newProduct)) {
+    console.log("No se agregó inventario inicial (cantidad = 0 o falta el producto)");
+    return;
+  }
+    
+  // Usar sucursal_id como almacén para inventario inicial
+  const almacenId = productData.sucursal_id;
+  
+  if (!almacenId) {
+    console.warn("No se especificó ubicación para el inventario inicial");
+    return;
+  }
+  
+  console.log(`Agregando inventario inicial: ${productData.initialStock} unidades en almacén ${almacenId}`);
+  
+  try {
+    const { data: inventoryData, error: inventoryError } = await supabase
+      .from('inventario')
+      .insert({
+        producto_id: newProduct.id,
+        almacen_id: almacenId,
+        cantidad: productData.initialStock
+      })
+      .select();
+      
+    if (inventoryError) {
+      console.error("Error adding initial inventory:", inventoryError);
+      toast.error("Producto creado pero hubo un error al añadir inventario inicial");
+      return;
+    }
+    
+    console.log("Inventario inicial agregado correctamente:", inventoryData);
+  } catch (error) {
+    console.error("Error al manejar inventario inicial:", error);
+    toast.error("Error al manejar inventario inicial");
+  }
+}
+
+/**
  * Actualiza un producto existente
- * @param productData Datos actualizados del producto
  */
 export async function updateProduct(productData: any) {
   console.log("Updating product in Supabase:", productData);
@@ -86,7 +98,7 @@ export async function updateProduct(productData: any) {
   }
   
   try {
-    // Asegurarnos de que los campos color y talla se manejan explícitamente para permitir valores nulos
+    // Actualizar datos básicos del producto
     const updateData = {
       nombre: productData.nombre,
       descripcion: productData.descripcion,
@@ -100,8 +112,6 @@ export async function updateProduct(productData: any) {
       color: productData.color || null,
       talla: productData.talla || null
     };
-    
-    console.log("Datos efectivos para actualización:", updateData);
     
     const { data: updatedProduct, error: updateError } = await supabase
       .from('productos')
@@ -117,53 +127,8 @@ export async function updateProduct(productData: any) {
     
     console.log("Product updated successfully:", updatedProduct);
     
-    // Si hay un ajuste de stock, actualizar el inventario
-    if (productData.stockAdjustment && productData.stockAdjustment !== 0) {
-      // Necesitamos el almacén (sucursal) del producto para actualizar su inventario
-      const almacenId = productData.sucursal_id;
-      
-      if (!almacenId) {
-        console.warn("No se encontró el almacén del producto para ajustar el stock");
-        return { success: true, data: updatedProduct };
-      }
-      
-      console.log(`Ajustando inventario: ${productData.stockAdjustment} unidades en almacén ${almacenId}`);
-      
-      // Llamar a la función de actualización de inventario usando RPC
-      const { data: adjustmentResult, error: adjustmentError } = await supabase
-        .rpc('update_inventory', {
-          p_producto_id: productData.id,
-          p_almacen_id: almacenId,
-          p_cantidad: productData.stockAdjustment
-        });
-        
-      if (adjustmentError) {
-        console.error("Error adjusting inventory:", adjustmentError);
-        toast.error("Producto actualizado pero hubo un error al ajustar el inventario");
-      } else {
-        console.log("Inventario ajustado correctamente");
-        
-        // Registrar el movimiento en la tabla de movimientos
-        const movimientoTipo = productData.stockAdjustment > 0 ? 'entrada' : 'salida';
-        const cantidadAbs = Math.abs(productData.stockAdjustment);
-        
-        const { error: movimientoError } = await supabase
-          .from('movimientos')
-          .insert({
-            producto_id: productData.id,
-            almacen_origen_id: movimientoTipo === 'salida' ? almacenId : null,
-            almacen_destino_id: movimientoTipo === 'entrada' ? almacenId : null,
-            cantidad: cantidadAbs,
-            tipo: movimientoTipo,
-            notas: `Ajuste manual desde edición de producto`
-          });
-          
-        if (movimientoError) {
-          console.error("Error registering movement:", movimientoError);
-          toast.error("Inventario ajustado pero no se pudo registrar el movimiento");
-        }
-      }
-    }
+    // Manejar ajuste de inventario si es necesario
+    await handleInventoryAdjustment(productData);
     
     return { success: true, data: updatedProduct };
   } catch (error) {
@@ -173,14 +138,84 @@ export async function updateProduct(productData: any) {
 }
 
 /**
+ * Gestiona ajustes de inventario durante la actualización de productos
+ */
+async function handleInventoryAdjustment(productData: any) {
+  if (!(productData.stockAdjustment && productData.stockAdjustment !== 0)) {
+    return;
+  }
+  
+  // Necesitamos el almacén (sucursal) del producto para actualizar su inventario
+  const almacenId = productData.sucursal_id;
+  
+  if (!almacenId) {
+    console.warn("No se encontró el almacén del producto para ajustar el stock");
+    return;
+  }
+  
+  console.log(`Ajustando inventario: ${productData.stockAdjustment} unidades en almacén ${almacenId}`);
+  
+  try {
+    // Actualizar inventario usando RPC
+    const { data: adjustmentResult, error: adjustmentError } = await supabase
+      .rpc('update_inventory', {
+        p_producto_id: productData.id,
+        p_almacen_id: almacenId,
+        p_cantidad: productData.stockAdjustment
+      });
+      
+    if (adjustmentError) {
+      console.error("Error adjusting inventory:", adjustmentError);
+      toast.error("Producto actualizado pero hubo un error al ajustar el inventario");
+      return;
+    }
+    
+    console.log("Inventario ajustado correctamente");
+    
+    // Registrar el movimiento
+    await logInventoryMovement(productData, almacenId);
+  } catch (error) {
+    console.error("Error al realizar ajuste de inventario:", error);
+    toast.error("Error al ajustar inventario");
+  }
+}
+
+/**
+ * Registra un movimiento de inventario en la tabla de movimientos
+ */
+async function logInventoryMovement(productData: any, almacenId: string) {
+  const movimientoTipo = productData.stockAdjustment > 0 ? 'entrada' : 'salida';
+  const cantidadAbs = Math.abs(productData.stockAdjustment);
+  
+  try {
+    const { error: movimientoError } = await supabase
+      .from('movimientos')
+      .insert({
+        producto_id: productData.id,
+        almacen_origen_id: movimientoTipo === 'salida' ? almacenId : null,
+        almacen_destino_id: movimientoTipo === 'entrada' ? almacenId : null,
+        cantidad: cantidadAbs,
+        tipo: movimientoTipo,
+        notas: `Ajuste manual desde edición de producto`
+      });
+      
+    if (movimientoError) {
+      console.error("Error registering movement:", movimientoError);
+      toast.error("Inventario ajustado pero no se pudo registrar el movimiento");
+    }
+  } catch (error) {
+    console.error("Error al registrar movimiento:", error);
+  }
+}
+
+/**
  * Elimina un producto por su ID
- * @param productId ID del producto a eliminar
  */
 export async function deleteProduct(productId: string) {
   console.log("Deleting product from Supabase:", productId);
   
-  // Primero eliminar registros de inventario relacionados
   try {
+    // Primero eliminar registros de inventario relacionados
     const { error: inventoryError } = await supabase
       .from('inventario')
       .delete()
@@ -188,10 +223,10 @@ export async function deleteProduct(productId: string) {
       
     if (inventoryError) {
       console.error("Error deleting inventory records:", inventoryError);
-      // Continuar intentando eliminar el producto a pesar del error
+      // Continuar eliminando producto a pesar del error
     }
     
-    // Ahora eliminar el producto
+    // Eliminar producto
     const { error: productError } = await supabase
       .from('productos')
       .delete()
