@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
@@ -13,6 +12,9 @@ import { DeleteProductDialog } from "@/components/inventory/DeleteProductDialog"
 import { ProductHistorySheet } from "@/components/ProductHistorySheet";
 import { toast } from "sonner";
 import { formatQuantityWithUnit } from "@/utils/inventory/formatters";
+import { ExcelImportButton } from "./excel-import/ExcelImportButton";
+import { Button } from "@/components/ui/button";
+import { DownloadCloud } from "lucide-react";
 
 interface ProductsViewProps {
   onRefresh?: () => void;
@@ -154,6 +156,16 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
         storeFilter={storeFilter}
         onStoreChange={setStoreFilter}
       />
+
+      <div className="flex flex-wrap gap-2 bg-accent/30 p-3 rounded-md border">
+        <div className="flex-1">
+          <h3 className="text-sm font-medium mb-1">Herramientas de Excel</h3>
+          <p className="text-xs text-muted-foreground mb-2">Importa o descarga plantillas para gestionar tu inventario</p>
+        </div>
+        <div className="flex gap-2 items-center">
+          <ExcelImportButton />
+        </div>
+      </div>
 
       <StoreFilterNotice 
         storeFilter={storeFilter} 

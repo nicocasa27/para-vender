@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import * as XLSX from "xlsx";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function InventoryExcelTemplate() {
   const handleDownloadTemplate = () => {
@@ -88,14 +89,23 @@ export function InventoryExcelTemplate() {
   };
 
   return (
-    <Button 
-      variant="outline" 
-      size="sm" 
-      onClick={handleDownloadTemplate}
-      className="flex items-center gap-2"
-    >
-      <Download className="h-4 w-4" />
-      Descargar Plantilla
-    </Button>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            onClick={handleDownloadTemplate}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Descargar Plantilla
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Descargar plantilla Excel para importación</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

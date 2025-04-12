@@ -15,7 +15,7 @@ export function ExcelImportButton() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button 
-              variant="secondary" 
+              variant="default" 
               size="sm" 
               onClick={() => setIsDialogOpen(true)}
               className="flex items-center gap-2"
