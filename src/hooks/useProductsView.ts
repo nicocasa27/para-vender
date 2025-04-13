@@ -48,6 +48,9 @@ export function useProductsView(onRefresh?: () => void) {
     if (!currentProduct) return;
     
     try {
+      console.log("Datos del formulario para editar:", productData);
+      
+      // Asegurarse de que el ID del producto esté incluido
       await editProduct({
         ...productData,
         id: currentProduct.id
@@ -55,7 +58,12 @@ export function useProductsView(onRefresh?: () => void) {
       
       setIsEditModalOpen(false);
       setCurrentProduct(null);
+      
+      // Refrescar la lista de productos
+      await refreshProducts();
       if (onRefresh) onRefresh();
+      
+      toast.success("Producto actualizado correctamente");
     } catch (error) {
       console.error("Error al editar producto:", error);
       toast.error("Error al editar producto");
@@ -72,6 +80,7 @@ export function useProductsView(onRefresh?: () => void) {
   };
 
   const openEditModal = (product: Product) => {
+    // Actualizamos el producto antes de abrir el modal para asegurarnos de tener la última versión
     console.log("Abriendo modal de edición para producto:", product);
     console.log("Stock actual del producto:", product.stock_total);
     setCurrentProduct(product);
@@ -83,8 +92,8 @@ export function useProductsView(onRefresh?: () => void) {
     setIsHistoryOpen(true);
   };
 
-  const handleRefresh = () => {
-    refreshProducts();
+  const handleRefresh = async () => {
+    await refreshProducts();
     if (onRefresh) onRefresh();
   };
 

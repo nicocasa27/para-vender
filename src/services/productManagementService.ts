@@ -128,7 +128,12 @@ export async function updateProduct(productData: any) {
     console.log("Product updated successfully:", updatedProduct);
     
     // Manejar ajuste de inventario si es necesario
-    await handleInventoryAdjustment(productData);
+    if (productData.stockAdjustment && productData.stockAdjustment !== 0) {
+      console.log(`Ajuste de inventario solicitado: ${productData.stockAdjustment}`);
+      await handleInventoryAdjustment(productData);
+    } else {
+      console.log("No se realizó ajuste de inventario (ajuste = 0 o no especificado)");
+    }
     
     return { success: true, data: updatedProduct };
   } catch (error) {
@@ -142,6 +147,7 @@ export async function updateProduct(productData: any) {
  */
 async function handleInventoryAdjustment(productData: any) {
   if (!(productData.stockAdjustment && productData.stockAdjustment !== 0)) {
+    console.log("No hay ajuste de inventario para realizar");
     return;
   }
   
@@ -150,6 +156,7 @@ async function handleInventoryAdjustment(productData: any) {
   
   if (!almacenId) {
     console.warn("No se encontró el almacén del producto para ajustar el stock");
+    toast.error("No se pudo ajustar el inventario: Falta la ubicación del producto");
     return;
   }
   
@@ -166,14 +173,17 @@ async function handleInventoryAdjustment(productData: any) {
       
     if (adjustmentError) {
       console.error("Error adjusting inventory:", adjustmentError);
-      toast.error("Producto actualizado pero hubo un error al ajustar el inventario");
+      toast.error("Producto actualizado pero hubo un error al ajustar el inventario", {
+        description: adjustmentError.message
+      });
       return;
     }
     
-    console.log("Inventario ajustado correctamente");
+    console.log("Inventario ajustado correctamente", adjustmentResult);
     
     // Registrar el movimiento
     await logInventoryMovement(productData, almacenId);
+    toast.success("Inventario actualizado correctamente");
   } catch (error) {
     console.error("Error al realizar ajuste de inventario:", error);
     toast.error("Error al ajustar inventario");
@@ -188,7 +198,7 @@ async function logInventoryMovement(productData: any, almacenId: string) {
   const cantidadAbs = Math.abs(productData.stockAdjustment);
   
   try {
-    const { error: movimientoError } = await supabase
+    const { data: movimientoData, error: movimientoError } = await supabase
       .from('movimientos')
       .insert({
         producto_id: productData.id,
@@ -197,11 +207,14 @@ async function logInventoryMovement(productData: any, almacenId: string) {
         cantidad: cantidadAbs,
         tipo: movimientoTipo,
         notas: `Ajuste manual desde edición de producto`
-      });
+      })
+      .select();
       
     if (movimientoError) {
       console.error("Error registering movement:", movimientoError);
       toast.error("Inventario ajustado pero no se pudo registrar el movimiento");
+    } else {
+      console.log("Movimiento registrado correctamente:", movimientoData);
     }
   } catch (error) {
     console.error("Error al registrar movimiento:", error);

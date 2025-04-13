@@ -40,8 +40,14 @@ export function transformProductFormData(data: ProductFormData, isEditing: boole
   };
   
   // Si estamos editando y hay un ajuste de stock, incluirlo
+  // Aseguramos que llegue como número con valor distinto de cero
   if (isEditing && typeof data.stockAdjustment === 'number' && data.stockAdjustment !== 0) {
     productData.stockAdjustment = data.stockAdjustment;
+    
+    // Añadir log para debug
+    console.log(`Ajuste de stock: ${data.stockAdjustment}, Stock actual: ${currentStock}, Nuevo stock esperado: ${currentStock + data.stockAdjustment}`);
+  } else if (isEditing) {
+    console.log("No se detectó ajuste de stock o es cero");
   }
   
   if (!isEditing && data.location && data.location !== "no-location" && data.initialStock && data.initialStock > 0) {
