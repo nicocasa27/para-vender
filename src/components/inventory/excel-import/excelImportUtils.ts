@@ -13,6 +13,8 @@ export interface ExcelProduct {
   stock_maximo?: number;
   sucursal?: string;
   stock_inicial: number;
+  color?: string;
+  talla?: string;
   _row?: number; // For tracking the Excel row number
   _error?: boolean; // For marking rows with errors
 }
@@ -28,7 +30,9 @@ const fieldMap: Record<string, string> = {
   "Stock Mínimo*": "stock_minimo",
   "Stock Máximo": "stock_maximo",
   "Sucursal": "sucursal",
-  "Stock Inicial*": "stock_inicial"
+  "Stock Inicial*": "stock_inicial",
+  "Color": "color",
+  "Talla": "talla"
 };
 
 // Define required fields

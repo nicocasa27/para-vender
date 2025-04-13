@@ -33,7 +33,7 @@ export function InventoryExcelTemplate() {
         "Unidad", 
         "5", 
         "50", 
-        "", 
+        "Sucursal Principal", 
         "10",
         "Negro",
         "M"
@@ -83,6 +83,12 @@ export function InventoryExcelTemplate() {
       ["- Sucursal: Nombre de la sucursal donde estará el producto (debe existir en el sistema)"],
       ["- Color: Color del producto (texto)"],
       ["- Talla: Talla o tamaño del producto (texto)"],
+      [""],
+      ["Notas importantes:"],
+      ["1. No cambie el orden de las columnas"],
+      ["2. Los campos marcados con * son obligatorios"],
+      ["3. Si no conoce algún valor opcional, puede dejarlo en blanco"],
+      ["4. Para agregar más productos, simplemente añada más filas debajo del ejemplo"],
     ];
 
     const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsData);

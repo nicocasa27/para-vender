@@ -81,7 +81,9 @@ export async function importProductsFromExcel(
           unidad_id: unitId,
           stock_minimo: product.stock_minimo,
           stock_maximo: product.stock_maximo,
-          sucursal_id: storeId
+          sucursal_id: storeId,
+          color: product.color,
+          talla: product.talla
         });
         
         // 5. Create inventory entry if product was created and stock_inicial > 0

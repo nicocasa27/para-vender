@@ -1,9 +1,11 @@
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RefreshCw, Search, DownloadCloud, Upload } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Category, Store } from "@/types/inventory";
 import { ExcelImportButton } from "./excel-import/ExcelImportButton";
+import { InventoryExcelTemplate } from "./excel-import/InventoryExcelTemplate";
 import { useAuth } from "@/contexts/auth";
 
 interface ProductTableHeaderProps {
@@ -51,6 +53,7 @@ const ProductTableHeader = ({
           {canAddProducts && (
             <div className="flex gap-2">
               <ExcelImportButton />
+              <InventoryExcelTemplate />
             </div>
           )}
         </div>
