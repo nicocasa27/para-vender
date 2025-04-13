@@ -163,23 +163,73 @@ async function handleInventoryAdjustment(productData: any) {
   console.log(`Ajustando inventario: ${productData.stockAdjustment} unidades en almacén ${almacenId}`);
   
   try {
-    // Actualizar inventario usando RPC
-    const { data: adjustmentResult, error: adjustmentError } = await supabase
-      .rpc('update_inventory', {
-        p_producto_id: productData.id,
-        p_almacen_id: almacenId,
-        p_cantidad: productData.stockAdjustment
-      });
+    // Verificar si existe un registro de inventario para este producto y almacén
+    const { data: existingInventory, error: checkError } = await supabase
+      .from('inventario')
+      .select('id, cantidad')
+      .eq('producto_id', productData.id)
+      .eq('almacen_id', almacenId)
+      .maybeSingle();
       
-    if (adjustmentError) {
-      console.error("Error adjusting inventory:", adjustmentError);
-      toast.error("Producto actualizado pero hubo un error al ajustar el inventario", {
-        description: adjustmentError.message
-      });
+    if (checkError) {
+      console.error("Error checking inventory:", checkError);
+      toast.error("Error al verificar inventario existente");
       return;
     }
     
-    console.log("Inventario ajustado correctamente", adjustmentResult);
+    let adjustmentResult;
+    
+    if (existingInventory) {
+      // Existe un registro de inventario, actualizarlo
+      const newQuantity = Number(existingInventory.cantidad) + Number(productData.stockAdjustment);
+      
+      if (newQuantity < 0) {
+        toast.error("No hay suficiente inventario para realizar esta operación");
+        return;
+      }
+      
+      const { data, error: updateError } = await supabase
+        .from('inventario')
+        .update({ 
+          cantidad: newQuantity,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingInventory.id)
+        .select();
+        
+      if (updateError) {
+        console.error("Error updating inventory:", updateError);
+        toast.error("Error al actualizar inventario");
+        return;
+      }
+      
+      adjustmentResult = data;
+      console.log("Inventario actualizado correctamente:", data);
+    } else {
+      // No existe un registro, crearlo (solo si es un ajuste positivo)
+      if (productData.stockAdjustment <= 0) {
+        toast.error("No se puede reducir inventario que no existe");
+        return;
+      }
+      
+      const { data, error: insertError } = await supabase
+        .from('inventario')
+        .insert({
+          producto_id: productData.id,
+          almacen_id: almacenId,
+          cantidad: productData.stockAdjustment
+        })
+        .select();
+        
+      if (insertError) {
+        console.error("Error creating inventory:", insertError);
+        toast.error("Error al crear registro de inventario");
+        return;
+      }
+      
+      adjustmentResult = data;
+      console.log("Inventario creado correctamente:", data);
+    }
     
     // Registrar el movimiento
     await logInventoryMovement(productData, almacenId);

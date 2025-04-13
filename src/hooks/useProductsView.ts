@@ -66,7 +66,9 @@ export function useProductsView(onRefresh?: () => void) {
       toast.success("Producto actualizado correctamente");
     } catch (error) {
       console.error("Error al editar producto:", error);
-      toast.error("Error al editar producto");
+      toast.error("Error al editar producto", {
+        description: error instanceof Error ? error.message : "Error desconocido"
+      });
     }
   };
 
@@ -83,7 +85,19 @@ export function useProductsView(onRefresh?: () => void) {
     // Actualizamos el producto antes de abrir el modal para asegurarnos de tener la última versión
     console.log("Abriendo modal de edición para producto:", product);
     console.log("Stock actual del producto:", product.stock_total);
-    setCurrentProduct(product);
+    
+    // Si hay un filtro de sucursal activo, buscamos el stock específico de esa sucursal
+    let stockActual = product.stock_total || 0;
+    if (storeFilter && product.stock_by_store) {
+      stockActual = product.stock_by_store[storeFilter] || 0;
+    }
+    
+    console.log(`Stock para mostrar: ${stockActual} (${storeFilter ? 'filtrado por sucursal' : 'total'})`);
+    setCurrentProduct({
+      ...product,
+      // Asegurarse de que el stock_total refleje el valor correcto según el filtro
+      stock_total: stockActual
+    });
     setIsEditModalOpen(true);
   };
 
@@ -112,9 +126,21 @@ export function useProductsView(onRefresh?: () => void) {
     return store ? store.nombre : "Sucursal";
   };
 
-  // Obtener el stock actual del producto en edición
+  // Obtener el stock actual del producto en edición según el filtro de sucursal
   const getCurrentStock = () => {
     if (!currentProduct) return 0;
+    
+    // Si hay un filtro de sucursal activo, mostrar el stock de esa sucursal
+    if (storeFilter && currentProduct.stock_by_store) {
+      return currentProduct.stock_by_store[storeFilter] || 0;
+    }
+    
+    // Si el producto tiene una sucursal asignada y stock para esa sucursal
+    if (currentProduct.sucursal_id && currentProduct.stock_by_store && 
+        currentProduct.stock_by_store[currentProduct.sucursal_id]) {
+      return currentProduct.stock_by_store[currentProduct.sucursal_id];
+    }
+    
     return currentProduct.stock_total || 0;
   };
 
