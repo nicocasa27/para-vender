@@ -1,22 +1,28 @@
 
-import { toast } from "sonner";
+/**
+ * Utilidad para transformar datos del formulario de productos al formato esperado por Supabase
+ */
 
+// Definimos la interfaz para los datos que vienen del formulario
 interface ProductFormData {
-  name: any;
-  description?: any;
-  category: any;
-  unit: any;
-  purchasePrice: any;
-  salePrice: any;
-  minStock: any;
-  maxStock: any;
-  location: any;
-  color?: any;
-  talla?: any;
+  name: string;
+  description?: string;
+  category: string;
+  unit: string;
+  purchasePrice: number;
+  salePrice: number;
+  minStock: number;
+  maxStock: number;
+  location: string;
+  color?: string;
+  talla?: string;
   stockAdjustment?: number;
   initialStock?: number;
 }
 
+/**
+ * Transforma los datos del formulario al formato esperado por el servicio
+ */
 export function transformProductFormData(data: ProductFormData, isEditing: boolean, productId: string | null = null, currentStock: number = 0) {
   const productData: any = {
     id: isEditing && productId ? productId : null,

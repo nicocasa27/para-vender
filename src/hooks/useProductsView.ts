@@ -73,6 +73,7 @@ export function useProductsView(onRefresh?: () => void) {
 
   const openEditModal = (product: Product) => {
     console.log("Abriendo modal de edición para producto:", product);
+    console.log("Stock actual del producto:", product.stock_total);
     setCurrentProduct(product);
     setIsEditModalOpen(true);
   };

@@ -45,11 +45,12 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
     handleRefresh,
     getCategoryName,
     getStoreName,
+    getCurrentStock,
     hasMetadata
   } = useProductsView(onRefresh);
 
   const { isLoading: metadataLoading } = useProductMetadata();
-
+  
   useEffect(() => {
     if (!hasMetadata && !metadataLoading) {
       toast.error("Faltan datos básicos", {
@@ -114,9 +115,13 @@ export function ProductsView({ onRefresh }: ProductsViewProps) {
             category: currentProduct.categoria_id,
             unit: currentProduct.unidad_id,
             minStock: currentProduct.stock_minimo,
-            maxStock: currentProduct.stock_maximo
+            maxStock: currentProduct.stock_maximo,
+            location: currentProduct.sucursal_id || "no-location",
+            color: currentProduct.color || "",
+            talla: currentProduct.talla || ""
           }}
           isEditing
+          currentStock={getCurrentStock()}
         />
       )}
 

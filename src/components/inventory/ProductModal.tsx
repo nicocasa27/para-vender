@@ -8,10 +8,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Loader, AlertTriangle } from "lucide-react";
 import { useProductMetadata } from "@/hooks/useProductMetadata";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { ProductMetadataLoader } from "./ProductMetadataLoader";
 import { transformProductFormData } from "@/utils/inventory/productTransformers";
 
