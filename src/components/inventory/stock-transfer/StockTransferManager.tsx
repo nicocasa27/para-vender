@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StockTransferForm } from "./StockTransferForm";
 import { BulkTransferForm } from "./BulkTransferForm";
 import { TransferHistory } from "./TransferHistory";
-import { Package, Packages } from "lucide-react";
+import { Package, Box } from "lucide-react";  // Changed 'Packages' to 'Package' and 'Box'
 
 export function StockTransferManager() {
   const [refreshHistoryToggle, setRefreshHistoryToggle] = useState(false);
@@ -36,7 +36,7 @@ export function StockTransferManager() {
             Transferencia Individual
           </TabsTrigger>
           <TabsTrigger value="bulk" className="flex items-center gap-2">
-            <Packages className="h-4 w-4" />
+            <Box className="h-4 w-4" />
             Transferencia Masiva
           </TabsTrigger>
         </TabsList>
