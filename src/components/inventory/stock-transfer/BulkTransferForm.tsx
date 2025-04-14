@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ProductStock } from "./types";
+import { getProductsInStore } from "./stock-transfer-api";
 
 // Schema para una transferencia individual en el formulario
 const transferItemSchema = z.object({
@@ -65,8 +66,10 @@ export function BulkTransferForm({ onTransferComplete }: BulkTransferFormProps) 
   const [availableProducts, setAvailableProducts] = useState<ProductStock[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<(ProductStock & { quantity: number })[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<string>("");
   const [currentQuantity, setCurrentQuantity] = useState<number>(1);
+  const [productError, setProductError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof bulkTransferSchema>>({
     resolver: zodResolver(bulkTransferSchema),
@@ -101,38 +104,31 @@ export function BulkTransferForm({ onTransferComplete }: BulkTransferFormProps) 
   useEffect(() => {
     if (!sourceStore) {
       setAvailableProducts([]);
+      setProductError(null);
       return;
     }
 
     const fetchProducts = async () => {
+      setIsLoadingProducts(true);
+      setProductError(null);
+      
       try {
-        const { data, error } = await supabase
-          .from("inventario")
-          .select(`
-            cantidad,
-            productos!inner(
-              id,
-              nombre,
-              unidades(nombre, abreviatura)
-            )
-          `)
-          .eq("almacen_id", sourceStore)
-          .gt("cantidad", 0);
-
-        if (error) throw error;
-
-        // Transformar los datos para coincidir con nuestro formato de producto
-        const productsData = (data || []).map((item: any) => ({
-          id: item.productos.id,
-          nombre: item.productos.nombre,
-          stock: Number(item.cantidad),
-          unidad: item.productos.unidades?.abreviatura || "u",
-        }));
-
-        setAvailableProducts(productsData);
+        // Usar la función de la API para obtener productos
+        const products = await getProductsInStore(sourceStore);
+        
+        console.log("Productos cargados:", products);
+        
+        if (products.length === 0) {
+          setProductError("No hay productos con stock disponible en la sucursal de origen.");
+        }
+        
+        setAvailableProducts(products);
       } catch (error) {
         console.error("Error al cargar productos:", error);
+        setProductError("Error al cargar los productos. Inténtelo de nuevo.");
         toast.error("Error al cargar los productos");
+      } finally {
+        setIsLoadingProducts(false);
       }
     };
 
@@ -307,9 +303,6 @@ export function BulkTransferForm({ onTransferComplete }: BulkTransferFormProps) 
       setIsLoading(false);
     }
   };
-
-  // Verificar si hay productos disponibles para transferir
-  const hasAvailableProducts = availableProducts.length > 0;
   
   // Calcular el total de productos a transferir
   const totalProductsToTransfer = selectedProducts.length;
@@ -357,15 +350,22 @@ export function BulkTransferForm({ onTransferComplete }: BulkTransferFormProps) 
               <div className="space-y-4">
                 <FormLabel>Agregar Productos</FormLabel>
                 
-                {!hasAvailableProducts && (
+                {isLoadingProducts && (
+                  <div className="py-4 flex justify-center">
+                    <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full"></div>
+                    <span className="ml-2">Cargando productos...</span>
+                  </div>
+                )}
+                
+                {productError && !isLoadingProducts && (
                   <Alert variant="destructive">
                     <AlertDescription>
-                      No hay productos con stock disponible en la sucursal de origen.
+                      {productError}
                     </AlertDescription>
                   </Alert>
                 )}
                 
-                {hasAvailableProducts && (
+                {!isLoadingProducts && availableProducts.length > 0 && (
                   <div className="flex flex-col md:flex-row gap-4 items-end">
                     <div className="flex-1">
                       <FormLabel>Producto</FormLabel>

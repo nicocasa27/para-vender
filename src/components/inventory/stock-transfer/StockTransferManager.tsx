@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StockTransferForm } from "./StockTransferForm";
 import { BulkTransferForm } from "./BulkTransferForm";
 import { TransferHistory } from "./TransferHistory";
-import { Package, Box } from "lucide-react";  // Changed 'Packages' to 'Package' and 'Box'
+import { Package, Box } from "lucide-react";  // Corregido: importar Package y Box
 
 export function StockTransferManager() {
   const [refreshHistoryToggle, setRefreshHistoryToggle] = useState(false);
