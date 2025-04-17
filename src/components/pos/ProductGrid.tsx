@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,6 @@ export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps
   const { products, loading, setStoreFilter } = useProducts();
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
-  // Set the store filter when the selected store changes
   useEffect(() => {
     if (selectedStore) {
       setStoreFilter(selectedStore);
@@ -92,7 +90,12 @@ export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps
                     <span>{product.unidad || "unidad"}</span>
                   </div>
                   
-                  {/* Mostrar color y talla si existen */}
+                  {product.descripcion && (
+                    <div className="text-sm text-muted-foreground line-clamp-2">
+                      {product.descripcion}
+                    </div>
+                  )}
+                  
                   {(product.color || product.talla) && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {product.color && (
