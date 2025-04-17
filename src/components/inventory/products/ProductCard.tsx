@@ -1,4 +1,3 @@
-
 import { Product } from "@/types/inventory";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { History, Edit, Trash2, FileText, CircleDot, Tag } from "lucide-react";
 import { formatQuantityWithUnit } from "@/utils/inventory/formatters";
 import { useAuth } from "@/contexts/auth";
-import { formatProductAttributes, hasProductAttributes } from "./ProductUtils";
 
 interface ProductCardProps {
   product: Product;
@@ -38,7 +36,6 @@ export function ProductCard({
   
   // Detectar si hay atributos y descripción
   const hasAttributes = !!(product.color || product.talla);
-  const hasDescription = !!product.descripcion;
 
   return (
     <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow">
@@ -59,6 +56,13 @@ export function ProductCard({
             </div>
           )}
         </div>
+
+        {/* Descripción del producto */}
+        {product.descripcion && (
+          <div className="mt-2 text-sm text-gray-600">
+            {product.descripcion}
+          </div>
+        )}
         
         {/* Atributos visibles - Color y Talla */}
         {hasAttributes && (
@@ -75,16 +79,6 @@ export function ProductCard({
                 Talla: {product.talla}
               </div>
             )}
-          </div>
-        )}
-        
-        {/* Descripción visible */}
-        {hasDescription && (
-          <div className="mt-2 flex items-start gap-1">
-            <FileText className="h-3 w-3 mt-0.5 text-gray-500" />
-            <p className="text-xs text-gray-600 line-clamp-2">
-              {product.descripcion}
-            </p>
           </div>
         )}
       </CardHeader>
