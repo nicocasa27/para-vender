@@ -56,7 +56,7 @@ export function mapInventoryData(productsData: any[], inventoryData: any[]): Pro
       sucursalNombre = storeNamesMap.get(product.sucursal_id);
     }
     
-    // Crear objeto Product
+    // Crear objeto Product y asegurarse de que color y talla sean strings, no null
     return {
       id: product.id,
       nombre: product.nombre,
@@ -69,7 +69,7 @@ export function mapInventoryData(productsData: any[], inventoryData: any[]): Pro
       stock_total: stockTotal,
       stock_minimo: Number(product.stock_minimo) || 0,
       stock_maximo: Number(product.stock_maximo) || 0,
-      descripcion: product.descripcion,
+      descripcion: product.descripcion || '',
       sucursal_id: product.sucursal_id || null,
       sucursal_nombre: sucursalNombre || 'Sin sucursal',
       inventario: inventoryItems,

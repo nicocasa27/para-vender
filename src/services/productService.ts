@@ -20,7 +20,10 @@ export async function fetchProductData() {
       stock_maximo,
       categoria_id,
       unidad_id,
-      sucursal_id
+      sucursal_id,
+      descripcion,
+      color,
+      talla
     `);
 
   if (productsError) {

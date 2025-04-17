@@ -3,7 +3,7 @@ import { Product } from "@/types/inventory";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { History, Edit, Trash2, FileText, CircleDot } from "lucide-react";
+import { History, Edit, Trash2, FileText, CircleDot, Tag } from "lucide-react";
 import { formatQuantityWithUnit } from "@/utils/inventory/formatters";
 import { useAuth } from "@/contexts/auth";
 import { formatProductAttributes, hasProductAttributes } from "./ProductUtils";
@@ -36,9 +36,9 @@ export function ProductCard({
   // Sales users cannot see purchase prices, but admin and manager can
   const canViewPurchasePrice = !hasRole('sales') || hasRole('admin') || hasRole('manager');
   
-  // Obtener atributos formateados (color, talla)
-  const productAttributes = formatProductAttributes(product);
-  const hasAttributes = hasProductAttributes(product);
+  // Detectar si hay atributos y descripción
+  const hasAttributes = !!(product.color || product.talla);
+  const hasDescription = !!product.descripcion;
 
   return (
     <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow">
@@ -60,7 +60,7 @@ export function ProductCard({
           )}
         </div>
         
-        {/* Mostrar color y talla si existen */}
+        {/* Atributos visibles - Color y Talla */}
         {hasAttributes && (
           <div className="flex flex-wrap gap-1 mt-2">
             {product.color && (
@@ -70,15 +70,16 @@ export function ProductCard({
               </div>
             )}
             {product.talla && (
-              <div className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+              <div className="flex items-center text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+                <Tag className="h-3 w-3 mr-1" />
                 Talla: {product.talla}
               </div>
             )}
           </div>
         )}
         
-        {/* Mostrar descripción si existe */}
-        {product.descripcion && (
+        {/* Descripción visible */}
+        {hasDescription && (
           <div className="mt-2 flex items-start gap-1">
             <FileText className="h-3 w-3 mt-0.5 text-gray-500" />
             <p className="text-xs text-gray-600 line-clamp-2">
