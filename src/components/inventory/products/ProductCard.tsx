@@ -1,3 +1,4 @@
+
 import { Product } from "@/types/inventory";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -72,6 +73,13 @@ export function ProductCard({
                 Talla: {product.talla}
               </div>
             )}
+          </div>
+        )}
+        
+        {/* Mostrar descripción si existe */}
+        {product.descripcion && (
+          <div className="mt-2 text-xs text-gray-600 line-clamp-2">
+            {product.descripcion}
           </div>
         )}
       </CardHeader>
