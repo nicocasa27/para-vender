@@ -3,7 +3,7 @@ import { Product } from "@/types/inventory";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { History, Edit, Trash2 } from "lucide-react";
+import { History, Edit, Trash2, FileText, CircleDot } from "lucide-react";
 import { formatQuantityWithUnit } from "@/utils/inventory/formatters";
 import { useAuth } from "@/contexts/auth";
 import { formatProductAttributes, hasProductAttributes } from "./ProductUtils";
@@ -64,8 +64,9 @@ export function ProductCard({
         {hasAttributes && (
           <div className="flex flex-wrap gap-1 mt-2">
             {product.color && (
-              <div className="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">
-                Color: {product.color}
+              <div className="flex items-center text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">
+                <CircleDot className="h-3 w-3 mr-1" /> 
+                {product.color}
               </div>
             )}
             {product.talla && (
@@ -78,8 +79,11 @@ export function ProductCard({
         
         {/* Mostrar descripción si existe */}
         {product.descripcion && (
-          <div className="mt-2 text-xs text-gray-600 line-clamp-2">
-            {product.descripcion}
+          <div className="mt-2 flex items-start gap-1">
+            <FileText className="h-3 w-3 mt-0.5 text-gray-500" />
+            <p className="text-xs text-gray-600 line-clamp-2">
+              {product.descripcion}
+            </p>
           </div>
         )}
       </CardHeader>
