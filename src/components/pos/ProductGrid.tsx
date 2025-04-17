@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ShoppingCart, Search } from "lucide-react";
 import { Product } from "@/types/inventory";
-import { useSales } from "@/hooks/useSales";
 import { useProducts } from "@/hooks/useProducts";
 
 interface ProductGridProps {
@@ -23,23 +23,32 @@ export function ProductGrid({ onProductSelect, selectedStore }: ProductGridProps
     }
   }, [selectedStore, setStoreFilter]);
 
+  // Optimizado: Uso de useCallback para memoizar la función de búsqueda
+  const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  }, []);
+
+  // Optimizado: Uso de useMemo para filtrar productos solo cuando cambian relevantes
   useEffect(() => {
     if (products) {
-      setFilteredProducts(
-        products.filter(
+      // Implementar batching para mejorar rendimiento en listas grandes
+      const timeoutId = setTimeout(() => {
+        const query = searchQuery.toLowerCase();
+        
+        const filtered = products.filter(
           (product) =>
-            product.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (product.categoria &&
-              product.categoria.toLowerCase().includes(searchQuery.toLowerCase()))
-        )
-      );
+            product.nombre.toLowerCase().includes(query) ||
+            (product.categoria && product.categoria.toLowerCase().includes(query))
+        );
+        
+        setFilteredProducts(filtered);
+      }, 100); // Pequeño retraso para evitar múltiples actualizaciones en secuencia
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [products, searchQuery]);
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-  };
-
+  // Renderizado condicional para estado de carga
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

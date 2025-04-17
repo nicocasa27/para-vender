@@ -6,17 +6,97 @@ import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 import { useSales } from "@/hooks/useSales";
 
+// Claves para localStorage
+const CART_STORAGE_KEY = "pos_cart_items";
+const SELECTED_STORE_KEY = "pos_selected_store";
+const PAYMENT_METHOD_KEY = "pos_payment_method";
+const CASH_RECEIVED_KEY = "pos_cash_received";
+
 export function usePosState() {
-  const [selectedStore, setSelectedStore] = useState<string | undefined>(undefined);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  // Recuperar valores del localStorage o usar valores predeterminados
+  const getStoredCart = (): CartItem[] => {
+    try {
+      const storedCart = localStorage.getItem(CART_STORAGE_KEY);
+      return storedCart ? JSON.parse(storedCart) : [];
+    } catch (error) {
+      console.error("Error al recuperar carrito del localStorage:", error);
+      return [];
+    }
+  };
+
+  const getStoredStore = (): string | undefined => {
+    try {
+      return localStorage.getItem(SELECTED_STORE_KEY) || undefined;
+    } catch (error) {
+      console.error("Error al recuperar sucursal del localStorage:", error);
+      return undefined;
+    }
+  };
+
+  const getStoredPaymentMethod = (): string => {
+    try {
+      return localStorage.getItem(PAYMENT_METHOD_KEY) || "efectivo";
+    } catch (error) {
+      console.error("Error al recuperar método de pago del localStorage:", error);
+      return "efectivo";
+    }
+  };
+
+  const getStoredCashReceived = (): string => {
+    try {
+      return localStorage.getItem(CASH_RECEIVED_KEY) || "";
+    } catch (error) {
+      console.error("Error al recuperar monto recibido del localStorage:", error);
+      return "";
+    }
+  };
+
+  // Estado con valores iniciales desde localStorage
+  const [selectedStore, setSelectedStore] = useState<string | undefined>(getStoredStore());
+  const [cartItems, setCartItems] = useState<CartItem[]>(getStoredCart());
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<string>("efectivo");
-  const [cashReceived, setCashReceived] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<string>(getStoredPaymentMethod());
+  const [cashReceived, setCashReceived] = useState<string>(getStoredCashReceived());
   const [isViewer, setIsViewer] = useState(false);
   const { user, hasRole } = useAuth();
   const { processNewSale, loading } = useSales();
 
-  // Check user roles
+  // Guardar en localStorage cuando cambien los valores
+  useEffect(() => {
+    try {
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+    } catch (error) {
+      console.error("Error al guardar carrito en localStorage:", error);
+    }
+  }, [cartItems]);
+
+  useEffect(() => {
+    try {
+      if (selectedStore) {
+        localStorage.setItem(SELECTED_STORE_KEY, selectedStore);
+      }
+    } catch (error) {
+      console.error("Error al guardar sucursal en localStorage:", error);
+    }
+  }, [selectedStore]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PAYMENT_METHOD_KEY, paymentMethod);
+    } catch (error) {
+      console.error("Error al guardar método de pago en localStorage:", error);
+    }
+  }, [paymentMethod]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CASH_RECEIVED_KEY, cashReceived);
+    } catch (error) {
+      console.error("Error al guardar monto recibido en localStorage:", error);
+    }
+  }, [cashReceived]);
+
+  // Verificar los roles de usuario
   useEffect(() => {
     if (user) {
       const isAdmin = hasRole("admin");
@@ -28,8 +108,9 @@ export function usePosState() {
     }
   }, [user, hasRole]);
 
+  // Función para seleccionar producto
   const handleProductSelect = (product: Product) => {
-    // Prevent viewers from adding products
+    // Prevenir que los viewers agreguen productos
     if (isViewer) {
       toast.error("No tienes permiso para realizar ventas", {
         description: "Tu rol de 'viewer' solo permite visualizar información"
@@ -41,8 +122,9 @@ export function usePosState() {
     addProductToCart(product);
   };
 
+  // Función para añadir producto al carrito
   const addProductToCart = (product: Product) => {
-    // Double check viewer restriction
+    // Verificación adicional para viewers
     if (isViewer) return;
     
     const existingCartItemIndex = cartItems.findIndex((item) => item.id === product.id);
@@ -57,8 +139,9 @@ export function usePosState() {
     }
   };
 
+  // Función para actualizar cantidad de producto en carrito
   const updateCartItemQuantity = (itemId: string, newQuantity: number) => {
-    // Prevent viewers from modifying cart
+    // Prevenir que los viewers modifiquen el carrito
     if (isViewer) return;
     
     const updatedCartItems = cartItems.map((item) =>
@@ -67,27 +150,40 @@ export function usePosState() {
     setCartItems(updatedCartItems);
   };
 
+  // Función para eliminar producto del carrito
   const removeCartItem = (itemId: string) => {
-    // Prevent viewers from modifying cart
+    // Prevenir que los viewers modifiquen el carrito
     if (isViewer) return;
     
     const updatedCartItems = cartItems.filter((item) => item.id !== itemId);
     setCartItems(updatedCartItems);
   };
 
+  // Función para vaciar carrito
   const clearCart = () => {
-    // Prevent viewers from modifying cart
+    // Prevenir que los viewers modifiquen el carrito
     if (isViewer) return;
     
     setCartItems([]);
     setPaymentMethod("efectivo");
     setCashReceived("");
+
+    // Limpiar localStorage relacionado con el carrito
+    try {
+      localStorage.removeItem(CART_STORAGE_KEY);
+      localStorage.removeItem(PAYMENT_METHOD_KEY);
+      localStorage.removeItem(CASH_RECEIVED_KEY);
+    } catch (error) {
+      console.error("Error al limpiar localStorage:", error);
+    }
   };
 
+  // Función para calcular total
   const calculateTotal = () => {
     return cartItems.reduce((total, item) => total + item.precio * item.cantidad, 0);
   };
 
+  // Función para calcular cambio
   const calculateChange = () => {
     const total = calculateTotal();
     const cash = parseFloat(cashReceived);
@@ -97,14 +193,16 @@ export function usePosState() {
     return "0.00";
   };
 
+  // Manejador para cambio en monto recibido
   const handleCashReceivedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Solo permitir números y un punto decimal
     const value = e.target.value.replace(/[^0-9.]/g, '');
     setCashReceived(value);
   };
 
+  // Función para confirmar venta
   const handleConfirmSale = async () => {
-    // Prevent viewers from confirming sales
+    // Prevenir que los viewers confirmen ventas
     if (isViewer) {
       toast.error("No tienes permiso para realizar ventas", {
         description: "Tu rol de 'viewer' solo permite visualizar información"
@@ -112,6 +210,7 @@ export function usePosState() {
       return;
     }
     
+    // Validaciones antes de procesar la venta
     if (cartItems.length === 0) {
       toast.error("El carrito está vacío");
       return;
