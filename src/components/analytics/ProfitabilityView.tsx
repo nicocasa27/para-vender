@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -164,6 +163,7 @@ export function ProfitabilityView() {
         const dailyData: Record<string, {sales: number, costs: number}> = {};
         
         data.forEach(item => {
+          // Corregido: Acceder a la propiedad ventas como objeto, no como array
           if (!item.ventas || !item.ventas.created_at) return;
           
           const date = new Date(item.ventas.created_at);
@@ -180,7 +180,7 @@ export function ProfitabilityView() {
           }
           
           const venta = Number(item.cantidad) * Number(item.precio_unitario);
-          // Corregido: Acceder al precio_compra del objeto productos individual, no como array
+          // Corregido: Acceder al precio_compra directamente del objeto productos
           const costo = Number(item.cantidad) * (Number(item.productos?.precio_compra) || 0);
           
           dailyData[dateKey].sales += venta;
