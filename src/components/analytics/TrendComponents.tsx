@@ -51,7 +51,7 @@ export function TrendBarChart({ data, height = 400 }: TrendBarChartProps) {
             <Cell 
               key={`cell-${index}`}
               fill={entry.trending === "up" ? "#82ca9d" : "#ff7782"}
-              fillOpacity={entry.trending === "up" || entry.trending === "down" ? 1 : 0}
+              fillOpacity={entry.trending === "stable" ? 0.5 : 1}
             />
           ))}
         </Bar>

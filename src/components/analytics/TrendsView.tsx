@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import {
   ResponsiveContainer,
@@ -11,7 +12,7 @@ import {
   Cell
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
-import { getTopSellingProducts } from "@/lib/api/inventory.api";
+import { getTopSellingProducts, TopProduct } from "@/lib/api/inventory.api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -35,22 +36,22 @@ import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import { TrendBarChart } from "./TrendComponents";
 
-interface TopProduct {
-  name: string;
-  totalSales: number;
-}
-
+// Definición de DateRange compatible con react-day-picker
 interface DateRange {
   from?: Date;
   to?: Date;
 }
 
 export const TrendsView = () => {
-  const [date, setDate] = useState<DateRange | undefined>({
+  const [date, setDate] = useState<DateRange>({
     from: new Date(new Date().getFullYear(), new Date().getMonth() - 1, new Date().getDate()),
     to: new Date(),
   });
-  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
+  const [topProducts, setTopProducts] = useState<Array<{
+    name: string;
+    trendPercentage: number;
+    trending: "up" | "down" | "stable";
+  }>>([]);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["topProducts", date?.from, date?.to],
@@ -64,7 +65,7 @@ export const TrendsView = () => {
       const transformedData = data.map((product) => ({
         name: product.name,
         trendPercentage: product.totalSales,
-        trending: "up", // Como es el top de ventas, asumimos que la tendencia es positiva
+        trending: "up" as const, // Como es el top de ventas, asumimos que la tendencia es positiva
       }));
       setTopProducts(transformedData);
     }
@@ -72,9 +73,11 @@ export const TrendsView = () => {
 
   const handleDateChange = useCallback(
     (newDate: DateRange | undefined) => {
-      setDate(newDate);
-      if (newDate?.from && newDate?.to) {
-        refetch(); // Recargar los datos al cambiar las fechas
+      if (newDate) {
+        setDate(newDate);
+        if (newDate.from && newDate.to) {
+          refetch(); // Recargar los datos al cambiar las fechas
+        }
       }
     },
     [refetch]
@@ -116,7 +119,7 @@ function LoadingState() {
 }
 
 interface DateSelectorProps {
-  date: DateRange | undefined;
+  date: DateRange;
   onDateChange: (date: DateRange | undefined) => void;
 }
 
@@ -151,9 +154,7 @@ function DateSelector({ date, onDateChange }: DateSelectorProps) {
           onSelect={onDateChange}
           numberOfMonths={2}
           locale={es}
-          from={new Date('2024-01-01')}
-          to={new Date()}
-          className="border-0 rounded-md"
+          className="border-0 rounded-md pointer-events-auto"
           styles={{
             head_cell: {
               color: 'red'
