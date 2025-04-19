@@ -180,7 +180,8 @@ export function ProfitabilityView() {
           }
           
           const venta = Number(item.cantidad) * Number(item.precio_unitario);
-          const costo = Number(item.cantidad) * (Number(item?.productos?.precio_compra) || 0);
+          // Corregido: Acceder al precio_compra del objeto productos individual, no como array
+          const costo = Number(item.cantidad) * (Number(item.productos?.precio_compra) || 0);
           
           dailyData[dateKey].sales += venta;
           dailyData[dateKey].costs += costo;
@@ -238,7 +239,7 @@ export function ProfitabilityView() {
   };
   
   // Renderizar valores con el formato correcto (porcentaje o absoluto)
-  const formatValue = (value: number, isPercentage: boolean = false) => {
+  const formatValue = (value: number, isPercentage: boolean = false) => { 
     if (isPercentage) {
       return `${value.toFixed(1)}%`;
     }
