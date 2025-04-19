@@ -35,12 +35,10 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import { TrendBarChart } from "./TrendComponents";
+import { DateRange as DayPickerDateRange } from "react-day-picker";
 
-// Definición de DateRange compatible con react-day-picker
-interface DateRange {
-  from?: Date;
-  to?: Date;
-}
+// Definimos nuestro DateRange que coincide con el de react-day-picker
+type DateRange = DayPickerDateRange;
 
 export const TrendsView = () => {
   const [date, setDate] = useState<DateRange>({

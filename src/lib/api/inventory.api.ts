@@ -34,7 +34,7 @@ export const getTopSellingProducts = async (
     
     if (data && data.length > 0) {
       data.forEach(detail => {
-        if (detail.productos && detail.productos.nombre) {
+        if (detail.productos && typeof detail.productos === 'object' && 'nombre' in detail.productos) {
           const productName = detail.productos.nombre;
           const quantity = Number(detail.cantidad) || 0;
           
