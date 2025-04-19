@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -49,6 +50,25 @@ interface BarChartData {
   sales: number;
   costs: number;
   margin: number;
+}
+
+// Interfaces para los tipos de datos de Supabase
+interface VentaData {
+  created_at: string;
+  almacen_id: string;
+}
+
+interface ProductoData {
+  precio_compra: number;
+}
+
+interface DetalleVentaItem {
+  id: string;
+  cantidad: number;
+  precio_unitario: number;
+  producto_id: string;
+  productos?: ProductoData;
+  ventas?: VentaData;
 }
 
 export function ProfitabilityView() {
@@ -162,9 +182,9 @@ export function ProfitabilityView() {
         // Procesar datos para crear la serie temporal
         const dailyData: Record<string, {sales: number, costs: number}> = {};
         
-        data.forEach(item => {
-          // Corregido: Acceder a la propiedad ventas como objeto, no como array
-          if (!item.ventas || !item.ventas.created_at) return;
+        data.forEach((item: DetalleVentaItem) => {
+          // Verificar que ventas existe y contiene created_at
+          if (!item.ventas || typeof item.ventas !== 'object') return;
           
           const date = new Date(item.ventas.created_at);
           let dateKey: string;
@@ -180,8 +200,10 @@ export function ProfitabilityView() {
           }
           
           const venta = Number(item.cantidad) * Number(item.precio_unitario);
-          // Corregido: Acceder al precio_compra directamente del objeto productos
-          const costo = Number(item.cantidad) * (Number(item.productos?.precio_compra) || 0);
+          // Verificar que productos existe y contiene precio_compra
+          const precio_compra = item.productos && typeof item.productos === 'object' ? 
+            Number(item.productos.precio_compra) || 0 : 0;
+          const costo = Number(item.cantidad) * precio_compra;
           
           dailyData[dateKey].sales += venta;
           dailyData[dateKey].costs += costo;
