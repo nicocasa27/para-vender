@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/auth";
 import { ProfitabilityView } from "@/components/analytics/ProfitabilityView";
-import { BarChart3, LineChart, PieChart } from "lucide-react";
+import { TrendsView } from "@/components/analytics/TrendsView";
+import { BarChart3, LineChart, PieChart, TrendingUp } from "lucide-react";
 
 export default function Analiticas2() {
   const { hasRole } = useAuth();
@@ -34,7 +35,7 @@ export default function Analiticas2() {
                 <span>Rentabilidad</span>
               </TabsTrigger>
               <TabsTrigger value="trends" className="flex items-center gap-2">
-                <LineChart className="h-4 w-4" />
+                <TrendingUp className="h-4 w-4" />
                 <span>Tendencias</span>
               </TabsTrigger>
               <TabsTrigger value="categories" className="flex items-center gap-2">
@@ -48,13 +49,7 @@ export default function Analiticas2() {
             </TabsContent>
             
             <TabsContent value="trends">
-              <div className="p-6 text-center">
-                <h2 className="text-xl font-semibold mb-4">Análisis de Tendencias</h2>
-                <p className="text-muted-foreground">
-                  Esta sección está actualmente en desarrollo. Estamos trabajando para 
-                  proporcionar análisis de tendencias para su negocio.
-                </p>
-              </div>
+              <TrendsView />
             </TabsContent>
             
             <TabsContent value="categories">
