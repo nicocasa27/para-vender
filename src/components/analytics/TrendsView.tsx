@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
@@ -888,8 +887,14 @@ export function TrendsView() {
                 <Bar
                   dataKey="trendPercentage"
                   name="Variación porcentual"
-                  fill={(entry) => entry.trending === "up" ? "#82ca9d" : "#ff7782"}
-                />
+                >
+                  {compareData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`}
+                      fill={entry.trending === "up" ? "#82ca9d" : "#ff7782"}
+                    />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           )}

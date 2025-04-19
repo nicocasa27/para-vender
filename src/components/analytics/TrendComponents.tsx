@@ -8,7 +8,8 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Cell
 } from "recharts";
 
 interface TrendBarChartProps {
@@ -45,17 +46,15 @@ export function TrendBarChart({ data, height = 400 }: TrendBarChartProps) {
         <Bar
           dataKey="trendPercentage"
           name="Variación porcentual"
-          fill="#82ca9d"
-          // Usamos un callback en fillOpacity en lugar de fill para cambiar el color
-          fillOpacity={(entry) => entry.trending === "up" ? 1 : 0}
-        />
-        <Bar
-          dataKey="trendPercentage"
-          name="Variación porcentual negativa"
-          fill="#ff7782"
-          // Usamos visibilidad para mostrar solo los valores negativos
-          fillOpacity={(entry) => entry.trending === "down" ? 1 : 0}
-        />
+        >
+          {data.map((entry, index) => (
+            <Cell 
+              key={`cell-${index}`}
+              fill={entry.trending === "up" ? "#82ca9d" : "#ff7782"}
+              fillOpacity={entry.trending === "up" || entry.trending === "down" ? 1 : 0}
+            />
+          ))}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );
