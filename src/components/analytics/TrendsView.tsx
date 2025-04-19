@@ -55,6 +55,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
 import jsPDF from "jspdf";
 
 // Tipos para datos de tendencias
@@ -81,6 +82,11 @@ interface TrendReportOptions {
   aggregation: "daily" | "weekly" | "monthly";
   confidenceLevel: "60" | "75" | "90";
   categoryFilter: string;
+}
+
+interface DateRange {
+  from: Date | undefined;
+  to: Date | undefined;
 }
 
 // Datos simulados para visualización inicial
@@ -375,7 +381,7 @@ export function TrendsView() {
         // Calcular ventas por producto para el período actual
         const currentProductSales: Record<string, {total: number, name: string, category: string}> = {};
         
-        currentResponse.data?.forEach(item => {
+        currentResponse.data?.forEach((item: any) => {
           if (!item.productos || !item.productos.id) return;
           
           const productId = item.productos.id;
@@ -395,7 +401,7 @@ export function TrendsView() {
         // Calcular ventas por producto para el período anterior
         const previousProductSales: Record<string, number> = {};
         
-        previousResponse.data?.forEach(item => {
+        previousResponse.data?.forEach((item: any) => {
           if (!item.productos || !item.productos.id) return;
           
           const productId = item.productos.id;
@@ -634,7 +640,7 @@ export function TrendsView() {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
+          <CalendarComponent
             initialFocus
             mode="range"
             defaultMonth={options.dateRange[0]}
@@ -642,7 +648,7 @@ export function TrendsView() {
               from: options.dateRange[0],
               to: options.dateRange[1],
             }}
-            onSelect={(range) => {
+            onSelect={(range: DateRange) => {
               if (range?.from && range?.to) {
                 setOptions({
                   ...options,

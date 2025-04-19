@@ -72,7 +72,7 @@ interface DetalleVentaItem {
 }
 
 export function ProfitabilityView() {
-  // Estados para los filtros y toggles
+  // Estado para los filtros y toggles
   const [period, setPeriod] = useState<string>("week");
   const [selectedStore, setSelectedStore] = useState<string>("all");
   const [groupBy, setGroupBy] = useState<string>("category");
@@ -182,7 +182,7 @@ export function ProfitabilityView() {
         // Procesar datos para crear la serie temporal
         const dailyData: Record<string, {sales: number, costs: number}> = {};
         
-        data.forEach((item: DetalleVentaItem) => {
+        data.forEach((item: any) => {
           // Verificar que ventas existe y contiene created_at
           if (!item.ventas || typeof item.ventas !== 'object') return;
           
