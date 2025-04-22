@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/auth";
 import { ProfitabilityView } from "@/components/analytics/ProfitabilityView";
+import { DailySalesView } from "@/components/analytics/DailySalesView";
 import { BarChart3, LineChart, PieChart } from "lucide-react";
 
 export default function Analiticas2() {
@@ -11,7 +11,6 @@ export default function Analiticas2() {
   const isAdmin = hasRole('admin');
   const [activeTab, setActiveTab] = useState<string>("profitability");
   
-  // Safe array access examples
   const safeGetName = (array: any[] | null | undefined) => {
     return array && array.length > 0 ? array[0].nombre : "Sin nombre";
   };
@@ -43,8 +42,9 @@ export default function Analiticas2() {
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="profitability">
+            <TabsContent value="profitability" className="space-y-6">
               <ProfitabilityView />
+              <DailySalesView />
             </TabsContent>
             
             <TabsContent value="trends">
