@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -50,6 +49,20 @@ interface BarChartData {
   sales: number;
   costs: number;
   margin: number;
+}
+
+interface DetalleVenta {
+  id: string;
+  cantidad: number;
+  precio_unitario: number;
+  producto_id: string;
+  productos?: {
+    precio_compra: number;
+  };
+  ventas: {
+    created_at: string;
+    almacen_id: string;
+  };
 }
 
 export function ProfitabilityView() {
@@ -163,17 +176,16 @@ export function ProfitabilityView() {
         // Procesar datos para crear la serie temporal
         const dailyData: Record<string, {sales: number, costs: number}> = {};
         
-        data.forEach(item => {
-          // Comprobar que item.ventas existe y tiene la propiedad created_at
-          if (!item.ventas || !item.ventas.created_at) return;
+        (data as DetalleVenta[]).forEach(item => {
+          if (!item.ventas?.created_at) return;
           
           const date = new Date(item.ventas.created_at);
           let dateKey: string;
           
           if (interval === 'day') {
-            dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+            dateKey = date.toISOString().split('T')[0];
           } else {
-            dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
+            dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
           }
           
           if (!dailyData[dateKey]) {
@@ -181,9 +193,7 @@ export function ProfitabilityView() {
           }
           
           const venta = Number(item.cantidad) * Number(item.precio_unitario);
-          // Acceder al precio_compra de manera segura
-          const precioCompra = item.productos && typeof item.productos === 'object' ? 
-            Number(item.productos.precio_compra) || 0 : 0;
+          const precioCompra = item.productos?.precio_compra || 0;
           const costo = Number(item.cantidad) * precioCompra;
           
           dailyData[dateKey].sales += venta;
@@ -437,4 +447,3 @@ export function ProfitabilityView() {
     </div>
   );
 }
-
