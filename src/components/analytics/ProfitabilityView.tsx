@@ -51,18 +51,19 @@ interface BarChartData {
   margin: number;
 }
 
+// Interfaz corregida para coincidir con la estructura de datos de Supabase
 interface DetalleVenta {
   id: string;
   cantidad: number;
   precio_unitario: number;
   producto_id: string;
-  productos?: {
+  productos: {
     precio_compra: number;
-  };
+  } | null;
   ventas: {
     created_at: string;
     almacen_id: string;
-  };
+  } | null;
 }
 
 export function ProfitabilityView() {
@@ -117,7 +118,7 @@ export function ProfitabilityView() {
     localStorage.setItem('profitability_showPercentage', showPercentage.toString());
   }, [period, selectedStore, groupBy, showPercentage]);
   
-  // Cargar datos de evolución del margen bruto
+  // Cargar datos de evolución del margen bruto con manejo correcto de tipos
   useEffect(() => {
     const fetchTrendData = async () => {
       setIsLoading(true);
@@ -176,8 +177,10 @@ export function ProfitabilityView() {
         // Procesar datos para crear la serie temporal
         const dailyData: Record<string, {sales: number, costs: number}> = {};
         
-        (data as DetalleVenta[]).forEach(item => {
-          if (!item.ventas?.created_at) return;
+        // Convertir los datos a DetalleVenta[] después de asegurar la estructura correcta
+        data.forEach((item: any) => {
+          // Verificar que item.ventas existe y tiene datos
+          if (!item.ventas || !item.ventas.created_at) return;
           
           const date = new Date(item.ventas.created_at);
           let dateKey: string;
@@ -193,7 +196,8 @@ export function ProfitabilityView() {
           }
           
           const venta = Number(item.cantidad) * Number(item.precio_unitario);
-          const precioCompra = item.productos?.precio_compra || 0;
+          // Acceder al precio_compra de manera segura
+          const precioCompra = item.productos ? Number(item.productos.precio_compra) || 0 : 0;
           const costo = Number(item.cantidad) * precioCompra;
           
           dailyData[dateKey].sales += venta;
