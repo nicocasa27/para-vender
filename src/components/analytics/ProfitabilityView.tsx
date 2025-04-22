@@ -164,6 +164,7 @@ export function ProfitabilityView() {
         const dailyData: Record<string, {sales: number, costs: number}> = {};
         
         data.forEach(item => {
+          // Comprobar que item.ventas existe y tiene la propiedad created_at
           if (!item.ventas || !item.ventas.created_at) return;
           
           const date = new Date(item.ventas.created_at);
@@ -180,8 +181,10 @@ export function ProfitabilityView() {
           }
           
           const venta = Number(item.cantidad) * Number(item.precio_unitario);
-          // Corregido: Acceder al precio_compra del objeto productos individual, no como array
-          const costo = Number(item.cantidad) * (Number(item.productos?.precio_compra) || 0);
+          // Acceder al precio_compra de manera segura
+          const precioCompra = item.productos && typeof item.productos === 'object' ? 
+            Number(item.productos.precio_compra) || 0 : 0;
+          const costo = Number(item.cantidad) * precioCompra;
           
           dailyData[dateKey].sales += venta;
           dailyData[dateKey].costs += costo;
@@ -434,3 +437,4 @@ export function ProfitabilityView() {
     </div>
   );
 }
+
