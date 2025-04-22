@@ -4,35 +4,42 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchSalesToday } from "@/services/salesService";
+import { fetchSales } from "@/services/salesService";
 
 export function DailySalesView() {
   const { data: salesData, isLoading } = useQuery({
     queryKey: ['dailySales'],
-    queryFn: fetchSalesToday
+    queryFn: () => fetchSales(30) // Obtener los últimos 30 días de ventas
   });
 
-  // Procesar los datos para agruparlos por hora
+  // Procesar los datos para agruparlos por día
   const processedData = React.useMemo(() => {
     if (!salesData) return [];
 
-    const salesByHour: { [key: string]: number } = {};
+    const salesByDay: { [key: string]: number } = {};
     
-    // Inicializar todas las horas del día con 0
-    for (let i = 0; i < 24; i++) {
-      const hour = i.toString().padStart(2, '0');
-      salesByHour[hour] = 0;
+    // Inicializar los últimos 30 días con 0
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dayKey = date.toISOString().split('T')[0];
+      salesByDay[dayKey] = 0;
     }
 
-    // Agrupar ventas por hora
+    // Agrupar ventas por día
     salesData.forEach((sale: any) => {
-      const hour = new Date(sale.created_at).getHours().toString().padStart(2, '0');
-      salesByHour[hour] = (salesByHour[hour] || 0) + Number(sale.total);
+      const dayKey = new Date(sale.created_at).toISOString().split('T')[0];
+      if (salesByDay[dayKey] !== undefined) {
+        salesByDay[dayKey] = (salesByDay[dayKey] || 0) + Number(sale.total);
+      }
     });
 
     // Convertir a array para Recharts
-    return Object.entries(salesByHour).map(([hour, total]) => ({
-      hour: `${hour}:00`,
+    return Object.entries(salesByDay).map(([date, total]) => ({
+      date: new Date(date).toLocaleDateString('es-ES', { 
+        day: '2-digit',
+        month: '2-digit'
+      }),
       total
     }));
   }, [salesData]);
@@ -53,7 +60,7 @@ export function DailySalesView() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Ventas por Hora del Día</CardTitle>
+        <CardTitle>Ventas por Día</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[300px] w-full">
@@ -61,7 +68,7 @@ export function DailySalesView() {
             <LineChart data={processedData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
-                dataKey="hour"
+                dataKey="date"
                 interval={2}
               />
               <YAxis
@@ -69,7 +76,7 @@ export function DailySalesView() {
               />
               <Tooltip
                 formatter={(value: number) => [`$${value.toLocaleString()}`, 'Total']}
-                labelFormatter={(label) => `Hora: ${label}`}
+                labelFormatter={(label) => `Fecha: ${label}`}
               />
               <Line
                 type="monotone"
