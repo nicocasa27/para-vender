@@ -3,8 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   LineChart,
   Line,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -44,22 +42,15 @@ interface ProfitData {
   margin: number;
 }
 
-interface BarChartData {
-  name: string;
-  sales: number;
-  costs: number;
-  margin: number;
-}
-
 // Interfaz corregida para coincidir con la estructura de datos de Supabase
 interface DetalleVenta {
   id: string;
   cantidad: number;
   precio_unitario: number;
-  producto_id: string;
+  producto_id: string | null;
   productos: {
     precio_compra: number;
-  } | null;
+  }[] | null;
   ventas: {
     created_at: string;
     almacen_id: string;
@@ -197,7 +188,7 @@ export function ProfitabilityView() {
           
           const venta = Number(item.cantidad) * Number(item.precio_unitario);
           // Acceder al precio_compra de manera segura
-          const precioCompra = item.productos ? Number(item.productos.precio_compra) || 0 : 0;
+          const precioCompra = item.productos ? Number(item.productos[0]?.precio_compra) || 0 : 0;
           const costo = Number(item.cantidad) * precioCompra;
           
           dailyData[dateKey].sales += venta;
