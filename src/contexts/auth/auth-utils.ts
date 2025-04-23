@@ -31,37 +31,34 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
     
     // Transformar los datos para incluir el nombre del almacén
     const roles = data.map(role => {
-      // Verificamos si almacenes es un array o un objeto y extraemos el nombre de forma segura
-      let almacenNombre = null;
+      // Variables para almacenar el nombre del almacén
+      let almacenNombre: string | null = null;
+      let almacenesObject: { nombre: string } = { nombre: '' };
       
-      if (role.almacenes) {
-        if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
-          // Si es array y tiene elementos, tratamos con cuidado el acceso a propiedades
-          const primerAlmacen = role.almacenes[0];
-          if (primerAlmacen && typeof primerAlmacen === 'object') {
-            // Verificamos explícitamente que 'nombre' existe en el objeto
-            almacenNombre = 'nombre' in primerAlmacen ? primerAlmacen.nombre as string : null;
-          }
-        } else if (!Array.isArray(role.almacenes) && typeof role.almacenes === 'object') {
-          // Si es objeto, verificamos explícitamente que 'nombre' existe
-          almacenNombre = 'nombre' in role.almacenes ? (role.almacenes as any).nombre as string : null;
-        }
-      }
-      
-      // Creamos un objeto almacenes consistente para mantener la compatibilidad de tipos
-      let almacenesObject = { nombre: '' };
-      
-      if (role.almacenes) {
-        if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
-          const primerAlmacen = role.almacenes[0];
-          if (primerAlmacen && typeof primerAlmacen === 'object' && 'nombre' in primerAlmacen) {
-            almacenesObject = { nombre: (primerAlmacen as any).nombre as string || '' };
-          }
-        } else if (!Array.isArray(role.almacenes) && typeof role.almacenes === 'object') {
-          if ('nombre' in role.almacenes) {
-            almacenesObject = { nombre: (role.almacenes as any).nombre as string || '' };
+      try {
+        // Extraer el nombre del almacén de manera segura
+        if (role.almacenes) {
+          if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
+            const primerAlmacen = role.almacenes[0];
+            if (primerAlmacen && typeof primerAlmacen === 'object') {
+              // Usando type assertion para evitar errores de TypeScript
+              const nombreProp = 'nombre' in primerAlmacen ? (primerAlmacen as any).nombre : null;
+              almacenNombre = typeof nombreProp === 'string' ? nombreProp : null;
+              if (almacenNombre) {
+                almacenesObject = { nombre: almacenNombre };
+              }
+            }
+          } else if (!Array.isArray(role.almacenes) && typeof role.almacenes === 'object') {
+            // Si es un objeto, intentamos extraer el nombre
+            const nombreProp = 'nombre' in role.almacenes ? (role.almacenes as any).nombre : null;
+            almacenNombre = typeof nombreProp === 'string' ? nombreProp : null;
+            if (almacenNombre) {
+              almacenesObject = { nombre: almacenNombre };
+            }
           }
         }
+      } catch (err) {
+        console.error("Auth Utils: Error parsing almacenes data:", err);
       }
       
       return {
@@ -207,37 +204,34 @@ export async function fetchAllUsers() {
         
         // Transformar los datos para incluir el nombre del almacén
         const transformedRoles = roles.map(role => {
-          // Verificamos si almacenes es un array o un objeto y extraemos el nombre de forma segura
-          let almacenNombre = null;
+          // Variables para almacenar el nombre del almacén
+          let almacenNombre: string | null = null;
+          let almacenesObject: { nombre: string } = { nombre: '' };
           
-          if (role.almacenes) {
-            if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
-              // Si es array y tiene elementos, tratamos con cuidado el acceso a propiedades
-              const primerAlmacen = role.almacenes[0];
-              if (primerAlmacen && typeof primerAlmacen === 'object') {
-                // Verificamos explícitamente que 'nombre' existe en el objeto
-                almacenNombre = 'nombre' in primerAlmacen ? (primerAlmacen as any).nombre as string : null;
-              }
-            } else if (!Array.isArray(role.almacenes) && typeof role.almacenes === 'object') {
-              // Si es objeto, verificamos explícitamente que 'nombre' existe
-              almacenNombre = 'nombre' in role.almacenes ? (role.almacenes as any).nombre as string : null;
-            }
-          }
-          
-          // Creamos un objeto almacenes consistente para mantener la compatibilidad de tipos
-          let almacenesObject = { nombre: '' };
-          
-          if (role.almacenes) {
-            if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
-              const primerAlmacen = role.almacenes[0];
-              if (primerAlmacen && typeof primerAlmacen === 'object' && 'nombre' in primerAlmacen) {
-                almacenesObject = { nombre: (primerAlmacen as any).nombre as string || '' };
-              }
-            } else if (!Array.isArray(role.almacenes) && typeof role.almacenes === 'object') {
-              if ('nombre' in role.almacenes) {
-                almacenesObject = { nombre: (role.almacenes as any).nombre as string || '' };
+          try {
+            // Extraer el nombre del almacén de manera segura
+            if (role.almacenes) {
+              if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
+                const primerAlmacen = role.almacenes[0];
+                if (primerAlmacen && typeof primerAlmacen === 'object') {
+                  // Usando type assertion para evitar errores de TypeScript
+                  const nombreProp = 'nombre' in primerAlmacen ? (primerAlmacen as any).nombre : null;
+                  almacenNombre = typeof nombreProp === 'string' ? nombreProp : null;
+                  if (almacenNombre) {
+                    almacenesObject = { nombre: almacenNombre };
+                  }
+                }
+              } else if (!Array.isArray(role.almacenes) && typeof role.almacenes === 'object') {
+                // Si es un objeto, intentamos extraer el nombre
+                const nombreProp = 'nombre' in role.almacenes ? (role.almacenes as any).nombre : null;
+                almacenNombre = typeof nombreProp === 'string' ? nombreProp : null;
+                if (almacenNombre) {
+                  almacenesObject = { nombre: almacenNombre };
+                }
               }
             }
+          } catch (err) {
+            console.error("Auth Utils: Error parsing almacenes data:", err);
           }
           
           return {
