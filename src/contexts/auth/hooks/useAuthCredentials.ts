@@ -88,7 +88,7 @@ export function useAuthCredentials(refreshUserRoles: () => Promise<any[]>) {
         }
         
         // Verificar si el usuario tiene roles y crear uno por defecto si no tiene
-        const { data: userRoles, error: rolesError } = await supabase
+        const { data: existingRoles, error: rolesError } = await supabase
           .from('user_roles')
           .select('id')
           .eq('user_id', data.user.id);
@@ -97,7 +97,7 @@ export function useAuthCredentials(refreshUserRoles: () => Promise<any[]>) {
           console.error("Auth: Error checking roles:", rolesError);
         }
         
-        if (!userRoles || userRoles.length === 0) {
+        if (!existingRoles || existingRoles.length === 0) {
           console.warn("Auth: No roles found, creating default role");
           const { error: roleError } = await supabase
             .from('user_roles')

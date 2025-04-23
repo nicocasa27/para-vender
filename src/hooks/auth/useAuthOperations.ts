@@ -84,7 +84,7 @@ export function useAuthOperations({
       }
       
       // Verificar que el usuario tiene roles asignados
-      const { data: userRoles, error: rolesError } = await supabase
+      const { data: existingRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('id')
         .eq('user_id', data.user.id);
@@ -94,13 +94,30 @@ export function useAuthOperations({
       }
       
       // Si el usuario no tiene roles, crear un rol por defecto (viewer)
-      if (!userRoles || userRoles.length === 0) {
+      if (!existingRoles || existingRoles.length === 0) {
         console.warn("Auth: No se encontraron roles para el usuario, creando rol por defecto");
         try {
-          await createDefaultRole(data.user.id);
-          sonnerToast.success("Rol asignado correctamente", {
-            description: "Se te asignó el rol de Visor por defecto"
-          });
+          const { data: insertedRole, error: roleInsertError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: data.user.id,
+              role: 'viewer',
+              almacen_id: null
+            })
+            .select()
+            .single();
+
+          if (roleInsertError) {
+            console.error("Auth: Error creando rol por defecto:", roleInsertError);
+            sonnerToast.warning("No se pudo asignar un rol", {
+              description: "Algunas funciones pueden estar limitadas"
+            });
+          } else {
+            console.log("Auth: Rol por defecto creado correctamente:", insertedRole);
+            sonnerToast.success("Rol asignado correctamente", {
+              description: "Se te asignó el rol de Visor por defecto"
+            });
+          }
         } catch (roleError) {
           console.error("Auth: Error creando rol por defecto:", roleError);
           // No cerramos sesión aquí, permitimos continuar sin rol

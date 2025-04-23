@@ -423,7 +423,14 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      is_admin_user: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      is_user_role_owner: {
+        Args: { user_id: string; role_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
