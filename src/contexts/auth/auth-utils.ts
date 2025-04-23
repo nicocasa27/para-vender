@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { UserRoleWithStore, UserRole } from '@/types/auth';
 
@@ -55,13 +54,11 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
         if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
           const primerAlmacen = role.almacenes[0];
           if (primerAlmacen && typeof primerAlmacen === 'object' && 'nombre' in primerAlmacen) {
-            // Usamos una aserción de tipo para ayudar a TypeScript
-            almacenesObject = { nombre: (primerAlmacen as any).nombre || '' };
+            almacenesObject = { nombre: primerAlmacen.nombre || '' };
           }
         } else if (!Array.isArray(role.almacenes) && typeof role.almacenes === 'object') {
           if ('nombre' in role.almacenes) {
-            // Usamos una aserción de tipo para ayudar a TypeScript
-            almacenesObject = { nombre: (role.almacenes as any).nombre || '' };
+            almacenesObject = { nombre: role.almacenes.nombre || '' };
           }
         }
       }
@@ -233,13 +230,11 @@ export async function fetchAllUsers() {
             if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
               const primerAlmacen = role.almacenes[0];
               if (primerAlmacen && typeof primerAlmacen === 'object' && 'nombre' in primerAlmacen) {
-                // Usamos una aserción de tipo para ayudar a TypeScript
-                almacenesObject = { nombre: (primerAlmacen as any).nombre || '' };
+                almacenesObject = { nombre: primerAlmacen.nombre || '' };
               }
             } else if (!Array.isArray(role.almacenes) && typeof role.almacenes === 'object') {
               if ('nombre' in role.almacenes) {
-                // Usamos una aserción de tipo para ayudar a TypeScript
-                almacenesObject = { nombre: (role.almacenes as any).nombre || '' };
+                almacenesObject = { nombre: role.almacenes.nombre || '' };
               }
             }
           }
