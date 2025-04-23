@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { UserRoleWithStore, UserRole } from '@/types/auth';
 
@@ -39,11 +40,11 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
           const primerAlmacen = role.almacenes[0];
           if (primerAlmacen && typeof primerAlmacen === 'object') {
             // Verificamos explícitamente que 'nombre' existe en el objeto
-            almacenNombre = 'nombre' in primerAlmacen ? primerAlmacen.nombre : null;
+            almacenNombre = 'nombre' in primerAlmacen ? primerAlmacen.nombre as string : null;
           }
         } else if (!Array.isArray(role.almacenes) && typeof role.almacenes === 'object') {
           // Si es objeto, verificamos explícitamente que 'nombre' existe
-          almacenNombre = 'nombre' in role.almacenes ? role.almacenes.nombre : null;
+          almacenNombre = 'nombre' in role.almacenes ? (role.almacenes as any).nombre as string : null;
         }
       }
       
@@ -54,11 +55,11 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
         if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
           const primerAlmacen = role.almacenes[0];
           if (primerAlmacen && typeof primerAlmacen === 'object' && 'nombre' in primerAlmacen) {
-            almacenesObject = { nombre: primerAlmacen.nombre || '' };
+            almacenesObject = { nombre: (primerAlmacen as any).nombre as string || '' };
           }
         } else if (!Array.isArray(role.almacenes) && typeof role.almacenes === 'object') {
           if ('nombre' in role.almacenes) {
-            almacenesObject = { nombre: role.almacenes.nombre || '' };
+            almacenesObject = { nombre: (role.almacenes as any).nombre as string || '' };
           }
         }
       }
@@ -215,11 +216,11 @@ export async function fetchAllUsers() {
               const primerAlmacen = role.almacenes[0];
               if (primerAlmacen && typeof primerAlmacen === 'object') {
                 // Verificamos explícitamente que 'nombre' existe en el objeto
-                almacenNombre = 'nombre' in primerAlmacen ? primerAlmacen.nombre : null;
+                almacenNombre = 'nombre' in primerAlmacen ? (primerAlmacen as any).nombre as string : null;
               }
             } else if (!Array.isArray(role.almacenes) && typeof role.almacenes === 'object') {
               // Si es objeto, verificamos explícitamente que 'nombre' existe
-              almacenNombre = 'nombre' in role.almacenes ? role.almacenes.nombre : null;
+              almacenNombre = 'nombre' in role.almacenes ? (role.almacenes as any).nombre as string : null;
             }
           }
           
@@ -230,11 +231,11 @@ export async function fetchAllUsers() {
             if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
               const primerAlmacen = role.almacenes[0];
               if (primerAlmacen && typeof primerAlmacen === 'object' && 'nombre' in primerAlmacen) {
-                almacenesObject = { nombre: primerAlmacen.nombre || '' };
+                almacenesObject = { nombre: (primerAlmacen as any).nombre as string || '' };
               }
             } else if (!Array.isArray(role.almacenes) && typeof role.almacenes === 'object') {
               if ('nombre' in role.almacenes) {
-                almacenesObject = { nombre: role.almacenes.nombre || '' };
+                almacenesObject = { nombre: (role.almacenes as any).nombre as string || '' };
               }
             }
           }
