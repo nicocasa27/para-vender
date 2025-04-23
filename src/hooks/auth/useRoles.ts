@@ -4,7 +4,6 @@ import { User } from '@supabase/supabase-js';
 import { UserRole, UserRoleWithStore } from '@/types/auth';
 import { fetchUserRoles, checkHasRole } from '@/contexts/auth/auth-utils';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 
 const MAX_ROLE_LOADING_RETRIES = 3;
 const ROLE_LOADING_RETRY_DELAY = 1000; // ms
@@ -67,16 +66,6 @@ export function useRoles(user: User | null) {
         while (attempt < MAX_ROLE_LOADING_RETRIES) {
           attempt++;
           console.log(`Roles: Fetching roles attempt ${attempt}/${MAX_ROLE_LOADING_RETRIES}`);
-          
-          // Primer intento: verificar si el usuario es admin
-          if (attempt === 1) {
-            // Usar RPC para verificar si es admin
-            const { data: isAdmin } = await supabase.rpc('user_has_role', { 
-              role_name: 'admin' 
-            });
-            
-            console.log("Roles: User admin check:", isAdmin);
-          }
           
           const fetchedRoles = await fetchUserRoles(userId);
           

@@ -1,6 +1,6 @@
 
 import { useCallback } from 'react';
-import { UserRole, UserWithRoles, UserRoleWithStore } from '@/types/auth';
+import { UserRole, UserWithRoles } from '@/types/auth';
 import { fetchAllUsers } from '../auth-utils';
 import { toast as sonnerToast } from "sonner";
 import { Session } from '@supabase/supabase-js';
@@ -18,19 +18,7 @@ export function useUserManagement(
         throw new Error("No tienes permisos para ver usuarios");
       }
       
-      // Usamos el tipo correcto para el retorno
-      const usersData = await fetchAllUsers();
-      
-      // Aseguramos que los datos coincidan con la interfaz UserWithRoles
-      const typedUsersData: UserWithRoles[] = usersData.map(user => ({
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        created_at: user.created_at,
-        roles: user.roles as UserRoleWithStore[]
-      }));
-      
-      return typedUsersData;
+      return await fetchAllUsers();
     } catch (error) {
       console.error("Auth: Error fetching users:", error);
       throw error;

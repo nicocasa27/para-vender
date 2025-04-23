@@ -423,22 +423,7 @@ export type Database = {
       }
     }
     Functions: {
-      is_admin_or_self: {
-        Args: { user_id: string }
-        Returns: boolean
-      }
-      is_admin_user: {
-        Args: { user_id: string }
-        Returns: boolean
-      }
-      is_user_role_owner: {
-        Args: { user_id: string; role_user_id: string }
-        Returns: boolean
-      }
-      user_has_role: {
-        Args: { role_name: string }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
