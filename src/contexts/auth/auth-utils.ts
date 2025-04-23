@@ -33,11 +33,25 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
     const roles = data.map(role => {
       // Verificamos si almacenes es un array o un objeto y extraemos el nombre de forma segura
       let almacenNombre = null;
+      
       if (role.almacenes) {
-        if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
-          almacenNombre = role.almacenes[0]?.nombre || null;
+        if (Array.isArray(role.almacenes)) {
+          // Si es array y tiene elementos, tomamos el nombre del primer elemento
+          almacenNombre = role.almacenes.length > 0 && role.almacenes[0] ? role.almacenes[0].nombre : null;
         } else {
-          almacenNombre = role.almacenes?.nombre || null;
+          // Si es objeto, tomamos el nombre directamente
+          almacenNombre = role.almacenes.nombre || null;
+        }
+      }
+      
+      // Creamos un objeto almacenes consistente para mantener la compatibilidad de tipos
+      let almacenesObject = { nombre: '' };
+      
+      if (role.almacenes) {
+        if (Array.isArray(role.almacenes) && role.almacenes.length > 0 && role.almacenes[0]) {
+          almacenesObject = { nombre: role.almacenes[0].nombre || '' };
+        } else if (!Array.isArray(role.almacenes)) {
+          almacenesObject = { nombre: role.almacenes.nombre || '' };
         }
       }
       
@@ -48,11 +62,7 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
         almacen_id: role.almacen_id,
         created_at: role.created_at,
         almacen_nombre: almacenNombre,
-        // Aseguramos que almacenes tenga la estructura correcta según la interfaz
-        almacenes: role.almacenes && !Array.isArray(role.almacenes) ? role.almacenes : 
-                  (role.almacenes && Array.isArray(role.almacenes) && role.almacenes.length > 0) ? 
-                  { nombre: role.almacenes[0]?.nombre || '' } : 
-                  { nombre: '' }
+        almacenes: almacenesObject
       };
     });
     
@@ -190,11 +200,25 @@ export async function fetchAllUsers() {
         const transformedRoles = roles.map(role => {
           // Verificamos si almacenes es un array o un objeto y extraemos el nombre de forma segura
           let almacenNombre = null;
+          
           if (role.almacenes) {
-            if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
-              almacenNombre = role.almacenes[0]?.nombre || null;
+            if (Array.isArray(role.almacenes)) {
+              // Si es array y tiene elementos, tomamos el nombre del primer elemento
+              almacenNombre = role.almacenes.length > 0 && role.almacenes[0] ? role.almacenes[0].nombre : null;
             } else {
-              almacenNombre = role.almacenes?.nombre || null;
+              // Si es objeto, tomamos el nombre directamente
+              almacenNombre = role.almacenes.nombre || null;
+            }
+          }
+          
+          // Creamos un objeto almacenes consistente para mantener la compatibilidad de tipos
+          let almacenesObject = { nombre: '' };
+          
+          if (role.almacenes) {
+            if (Array.isArray(role.almacenes) && role.almacenes.length > 0 && role.almacenes[0]) {
+              almacenesObject = { nombre: role.almacenes[0].nombre || '' };
+            } else if (!Array.isArray(role.almacenes)) {
+              almacenesObject = { nombre: role.almacenes.nombre || '' };
             }
           }
           
@@ -205,11 +229,7 @@ export async function fetchAllUsers() {
             almacen_id: role.almacen_id,
             created_at: role.created_at,
             almacen_nombre: almacenNombre,
-            // Aseguramos que almacenes tenga la estructura correcta según la interfaz
-            almacenes: role.almacenes && !Array.isArray(role.almacenes) ? role.almacenes : 
-                     (role.almacenes && Array.isArray(role.almacenes) && role.almacenes.length > 0) ? 
-                     { nombre: role.almacenes[0]?.nombre || '' } : 
-                     { nombre: '' }
+            almacenes: almacenesObject
           };
         });
         
