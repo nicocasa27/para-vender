@@ -88,7 +88,7 @@ export function useAuthCredentials(refreshUserRoles: () => Promise<any[]>) {
         }
         
         // Verificar si el usuario tiene roles y crear uno por defecto si no tiene
-        const { data: roles, error: rolesError } = await supabase
+        const { data: userRoles, error: rolesError } = await supabase
           .from('user_roles')
           .select('id')
           .eq('user_id', data.user.id);
@@ -97,7 +97,7 @@ export function useAuthCredentials(refreshUserRoles: () => Promise<any[]>) {
           console.error("Auth: Error checking roles:", rolesError);
         }
         
-        if (!roles || roles.length === 0) {
+        if (!userRoles || userRoles.length === 0) {
           console.warn("Auth: No roles found, creating default role");
           const { error: roleError } = await supabase
             .from('user_roles')
@@ -121,15 +121,15 @@ export function useAuthCredentials(refreshUserRoles: () => Promise<any[]>) {
           }
         }
         
-        const roles = await refreshUserRoles();
+        const updatedRoles = await refreshUserRoles();
         
-        if (roles.length === 0) {
+        if (updatedRoles.length === 0) {
           console.warn("Auth: No roles found after sign in");
           sonnerToast.warning("No se encontraron roles asignados", {
             description: "Es posible que necesites contactar a un administrador para obtener permisos"
           });
         } else {
-          console.log("Auth: Successfully loaded roles after sign in:", roles);
+          console.log("Auth: Successfully loaded roles after sign in:", updatedRoles);
         }
       }
 

@@ -84,7 +84,7 @@ export function useAuthOperations({
       }
       
       // Verificar que el usuario tiene roles asignados
-      const { data: roles, error: rolesError } = await supabase
+      const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('id')
         .eq('user_id', data.user.id);
@@ -94,7 +94,7 @@ export function useAuthOperations({
       }
       
       // Si el usuario no tiene roles, crear un rol por defecto (viewer)
-      if (!roles || roles.length === 0) {
+      if (!userRoles || userRoles.length === 0) {
         console.warn("Auth: No se encontraron roles para el usuario, creando rol por defecto");
         try {
           await createDefaultRole(data.user.id);
@@ -111,15 +111,15 @@ export function useAuthOperations({
       }
       
       // Cargar roles del usuario
-      const userRoles = await refreshUserRoles();
+      const userRolesData = await refreshUserRoles();
       
-      if (userRoles.length === 0) {
+      if (userRolesData.length === 0) {
         console.warn("Auth: No se encontraron roles después del inicio de sesión");
         sonnerToast.warning("No se encontraron roles asignados", {
           description: "Es posible que necesites contactar a un administrador para obtener permisos"
         });
       } else {
-        console.log("Auth: Roles cargados correctamente después del inicio de sesión:", userRoles);
+        console.log("Auth: Roles cargados correctamente después del inicio de sesión:", userRolesData);
       }
 
       sonnerToast.success("Inicio de sesión exitoso", {
@@ -174,11 +174,11 @@ export function useAuthOperations({
       // Primero verificar si el usuario ya existe en Supabase Auth
       const { error: checkError } = await supabase.auth.signInWithPassword({
         email,
-        password,
+        password: password + "_check", // Modificamos la contraseña para evitar login exitoso
       });
       
       // Si no hay error, significa que el usuario ya existe
-      if (!checkError) {
+      if (!checkError || (checkError.message && !checkError.message.includes("Invalid login credentials"))) {
         throw new Error("Este usuario ya existe. Por favor inicia sesión en lugar de registrarte.");
       }
       
