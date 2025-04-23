@@ -9,16 +9,20 @@ function mapRoleData(role: any): UserRoleWithStore {
   let almacenNombre: string | null = null;
   let almacenesObject: { nombre: string } = { nombre: '' };
 
-  const almacenesField = role.almacenes as { nombre: string } | { nombre: string }[] | null | undefined;
-
-  if (almacenesField) {
-    if (Array.isArray(almacenesField) && almacenesField.length > 0) {
-      almacenNombre = almacenesField[0]?.nombre || null;
-      almacenesObject = almacenNombre ? { nombre: almacenNombre } : { nombre: '' };
-    } else if (!Array.isArray(almacenesField) && typeof almacenesField === 'object' && 'nombre' in almacenesField) {
-      almacenNombre = almacenesField.nombre || null;
-      almacenesObject = almacenNombre ? { nombre: almacenNombre } : { nombre: '' };
+  // Manejar diferentes formatos de datos para almacenes
+  if (role.almacenes) {
+    if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
+      // Si es un array, tomar el primer elemento
+      almacenNombre = role.almacenes[0]?.nombre || null;
+    } else if (typeof role.almacenes === 'object' && role.almacenes !== null) {
+      // Si es un objeto directo
+      almacenNombre = role.almacenes.nombre || null;
     }
+  }
+
+  // Construir el objeto almacenes con el formato esperado
+  if (almacenNombre) {
+    almacenesObject = { nombre: almacenNombre };
   }
 
   return {
@@ -199,4 +203,3 @@ export async function fetchAllUsers() {
     throw error;
   }
 }
-
