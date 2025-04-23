@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
@@ -6,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Store, Loader2 } from "lucide-react";
+import { Store, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Auth() {
   const [activeTab, setActiveTab] = useState<string>("login");
@@ -21,6 +23,7 @@ export default function Auth() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCleaningSession, setIsCleaningSession] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
@@ -29,6 +32,7 @@ export default function Auth() {
     const cleanSession = async () => {
       try {
         setIsCleaningSession(true);
+        setErrorMessage(null);
         
         // Clean localStorage and sessionStorage data
         localStorage.removeItem('supabase.auth.token');
@@ -103,6 +107,7 @@ export default function Auth() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     
     if (!loginEmail || !loginPassword) {
       toast.error("Por favor, complete todos los campos");
@@ -115,7 +120,8 @@ export default function Auth() {
       // Navigate is handled in the signIn method
     } catch (error: any) {
       console.error("Error al iniciar sesión:", error);
-      // Error handling is done in the signIn method
+      // Extraer y mostrar el mensaje de error específico
+      setErrorMessage(error.message);
     } finally {
       setIsLoggingIn(false);
     }
@@ -184,6 +190,7 @@ export default function Auth() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     
     if (!registerEmail || !registerPassword || !registerFullName) {
       toast.error("Por favor, complete todos los campos");
@@ -210,6 +217,7 @@ export default function Auth() {
       setRegisterFullName("");
     } catch (error: any) {
       console.error("Error al registrarse:", error);
+      setErrorMessage(error.message);
       toast.error("Error al crear la cuenta", {
         description: error.message || "Hubo un problema al registrarse"
       });
@@ -247,13 +255,26 @@ export default function Auth() {
         <Tabs 
           defaultValue="login" 
           value={activeTab}
-          onValueChange={setActiveTab}
+          onValueChange={(value) => {
+            setActiveTab(value);
+            setErrorMessage(null);
+          }}
           className="w-full"
         >
           <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="login">Iniciar sesión</TabsTrigger>
             <TabsTrigger value="register">Registrarse</TabsTrigger>
           </TabsList>
+
+          {errorMessage && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>
+                {errorMessage}
+              </AlertDescription>
+            </Alert>
+          )}
 
           <TabsContent value="login">
             <Card>
