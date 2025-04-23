@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserRole } from '@/types/auth';
@@ -50,93 +49,98 @@ export function useAuthOperations({
       console.log("Auth: Sign in successful for user:", data.user.id);
       
       // Verificar que el usuario existe en la tabla profiles
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', data.user.id)
-        .maybeSingle();
-        
-      if (profileError) {
-        console.error("Auth: Error al verificar perfil:", profileError);
-      }
-      
-      // Si el perfil no existe, intentamos crearlo automáticamente
-      if (!profile) {
-        console.warn("Auth: No se encontró perfil para el usuario, intentando crearlo");
-        const { error: createProfileError } = await supabase
+      try {
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .insert({
-            id: data.user.id,
-            email: data.user.email,
-            full_name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || "Usuario"
-          });
+          .select('id')
+          .eq('id', data.user.id)
+          .maybeSingle();
           
-        if (createProfileError) {
-          console.error("Auth: Error creando perfil:", createProfileError);
-          await supabase.auth.signOut();
-          throw new Error("Tu cuenta existe pero no se pudo sincronizar con el sistema. Por favor contacta al administrador.");
-        } else {
-          console.log("Auth: Perfil creado automáticamente para usuario:", data.user.id);
-          sonnerToast.success("Perfil creado correctamente", {
-            description: "Tu cuenta fue sincronizada con el sistema"
-          });
+        if (profileError) {
+          console.error("Auth: Error al verificar perfil:", profileError);
         }
+        
+        // Si el perfil no existe, intentamos crearlo automáticamente
+        if (!profile) {
+          console.warn("Auth: No se encontró perfil para el usuario, intentando crearlo");
+          const { error: createProfileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              email: data.user.email,
+              full_name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || "Usuario"
+            });
+            
+          if (createProfileError) {
+            console.error("Auth: Error creando perfil:", createProfileError);
+            
+            // Verificar si el error es por duplicación (primary key violation)
+            if (createProfileError.code === '23505') {
+              console.log("Auth: El perfil ya existe, posible problema de concurrencia");
+              // Continuar con el proceso, no cerrar sesión
+            } else {
+              await supabase.auth.signOut();
+              throw new Error("Tu cuenta existe pero no se pudo sincronizar con el sistema. Por favor contacta al administrador.");
+            }
+          } else {
+            console.log("Auth: Perfil creado automáticamente para usuario:", data.user.id);
+            sonnerToast.success("Perfil creado correctamente", {
+              description: "Tu cuenta fue sincronizada con el sistema"
+            });
+          }
+        }
+      } catch (profileError) {
+        console.error("Auth: Error al verificar/crear perfil:", profileError);
+        sonnerToast.warning("Advertencia", {
+          description: "Se completó el inicio de sesi��n pero hubo un problema con tu perfil"
+        });
       }
       
       // Verificar que el usuario tiene roles asignados
-      const { data: existingRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('id')
-        .eq('user_id', data.user.id);
+      try {
+        const { data: existingRoles, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('id')
+          .eq('user_id', data.user.id);
+          
+        if (rolesError) {
+          console.error("Auth: Error verificando roles:", rolesError);
+        }
         
-      if (rolesError) {
-        console.error("Auth: Error verificando roles:", rolesError);
-      }
-      
-      // Si el usuario no tiene roles, crear un rol por defecto (viewer)
-      if (!existingRoles || existingRoles.length === 0) {
-        console.warn("Auth: No se encontraron roles para el usuario, creando rol por defecto");
-        try {
-          const { data: insertedRole, error: roleInsertError } = await supabase
-            .from('user_roles')
-            .insert({
-              user_id: data.user.id,
-              role: 'viewer',
-              almacen_id: null
-            })
-            .select()
-            .single();
-
-          if (roleInsertError) {
-            console.error("Auth: Error creando rol por defecto:", roleInsertError);
-            sonnerToast.warning("No se pudo asignar un rol", {
-              description: "Algunas funciones pueden estar limitadas"
-            });
-          } else {
-            console.log("Auth: Rol por defecto creado correctamente:", insertedRole);
+        // Si el usuario no tiene roles, crear un rol por defecto (viewer)
+        if (!existingRoles || existingRoles.length === 0) {
+          console.warn("Auth: No se encontraron roles para el usuario, creando rol por defecto");
+          try {
+            await createDefaultRole(data.user.id);
             sonnerToast.success("Rol asignado correctamente", {
               description: "Se te asignó el rol de Visor por defecto"
             });
+          } catch (roleError) {
+            console.error("Auth: Error creando rol por defecto:", roleError);
+            // No cerramos sesión aquí, permitimos continuar sin rol
+            sonnerToast.warning("No se pudo asignar un rol", {
+              description: "Algunas funciones pueden estar limitadas"
+            });
           }
-        } catch (roleError) {
-          console.error("Auth: Error creando rol por defecto:", roleError);
-          // No cerramos sesión aquí, permitimos continuar sin rol
-          sonnerToast.warning("No se pudo asignar un rol", {
-            description: "Algunas funciones pueden estar limitadas"
-          });
         }
+      } catch (roleCheckError) {
+        console.error("Auth: Error al verificar/crear roles:", roleCheckError);
       }
       
       // Cargar roles del usuario
-      const userRolesData = await refreshUserRoles();
-      
-      if (userRolesData.length === 0) {
-        console.warn("Auth: No se encontraron roles después del inicio de sesión");
-        sonnerToast.warning("No se encontraron roles asignados", {
-          description: "Es posible que necesites contactar a un administrador para obtener permisos"
-        });
-      } else {
-        console.log("Auth: Roles cargados correctamente después del inicio de sesión:", userRolesData);
+      try {
+        const userRolesData = await refreshUserRoles();
+        
+        if (userRolesData.length === 0) {
+          console.warn("Auth: No se encontraron roles después del inicio de sesión");
+          sonnerToast.warning("No se encontraron roles asignados", {
+            description: "Es posible que necesites contactar a un administrador para obtener permisos"
+          });
+        } else {
+          console.log("Auth: Roles cargados correctamente después del inicio de sesión:", userRolesData);
+        }
+      } catch (refreshError) {
+        console.error("Auth: Error al cargar roles:", refreshError);
       }
 
       sonnerToast.success("Inicio de sesión exitoso", {
