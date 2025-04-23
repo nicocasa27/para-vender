@@ -43,7 +43,16 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
   try {
     console.log("Auth Utils: Fetching roles for user:", userId);
 
-    const { data, error } = await supabase
+    // Usar función de RPC para verificar si el usuario es admin, evitando recursión infinita
+    const { data: isAdminCheck, error: adminError } = await supabase.rpc('user_has_role', {
+      role_name: 'admin'
+    });
+
+    // Si es admin, puede ver todos los roles (evitamos recursión)
+    const isAdmin = isAdminCheck === true;
+    console.log("Auth Utils: User is admin?", isAdmin);
+
+    let query = supabase
       .from('user_roles')
       .select(`
         id,
@@ -54,8 +63,14 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
         almacenes:almacen_id (
           nombre
         )
-      `)
-      .eq('user_id', userId);
+      `);
+
+    // Si no es admin, filtrar sólo por los roles del usuario actual
+    if (!isAdmin) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Auth Utils: Error fetching user roles:", error);
@@ -107,6 +122,7 @@ export async function createDefaultRole(userId: string): Promise<boolean> {
 
     console.log("Auth Utils: Verificando si el usuario necesita un rol por defecto:", userId);
 
+    // Usamos la función RPC para verificar roles para evitar recursión
     const { data: existingRoles, error: checkError } = await supabase
       .from('user_roles')
       .select('id')
