@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { UserRoleWithStore, UserRole } from '@/types/auth';
 
@@ -8,7 +7,7 @@ import { UserRoleWithStore, UserRole } from '@/types/auth';
 export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[]> {
   try {
     console.log("Auth Utils: Fetching roles for user:", userId);
-    
+
     // Obtener roles con información del almacén
     const { data, error } = await supabase
       .from('user_roles')
@@ -23,44 +22,29 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
         )
       `)
       .eq('user_id', userId);
-      
+
     if (error) {
       console.error("Auth Utils: Error fetching user roles:", error);
       throw error;
     }
-    
-    // Transformar los datos para incluir el nombre del almacén
+
+    // Refactor: Tipado seguro para almacenes
     const roles = data.map(role => {
-      // Variables para almacenar el nombre del almacén
       let almacenNombre: string | null = null;
       let almacenesObject: { nombre: string } = { nombre: '' };
-      
-      try {
-        // Extraer el nombre del almacén de manera segura
-        if (role.almacenes) {
-          if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
-            const primerAlmacen = role.almacenes[0];
-            if (primerAlmacen && typeof primerAlmacen === 'object') {
-              // Usando type assertion para evitar errores de TypeScript
-              const nombreProp = 'nombre' in primerAlmacen ? (primerAlmacen as any).nombre : null;
-              almacenNombre = typeof nombreProp === 'string' ? nombreProp : null;
-              if (almacenNombre) {
-                almacenesObject = { nombre: almacenNombre };
-              }
-            }
-          } else if (!Array.isArray(role.almacenes) && typeof role.almacenes === 'object') {
-            // Si es un objeto, intentamos extraer el nombre
-            const nombreProp = 'nombre' in role.almacenes ? (role.almacenes as any).nombre : null;
-            almacenNombre = typeof nombreProp === 'string' ? nombreProp : null;
-            if (almacenNombre) {
-              almacenesObject = { nombre: almacenNombre };
-            }
-          }
+
+      const almacenesField = role.almacenes as { nombre: string } | { nombre: string }[] | null | undefined;
+
+      if (almacenesField) {
+        if (Array.isArray(almacenesField) && almacenesField.length > 0) {
+          almacenNombre = almacenesField[0]?.nombre || null;
+          almacenesObject = almacenNombre ? { nombre: almacenNombre } : { nombre: '' };
+        } else if (!Array.isArray(almacenesField) && typeof almacenesField === 'object' && 'nombre' in almacenesField) {
+          almacenNombre = almacenesField.nombre || null;
+          almacenesObject = almacenNombre ? { nombre: almacenNombre } : { nombre: '' };
         }
-      } catch (err) {
-        console.error("Auth Utils: Error parsing almacenes data:", err);
       }
-      
+
       return {
         id: role.id,
         user_id: role.user_id,
@@ -71,7 +55,7 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
         almacenes: almacenesObject
       };
     });
-    
+
     console.log("Auth Utils: Fetched roles:", roles);
     return roles;
   } catch (error) {
@@ -164,7 +148,7 @@ export async function createDefaultRole(userId: string): Promise<boolean> {
 export async function fetchAllUsers() {
   try {
     console.log("Auth Utils: Obteniendo todos los usuarios");
-    
+
     // Obtener usuarios con sus perfiles
     const { data, error } = await supabase
       .from('profiles')
@@ -174,13 +158,13 @@ export async function fetchAllUsers() {
         full_name,
         created_at
       `);
-      
+
     if (error) {
       console.error("Auth Utils: Error fetching users:", error);
       throw error;
     }
-    
-    // Para cada usuario, obtener sus roles
+
+    // Refactor: Tipado seguro para almacenes en los roles
     const usersWithRoles = await Promise.all(
       data.map(async (user) => {
         const { data: roles, error: rolesError } = await supabase
@@ -196,44 +180,29 @@ export async function fetchAllUsers() {
             )
           `)
           .eq('user_id', user.id);
-          
+
         if (rolesError) {
           console.error(`Auth Utils: Error fetching roles for user ${user.id}:`, rolesError);
           return { ...user, roles: [] };
         }
-        
-        // Transformar los datos para incluir el nombre del almacén
+
+        // Refactor: Tipado seguro para almacenes
         const transformedRoles = roles.map(role => {
-          // Variables para almacenar el nombre del almacén
           let almacenNombre: string | null = null;
           let almacenesObject: { nombre: string } = { nombre: '' };
-          
-          try {
-            // Extraer el nombre del almacén de manera segura
-            if (role.almacenes) {
-              if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
-                const primerAlmacen = role.almacenes[0];
-                if (primerAlmacen && typeof primerAlmacen === 'object') {
-                  // Usando type assertion para evitar errores de TypeScript
-                  const nombreProp = 'nombre' in primerAlmacen ? (primerAlmacen as any).nombre : null;
-                  almacenNombre = typeof nombreProp === 'string' ? nombreProp : null;
-                  if (almacenNombre) {
-                    almacenesObject = { nombre: almacenNombre };
-                  }
-                }
-              } else if (!Array.isArray(role.almacenes) && typeof role.almacenes === 'object') {
-                // Si es un objeto, intentamos extraer el nombre
-                const nombreProp = 'nombre' in role.almacenes ? (role.almacenes as any).nombre : null;
-                almacenNombre = typeof nombreProp === 'string' ? nombreProp : null;
-                if (almacenNombre) {
-                  almacenesObject = { nombre: almacenNombre };
-                }
-              }
+
+          const almacenesField = role.almacenes as { nombre: string } | { nombre: string }[] | null | undefined;
+
+          if (almacenesField) {
+            if (Array.isArray(almacenesField) && almacenesField.length > 0) {
+              almacenNombre = almacenesField[0]?.nombre || null;
+              almacenesObject = almacenNombre ? { nombre: almacenNombre } : { nombre: '' };
+            } else if (!Array.isArray(almacenesField) && typeof almacenesField === 'object' && 'nombre' in almacenesField) {
+              almacenNombre = almacenesField.nombre || null;
+              almacenesObject = almacenNombre ? { nombre: almacenNombre } : { nombre: '' };
             }
-          } catch (err) {
-            console.error("Auth Utils: Error parsing almacenes data:", err);
           }
-          
+
           return {
             id: role.id,
             user_id: role.user_id,
@@ -244,14 +213,14 @@ export async function fetchAllUsers() {
             almacenes: almacenesObject
           };
         });
-        
+
         return {
           ...user,
           roles: transformedRoles
         };
       })
     );
-    
+
     console.log("Auth Utils: Fetched all users with roles:", usersWithRoles);
     return usersWithRoles;
   } catch (error) {
