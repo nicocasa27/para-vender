@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { UserRoleWithStore, UserRole } from '@/types/auth';
 
@@ -35,16 +34,14 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
       let almacenNombre = null;
       
       if (role.almacenes) {
-        if (Array.isArray(role.almacenes)) {
+        if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
           // Si es array y tiene elementos, tomamos el nombre del primer elemento
-          almacenNombre = role.almacenes.length > 0 && role.almacenes[0] && 'nombre' in role.almacenes[0] 
+          almacenNombre = role.almacenes[0] && typeof role.almacenes[0] === 'object' && 'nombre' in role.almacenes[0] 
             ? role.almacenes[0].nombre 
             : null;
-        } else {
+        } else if (!Array.isArray(role.almacenes) && typeof role.almacenes === 'object') {
           // Si es objeto, tomamos el nombre directamente
-          almacenNombre = role.almacenes && 'nombre' in role.almacenes 
-            ? role.almacenes.nombre 
-            : null;
+          almacenNombre = 'nombre' in role.almacenes ? role.almacenes.nombre : null;
         }
       }
       
@@ -52,9 +49,11 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
       let almacenesObject = { nombre: '' };
       
       if (role.almacenes) {
-        if (Array.isArray(role.almacenes) && role.almacenes.length > 0 && role.almacenes[0] && 'nombre' in role.almacenes[0]) {
+        if (Array.isArray(role.almacenes) && role.almacenes.length > 0 && 
+            typeof role.almacenes[0] === 'object' && 'nombre' in role.almacenes[0]) {
           almacenesObject = { nombre: role.almacenes[0].nombre || '' };
-        } else if (!Array.isArray(role.almacenes) && 'nombre' in role.almacenes) {
+        } else if (!Array.isArray(role.almacenes) && 
+                   typeof role.almacenes === 'object' && 'nombre' in role.almacenes) {
           almacenesObject = { nombre: role.almacenes.nombre || '' };
         }
       }
@@ -206,16 +205,14 @@ export async function fetchAllUsers() {
           let almacenNombre = null;
           
           if (role.almacenes) {
-            if (Array.isArray(role.almacenes)) {
+            if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
               // Si es array y tiene elementos, tomamos el nombre del primer elemento
-              almacenNombre = role.almacenes.length > 0 && role.almacenes[0] && 'nombre' in role.almacenes[0] 
+              almacenNombre = role.almacenes[0] && typeof role.almacenes[0] === 'object' && 'nombre' in role.almacenes[0] 
                 ? role.almacenes[0].nombre 
                 : null;
-            } else {
+            } else if (!Array.isArray(role.almacenes) && typeof role.almacenes === 'object') {
               // Si es objeto, tomamos el nombre directamente
-              almacenNombre = role.almacenes && 'nombre' in role.almacenes 
-                ? role.almacenes.nombre 
-                : null;
+              almacenNombre = 'nombre' in role.almacenes ? role.almacenes.nombre : null;
             }
           }
           
@@ -223,9 +220,11 @@ export async function fetchAllUsers() {
           let almacenesObject = { nombre: '' };
           
           if (role.almacenes) {
-            if (Array.isArray(role.almacenes) && role.almacenes.length > 0 && role.almacenes[0] && 'nombre' in role.almacenes[0]) {
+            if (Array.isArray(role.almacenes) && role.almacenes.length > 0 && 
+                typeof role.almacenes[0] === 'object' && 'nombre' in role.almacenes[0]) {
               almacenesObject = { nombre: role.almacenes[0].nombre || '' };
-            } else if (!Array.isArray(role.almacenes) && 'nombre' in role.almacenes) {
+            } else if (!Array.isArray(role.almacenes) && 
+                       typeof role.almacenes === 'object' && 'nombre' in role.almacenes) {
               almacenesObject = { nombre: role.almacenes.nombre || '' };
             }
           }
