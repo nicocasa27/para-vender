@@ -1,6 +1,6 @@
 
 import { useCallback } from 'react';
-import { UserRole, UserWithRoles } from '@/types/auth';
+import { UserRole, UserWithRoles, UserRoleWithStore } from '@/types/auth';
 import { fetchAllUsers } from '@/contexts/auth/auth-utils';
 import { toast as sonnerToast } from "sonner";
 import { Session } from '@supabase/supabase-js';
@@ -29,7 +29,19 @@ export function useUserAdministration({
         throw new Error("No tienes permisos para ver usuarios");
       }
       
-      return await fetchAllUsers();
+      // Obtenemos los usuarios y nos aseguramos de que el tipo sea correcto
+      const usersData = await fetchAllUsers();
+      
+      // Aseguramos que los datos coincidan con la interfaz UserWithRoles
+      const typedUsersData: UserWithRoles[] = usersData.map(user => ({
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        created_at: user.created_at,
+        roles: user.roles as UserRoleWithStore[]
+      }));
+      
+      return typedUsersData;
     } catch (error) {
       console.error("Auth: Error fetching users:", error);
       throw error;
@@ -51,7 +63,7 @@ export function useUserAdministration({
         throw new Error("No hay sesión de usuario");
       }
       
-      const response = await fetch(`https://dyvjtczkihdncxvsjdrz.supabase.co/functions/v1/delete-user`, {
+      const response = await fetch(`https://oyydsjvmtzilfvdzyupw.supabase.co/functions/v1/delete-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -30,10 +30,31 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
     }
     
     // Transformar los datos para incluir el nombre del almacén
-    const roles = data.map(role => ({
-      ...role,
-      almacen_nombre: role.almacenes?.nombre || null
-    }));
+    const roles = data.map(role => {
+      // Verificamos si almacenes es un array o un objeto y extraemos el nombre de forma segura
+      let almacenNombre = null;
+      if (role.almacenes) {
+        if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
+          almacenNombre = role.almacenes[0]?.nombre || null;
+        } else {
+          almacenNombre = role.almacenes?.nombre || null;
+        }
+      }
+      
+      return {
+        id: role.id,
+        user_id: role.user_id,
+        role: role.role,
+        almacen_id: role.almacen_id,
+        created_at: role.created_at,
+        almacen_nombre: almacenNombre,
+        // Aseguramos que almacenes tenga la estructura correcta según la interfaz
+        almacenes: role.almacenes && !Array.isArray(role.almacenes) ? role.almacenes : 
+                  (role.almacenes && Array.isArray(role.almacenes) && role.almacenes.length > 0) ? 
+                  { nombre: role.almacenes[0]?.nombre || '' } : 
+                  { nombre: '' }
+      };
+    });
     
     console.log("Auth Utils: Fetched roles:", roles);
     return roles;
@@ -166,10 +187,31 @@ export async function fetchAllUsers() {
         }
         
         // Transformar los datos para incluir el nombre del almacén
-        const transformedRoles = roles.map(role => ({
-          ...role,
-          almacen_nombre: role.almacenes?.nombre || null
-        }));
+        const transformedRoles = roles.map(role => {
+          // Verificamos si almacenes es un array o un objeto y extraemos el nombre de forma segura
+          let almacenNombre = null;
+          if (role.almacenes) {
+            if (Array.isArray(role.almacenes) && role.almacenes.length > 0) {
+              almacenNombre = role.almacenes[0]?.nombre || null;
+            } else {
+              almacenNombre = role.almacenes?.nombre || null;
+            }
+          }
+          
+          return {
+            id: role.id,
+            user_id: role.user_id,
+            role: role.role,
+            almacen_id: role.almacen_id,
+            created_at: role.created_at,
+            almacen_nombre: almacenNombre,
+            // Aseguramos que almacenes tenga la estructura correcta según la interfaz
+            almacenes: role.almacenes && !Array.isArray(role.almacenes) ? role.almacenes : 
+                     (role.almacenes && Array.isArray(role.almacenes) && role.almacenes.length > 0) ? 
+                     { nombre: role.almacenes[0]?.nombre || '' } : 
+                     { nombre: '' }
+          };
+        });
         
         return {
           ...user,
