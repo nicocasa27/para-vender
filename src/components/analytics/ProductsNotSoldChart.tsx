@@ -13,17 +13,11 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { Product, SaleDetail, ProductSalesChange } from "./custom-types";
 
 interface Props {
   storeId: string | null;
   period: string;
-}
-
-interface ProductSalesChange {
-  name: string;
-  current: number;
-  previous: number;
-  change: number;
 }
 
 export function ProductsNotSoldChart({ storeId, period }: Props) {
@@ -78,7 +72,7 @@ export function ProductsNotSoldChart({ storeId, period }: Props) {
         
         // Initialize product sales map
         const productSalesMap: Record<string, { name: string, current: number, previous: number }> = {};
-        products.forEach(prod => {
+        (products as Product[]).forEach(prod => {
           productSalesMap[prod.id] = { name: prod.nombre, current: 0, previous: 0 };
         });
         
@@ -103,7 +97,7 @@ export function ProductsNotSoldChart({ storeId, period }: Props) {
         
         // Process current period sales
         if (currentSales && currentSales.length > 0) {
-          currentSales.forEach(sale => {
+          (currentSales as SaleDetail[]).forEach(sale => {
             const productId = sale.producto_id;
             if (!productId || !productSalesMap[productId]) return;
             
@@ -133,7 +127,7 @@ export function ProductsNotSoldChart({ storeId, period }: Props) {
         
         // Process previous period sales
         if (previousSales && previousSales.length > 0) {
-          previousSales.forEach(sale => {
+          (previousSales as SaleDetail[]).forEach(sale => {
             const productId = sale.producto_id;
             if (!productId || !productSalesMap[productId]) return;
             

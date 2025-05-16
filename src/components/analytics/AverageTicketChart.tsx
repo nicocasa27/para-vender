@@ -13,23 +13,17 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { formatCurrency } from "@/lib/utils";
+import { Store, Sale, AverageTicketDataPoint } from "./custom-types";
 
 interface Props {
   storeIds: string[];
   period: string;
 }
 
-interface StoreData {
-  id: string;
-  nombre: string;
-  color: string;
-}
-
 export function AverageTicketChart({ storeIds, period }: Props) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any[]>([]);
-  const [stores, setStores] = useState<StoreData[]>([]);
+  const [stores, setStores] = useState<(Store & { color: string })[]>([]);
   
   // Colors for the stores
   const colors = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088FE"];
@@ -46,7 +40,7 @@ export function AverageTicketChart({ storeIds, period }: Props) {
           
         if (error) throw error;
         
-        const storesWithColors = storesData.map((store, index) => ({
+        const storesWithColors = (storesData || []).map((store, index) => ({
           ...store,
           color: colors[index % colors.length]
         }));
@@ -92,7 +86,7 @@ export function AverageTicketChart({ storeIds, period }: Props) {
         };
         
         // Get average ticket per store from ventas table
-        const storeTicketData: Record<string, any[]> = {};
+        const storeTicketData: Record<string, AverageTicketDataPoint[]> = {};
         
         for (const store of stores) {
           const { data: ventasData, error } = await supabase
@@ -109,7 +103,7 @@ export function AverageTicketChart({ storeIds, period }: Props) {
             // Group sales by date and calculate daily average
             const salesByDate: Record<string, { total: number, count: number }> = {};
             
-            ventasData.forEach(venta => {
+            ventasData.forEach((venta: Sale) => {
               const date = new Date(venta.created_at).toLocaleDateString('es-ES', { 
                 day: 'numeric', 
                 month: 'short' 

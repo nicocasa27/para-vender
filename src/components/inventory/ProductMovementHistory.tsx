@@ -1,50 +1,39 @@
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { format } from "date-fns";
-import { ArrowRight } from "lucide-react";
+import { Loader } from "lucide-react";
+import { formatDate } from "@/lib/utils";
+
+interface ProductMovementHistoryProps {
+  productId: string;
+}
 
 interface Movement {
   id: string;
   tipo: string;
   cantidad: number;
   created_at: string;
-  origen?: {
-    nombre: string;
-  };
-  destino?: {
-    nombre: string;
-  };
-  notas?: string;
+  notas: string | null;
+  almacen_origen_id: string | null;
+  almacen_destino_id: string | null;
+  almacen_origen?: { nombre: string | null } | null;
+  almacen_destino?: { nombre: string | null } | null;
 }
 
-interface ProductMovementHistoryProps {
-  productId: string;
-}
-
-export const ProductMovementHistory: React.FC<ProductMovementHistoryProps> = ({ productId }) => {
+export function ProductMovementHistory({ productId }: ProductMovementHistoryProps) {
+  const [loading, setLoading] = useState(false);
   const [movements, setMovements] = useState<Movement[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [productName, setProductName] = useState("");
 
   useEffect(() => {
     if (productId) {
-      loadMovementHistory();
-      loadProductName();
+      loadMovements();
     }
   }, [productId]);
 
-  const loadMovementHistory = async () => {
+  const loadMovements = async () => {
     setLoading(true);
     try {
+      // Fetch movements with join for almacen names
       const { data, error } = await supabase
         .from('movimientos')
         .select(`
@@ -53,115 +42,84 @@ export const ProductMovementHistory: React.FC<ProductMovementHistoryProps> = ({ 
           cantidad,
           created_at,
           notas,
-          origen:almacenes!movimientos_almacen_origen_id_fkey(nombre),
-          destino:almacenes!movimientos_almacen_destino_id_fkey(nombre)
+          almacen_origen_id,
+          almacen_destino_id,
+          almacen_origen:almacenes!almacen_origen_id(nombre),
+          almacen_destino:almacenes!almacen_destino_id(nombre)
         `)
         .eq('producto_id', productId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      // Map the data to the Movement interface
-      const formattedData: Movement[] = (data || []).map((item: any) => ({
-        id: item.id,
-        tipo: item.tipo,
-        cantidad: Number(item.cantidad),
-        created_at: item.created_at,
-        notas: item.notas,
-        origen: item.origen ? { nombre: item.origen.nombre } : undefined,
-        destino: item.destino ? { nombre: item.destino.nombre } : undefined
-      }));
-      
-      setMovements(formattedData);
+      setMovements(data || []);
     } catch (error) {
-      console.error("Error al cargar el historial de movimientos:", error);
+      console.error('Error loading movements:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadProductName = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('productos')
-        .select('nombre')
-        .eq('id', productId)
-        .single();
-
-      if (error) throw error;
-      if (data) setProductName(data.nombre);
-    } catch (error) {
-      console.error("Error al cargar el nombre del producto:", error);
-    }
-  };
-
-  const renderMovementType = (tipo: string) => {
-    switch (tipo.toLowerCase()) {
-      case 'entrada':
-        return <span className="text-green-600">Entrada</span>;
-      case 'salida':
-        return <span className="text-red-600">Salida</span>;
-      case 'transferencia':
-        return <span className="text-blue-600">Transferencia</span>;
-      default:
-        return <span>{tipo}</span>;
-    }
-  };
-
   if (loading) {
     return (
-      <div className="flex justify-center items-center p-8">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      <div className="flex items-center justify-center h-40">
+        <Loader className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (movements.length === 0) {
+    return (
+      <div className="py-8 text-center text-muted-foreground">
+        No hay movimientos registrados para este producto.
       </div>
     );
   }
 
   return (
-    <div className="mt-4">
-      <h3 className="text-lg font-medium mb-4">{productName}</h3>
-      
-      {movements.length === 0 ? (
-        <p className="text-center text-muted-foreground p-4">
-          No hay movimientos registrados para este producto
-        </p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Cantidad</TableHead>
-              <TableHead>Detalles</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {movements.map((movement) => (
-              <TableRow key={movement.id}>
-                <TableCell className="whitespace-nowrap">
-                  {format(new Date(movement.created_at), 'dd/MM/yyyy HH:mm')}
-                </TableCell>
-                <TableCell>{renderMovementType(movement.tipo)}</TableCell>
-                <TableCell>{movement.cantidad}</TableCell>
-                <TableCell>
-                  {movement.tipo.toLowerCase() === 'transferencia' ? (
-                    <div className="flex items-center gap-1">
-                      <span>{movement.origen?.nombre}</span>
-                      <ArrowRight className="h-3 w-3 mx-1" />
-                      <span>{movement.destino?.nombre}</span>
-                    </div>
-                  ) : movement.tipo.toLowerCase() === 'entrada' ? (
-                    <span>{movement.destino?.nombre} {movement.notas && `(${movement.notas})`}</span>
-                  ) : movement.tipo.toLowerCase() === 'salida' ? (
-                    <span>{movement.origen?.nombre} {movement.notas && `(${movement.notas})`}</span>
-                  ) : (
-                    movement.notas
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+    <div className="space-y-4 mt-4">
+      {movements.map((movement) => (
+        <div key={movement.id} className="border rounded-lg p-4">
+          <div className="flex justify-between items-start">
+            <div>
+              <span className="font-semibold">
+                {movement.tipo === 'entrada' ? 'Entrada' : 
+                 movement.tipo === 'salida' ? 'Salida' : 
+                 movement.tipo === 'transferencia' ? 'Transferencia' : 
+                 movement.tipo}
+              </span>
+              <span className="ml-2 text-sm text-muted-foreground">
+                {formatDate(movement.created_at)}
+              </span>
+            </div>
+            <span className={`text-sm font-medium ${
+              movement.tipo === 'entrada' ? 'text-green-600' : 
+              movement.tipo === 'salida' ? 'text-red-600' : 'text-blue-600'
+            }`}>
+              {movement.tipo === 'entrada' ? '+' : 
+               movement.tipo === 'salida' ? '-' : '↔'} {movement.cantidad}
+            </span>
+          </div>
+          
+          <div className="mt-2 text-sm">
+            {movement.tipo === 'transferencia' ? (
+              <>
+                <div>De: {movement.almacen_origen?.nombre || 'Desconocido'}</div>
+                <div>A: {movement.almacen_destino?.nombre || 'Desconocido'}</div>
+              </>
+            ) : movement.tipo === 'entrada' ? (
+              <div>A: {movement.almacen_destino?.nombre || 'Desconocido'}</div>
+            ) : (
+              <div>De: {movement.almacen_origen?.nombre || 'Desconocido'}</div>
+            )}
+          </div>
+          
+          {movement.notas && (
+            <div className="mt-2 text-sm text-muted-foreground">
+              {movement.notas}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
-};
+}

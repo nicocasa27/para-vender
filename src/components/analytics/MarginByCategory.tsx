@@ -13,17 +13,11 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { Category, Product, SaleDetail, MarginData } from "./custom-types";
 
 interface Props {
   storeId: string | null;
   period: string;
-}
-
-interface MarginData {
-  name: string;
-  sales: number;
-  cost: number;
-  margin: number;
 }
 
 export function MarginByCategory({ storeId, period }: Props) {
@@ -67,7 +61,7 @@ export function MarginByCategory({ storeId, period }: Props) {
         
         // Initialize margin data by category
         const categoryMap: Record<string, { name: string, sales: number, cost: number }> = {};
-        categories.forEach(cat => {
+        (categories as Category[]).forEach(cat => {
           categoryMap[cat.id] = { name: cat.nombre, sales: 0, cost: 0 };
         });
         
@@ -80,7 +74,7 @@ export function MarginByCategory({ storeId, period }: Props) {
         
         // Create product price map
         const productPriceMap: Record<string, { venta: number, compra: number, categoria_id: string | null }> = {};
-        products?.forEach(prod => {
+        (products as Product[])?.forEach(prod => {
           productPriceMap[prod.id] = { 
             venta: Number(prod.precio_venta) || 0, 
             compra: Number(prod.precio_compra) || 0,
@@ -112,7 +106,7 @@ export function MarginByCategory({ storeId, period }: Props) {
         
         if (salesDetails && salesDetails.length > 0) {
           // Process sales data
-          salesDetails.forEach(detail => {
+          (salesDetails as SaleDetail[]).forEach(detail => {
             const productId = detail.producto_id;
             if (!productId || !productPriceMap[productId]) return;
             
