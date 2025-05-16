@@ -5,6 +5,7 @@ import { useRoleManagement } from './users/useRoleManagement';
 import { useUserDeletion } from './users/useUserDeletion';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { castToUserRole } from '@/types/auth';
 
 export function useUsersAndRoles(isAdmin: boolean) {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
@@ -47,7 +48,7 @@ export function useUsersAndRoles(isAdmin: boolean) {
         console.log(`Encontrados ${viewData.length} registros desde la vista`);
         
         // Agrupar por usuario
-        const userMap = new Map();
+        const userMap = new Map<string, UserWithRoles>();
         
         viewData.forEach(row => {
           if (!userMap.has(row.user_id)) {
@@ -62,17 +63,17 @@ export function useUsersAndRoles(isAdmin: boolean) {
           
           // Añadir el rol al usuario
           const user = userMap.get(row.user_id);
-          // Asegurarse de que almacen_nombre sea una propiedad reconocida por TypeScript
-          const almacenNombre = (row as any).almacen_nombre || null;
-          
-          user.roles.push({
-            id: row.id,
-            user_id: row.user_id,
-            role: row.role,
-            almacen_id: row.almacen_id,
-            created_at: row.created_at,
-            almacen_nombre: almacenNombre
-          });
+          if (user) {
+            // Process role with proper type casting
+            user.roles.push({
+              id: row.id,
+              user_id: row.user_id,
+              role: castToUserRole(row.role),
+              almacen_id: row.almacen_id,
+              created_at: row.created_at || new Date().toISOString(),
+              almacen_nombre: row.almacen_nombre || null
+            });
+          }
         });
         
         // Convertir el Map a array
@@ -116,14 +117,21 @@ export function useUsersAndRoles(isAdmin: boolean) {
         const userRoles = allRoles.filter(role => role.user_id === profile.id) || [];
         
         // Si el usuario no tiene roles asignados explícitamente, le asignamos el rol predeterminado 'viewer'
-        const roles: RoleWithStore[] = userRoles.length > 0 ? userRoles.map(role => ({
-          id: role.id,
-          user_id: role.user_id,
-          role: role.role,
-          almacen_id: role.almacen_id,
-          created_at: role.created_at || new Date().toISOString(),
-          almacen_nombre: role.almacenes?.nombre || null
-        })) : [{
+        const roles: RoleWithStore[] = userRoles.length > 0 ? userRoles.map(role => {
+          // Safe access to almacenes with error handling
+          const almacenNombre = role.almacenes && !role.almacenes.error 
+            ? role.almacenes.nombre 
+            : null;
+            
+          return {
+            id: role.id,
+            user_id: role.user_id,
+            role: castToUserRole(role.role),
+            almacen_id: role.almacen_id,
+            created_at: role.created_at || new Date().toISOString(),
+            almacen_nombre: almacenNombre
+          };
+        }) : [{
           id: `default-viewer-${profile.id}`,
           user_id: profile.id,
           role: 'viewer',

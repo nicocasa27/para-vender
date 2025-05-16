@@ -22,8 +22,9 @@ export function useFetchUsers() {
           // Process the view data
           const processedUsers = processUserRoleData(viewData.map(item => ({
             ...item,
-            role: castToUserRole(item.role) // Cast string to UserRole
-          })));
+            // Ensure role is properly cast to UserRole
+            role: castToUserRole(item.role)
+          } as UserRoleWithName)));
           
           setUsers(processedUsers);
           setLoading(false);
@@ -50,15 +51,22 @@ export function useFetchUsers() {
               id: profile.id,
               email: profile.email || "",
               full_name: profile.full_name || "",
-              roles: roles.map(role => ({
-                id: role.id,
-                user_id: role.user_id,
-                role: castToUserRole(role.role),
-                almacen_id: role.almacen_id,
-                created_at: role.created_at,
-                almacen_nombre: role.almacenes?.nombre || null,
-                almacenes: role.almacenes || { id: "", nombre: "" }
-              })) || []
+              roles: roles.map(role => {
+                // Safe access to almacenes with error handling
+                const safeAlmacenes = role.almacenes && !role.almacenes.error 
+                  ? { id: role.almacenes.id || "", nombre: role.almacenes.nombre || "" }
+                  : null;
+                
+                return {
+                  id: role.id,
+                  user_id: role.user_id,
+                  role: castToUserRole(role.role),
+                  almacen_id: role.almacen_id,
+                  created_at: role.created_at,
+                  almacen_nombre: safeAlmacenes ? safeAlmacenes.nombre : null,
+                  almacenes: safeAlmacenes
+                };
+              }) || []
             };
           })
         );
@@ -104,14 +112,19 @@ export function useFetchUsers() {
     return Array.from(userMap.values());
   }
 
-  return { users, loading, error, refetch: async () => {
-    setLoading(true);
-    try {
-      // Implement refetch logic here - similar to fetchUsers
-    } catch (err) {
-      setError(err as Error);
-    } finally {
-      setLoading(false);
+  return { 
+    users, 
+    loading, 
+    error, 
+    refetch: async () => {
+      setLoading(true);
+      try {
+        // Implement refetch logic here - similar to fetchUsers
+      } catch (err) {
+        setError(err as Error);
+      } finally {
+        setLoading(false);
+      }
     }
-  }};
+  };
 }

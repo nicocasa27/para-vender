@@ -42,6 +42,51 @@ export function checkHasRole(roles: UserRoleWithStore[], role: UserRole, storeId
 }
 
 /**
+ * Create a default role for a user if they don't have any roles
+ */
+export async function createDefaultRole(userId: string): Promise<boolean> {
+  try {
+    console.log("Creating default role for user:", userId);
+    
+    // Check if user already has roles
+    const { data: existingRoles, error: checkError } = await supabase
+      .from('user_roles')
+      .select('id')
+      .eq('user_id', userId);
+      
+    if (checkError) {
+      console.error("Error checking existing roles:", checkError);
+      return false;
+    }
+    
+    if (existingRoles && existingRoles.length > 0) {
+      console.log("User already has roles, not creating default");
+      return true;
+    }
+    
+    // Create default viewer role
+    const { error: insertError } = await supabase
+      .from('user_roles')
+      .insert({
+        user_id: userId,
+        role: 'viewer',
+        almacen_id: null
+      });
+      
+    if (insertError) {
+      console.error("Error creating default role:", insertError);
+      return false;
+    }
+    
+    console.log("Default role created successfully for user:", userId);
+    return true;
+  } catch (error) {
+    console.error("Exception creating default role:", error);
+    return false;
+  }
+}
+
+/**
  * Fetch roles for a specific user
  */
 export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[]> {
@@ -83,15 +128,21 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
     
     console.log(`Found ${roles.length} roles for user from regular query`);
     
-    return roles.map(role => ({
-      id: role.id,
-      user_id: role.user_id,
-      role: safeRoleCast(role.role),
-      almacen_id: role.almacen_id,
-      created_at: role.created_at || new Date().toISOString(),
+    return roles.map(role => {
       // Safe access to potentially null/error properties
-      almacen_nombre: safeProperty(role.almacenes, 'nombre', null)
-    }));
+      const almacenNombre = role.almacenes && !role.almacenes.error 
+        ? role.almacenes.nombre 
+        : null;
+      
+      return {
+        id: role.id,
+        user_id: role.user_id,
+        role: safeRoleCast(role.role),
+        almacen_id: role.almacen_id,
+        created_at: role.created_at || new Date().toISOString(),
+        almacen_nombre: almacenNombre
+      };
+    });
     
   } catch (error) {
     console.error("Error fetching user roles:", error);

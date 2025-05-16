@@ -88,20 +88,13 @@ export const useUserManagement = () => {
         // Format roles
         const formattedRoles = (roles || []).map(role => {
           // Safely handle almacen_nombre
-          let almacenNombre = null;
+          let almacenNombre: string | null = null;
           
-          // Use async-await in an IIFE to avoid await in a non-async function
-          (async function getAlmacenNombre() {
+          // Use a self-invoking function instead of await
+          (function getAlmacenNombre() {
             if (role.almacen_id) {
-              const { data: almacen } = await supabase
-                .from('almacenes')
-                .select('nombre')
-                .eq('id', role.almacen_id)
-                .single();
-                
-              if (almacen && almacen.nombre) {
-                almacenNombre = almacen.nombre;
-              }
+              // We'll set this to null and fetch it separately if needed
+              almacenNombre = null;
             }
           })();
           

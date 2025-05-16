@@ -56,7 +56,7 @@ export function processUserData(data: any[], isFromView = false): UserWithRoles[
           // Use optional chaining for potentially null properties
           almacen_nombre: isFromView ? row.almacen_nombre : (row.almacenes?.nombre || null),
           // Include almacenes object if available (for compatibility)
-          ...(row.almacenes && { almacenes: { 
+          ...(row.almacenes && !row.almacenes.error && { almacenes: { 
             id: row.almacenes.id || "", 
             nombre: row.almacenes.nombre || "" 
           }})

@@ -5,13 +5,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole, UserRoleWithStore, UserWithRoles } from "@/types/auth";
 import { safeCast } from "@/utils/supabaseHelpers";
-import { extractProperty } from "@/utils/supabase-helpers";
+import { extractProperty } from "@/utils/supabaseHelpers";
 
 // Helper function to safely cast to UserRole with proper types 
 export function safelyExtractRole(role: string): UserRole {
-  // Create a copy of the array to make it mutable
-  const validRoles = ["admin", "manager", "sales", "viewer"] as UserRole[];
-  return validRoles.includes(role as UserRole) ? (role as UserRole) : "viewer";
+  // Create a valid array for use with safeCast
+  const validRoles = ["admin", "manager", "sales", "viewer"] as const;
+  return safeCast(role, validRoles, "viewer");
 }
 
 /**
@@ -62,7 +62,9 @@ export async function fetchAllUsers(): Promise<UserWithRoles[]> {
         
         const roles = rolesData.map(role => {
           // Safely access nested properties
-          const almacenNombre = safeAccess(role.almacenes, 'nombre', null);
+          const almacenNombre = role.almacenes && !role.almacenes.error 
+            ? role.almacenes.nombre 
+            : null;
           
           // Use a proper type cast for the role
           const processedRole: UserRoleWithStore = {

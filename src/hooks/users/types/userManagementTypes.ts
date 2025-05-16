@@ -54,9 +54,14 @@ export interface UserRoleWithName {
 export interface UserWithRoles {
   id: string;
   email: string;
-  full_name: string;
+  full_name: string | null;
   created_at?: string;
   roles: RoleWithStore[];
+  profiles?: {
+    id: string;
+    email: string;
+    full_name: string | null;
+  };
 }
 
 // Helper function to safely cast a string to UserRole

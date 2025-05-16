@@ -12,7 +12,7 @@ export function exampleFunction(): UserDataQueryResult {
   };
 }
 
-// Added fetchUserData function that was missing
+// Added fetchUserData function with proper error handling
 export async function fetchUserData(): Promise<UserWithRoles[]> {
   try {
     const { data: profiles, error: profilesError } = await supabase
@@ -37,8 +37,10 @@ export async function fetchUserData(): Promise<UserWithRoles[]> {
           full_name: profile.full_name || "",
           created_at: profile.created_at,
           roles: roles.map(role => {
-            // Safely access nested properties with nullish coalescing
-            const safeAlmacenes = role.almacenes || { id: "", nombre: "" };
+            // Safely access nested properties with type checking
+            const safeAlmacenes = role.almacenes && !role.almacenes.error 
+              ? { id: role.almacenes.id || "", nombre: role.almacenes.nombre || "" }
+              : null;
               
             return {
               id: role.id,
@@ -46,7 +48,7 @@ export async function fetchUserData(): Promise<UserWithRoles[]> {
               role: castToUserRole(role.role),
               almacen_id: role.almacen_id,
               created_at: role.created_at || new Date().toISOString(),
-              almacen_nombre: safeAlmacenes.nombre,
+              almacen_nombre: safeAlmacenes ? safeAlmacenes.nombre : null,
               almacenes: safeAlmacenes
             };
           }) || []
@@ -97,7 +99,6 @@ export function updateUserData(userId: string, data: any): UserDataQueryResult {
         id: userId,
         email: data.email || '',
         full_name: data.full_name || null,
-        created_at: data.created_at || new Date().toISOString(),
         roles: data.roles || []
       },
       message: "User data updated successfully",

@@ -46,6 +46,18 @@ export function extractProperty<T = any>(
 }
 
 /**
+ * Cast string to enum safely with fallback
+ * @param value Value to cast
+ * @param validValues Array of valid enum values
+ * @param defaultValue Default value to use if cast fails
+ * @returns Safely cast value
+ */
+export function safeCast<T extends string>(value: unknown, validValues: readonly T[], defaultValue: T): T {
+  if (typeof value !== 'string') return defaultValue;
+  return (validValues as readonly string[]).includes(value) ? (value as T) : defaultValue;
+}
+
+/**
  * Type guard for checking if an object came from Supabase with the expected structure
  * @param obj Object to check
  * @param requiredFields Fields that must exist on the object
@@ -75,7 +87,6 @@ export function isValidSupabaseResult(obj: any, requiredFields: string[]): boole
  */
 export function createTypedSelector<T>(tableName: string) {
   return async (query: string) => {
-    // Use imported supabase client
     const { data, error } = await supabase.from(tableName).select(query);
     if (error) throw error;
     return data as T[];
