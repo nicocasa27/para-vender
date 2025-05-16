@@ -1,51 +1,82 @@
 
+import { supabase } from "@/integrations/supabase/client";
+
 /**
- * Utilities for safely handling Supabase response data
+ * Safely transform Supabase query results to ensure type safety
+ * @param data Raw data from Supabase query
+ * @param transformer Function to transform each item
+ * @returns Array of transformed items
  */
-
-// Safely get property from potentially nested object
-export function safeGet<T, K extends keyof T>(obj: T | null | undefined, key: K): T[K] | null {
-  if (!obj) return null;
-  return obj[key];
+export function transformSupabaseData<T, R>(
+  data: T[] | null | undefined,
+  transformer: (item: T) => R
+): R[] {
+  if (!data || !Array.isArray(data)) return [];
+  return data.map(item => transformer(item));
 }
 
-// For safely accessing nested properties from Supabase relations
-export function safeGetNested<T, K1 extends keyof T, K2 extends keyof NonNullable<T[K1]>>(
-  obj: T | null | undefined, 
-  key1: K1, 
-  key2: K2
-): NonNullable<T[K1]>[K2] | null {
-  if (!obj) return null;
-  const value1 = obj[key1];
-  if (!value1) return null;
-  return (value1 as any)[key2];
-}
-
-// Cast any string to a specific enum type with fallback
-export function safeCast<T extends string>(value: unknown, validValues: T[], defaultValue: T): T {
-  if (typeof value !== 'string') return defaultValue;
-  return validValues.includes(value as T) ? (value as T) : defaultValue;
-}
-
-// Type guard for checking if a value is not null or undefined
-export function isNotNullOrUndefined<T>(value: T | null | undefined): value is T {
-  return value !== null && value !== undefined;
-}
-
-// Parse JSON safely
-export function safeParseJson<T>(json: string | null | undefined, defaultValue: T): T {
-  if (!json) return defaultValue;
+/**
+ * Safely extract a property from a Supabase query result
+ * @param obj Object that might contain a nested property
+ * @param path Path to the property (e.g., "almacenes.nombre")
+ * @param defaultValue Default value if property doesn't exist
+ * @returns The property value or default
+ */
+export function extractProperty<T = any>(
+  obj: any,
+  path: string,
+  defaultValue: T
+): T {
   try {
-    return JSON.parse(json) as T;
-  } catch (e) {
+    const parts = path.split('.');
+    let current = obj;
+    
+    for (const part of parts) {
+      if (current === null || current === undefined) {
+        return defaultValue;
+      }
+      current = current[part];
+    }
+    
+    return (current === null || current === undefined) ? defaultValue : current as T;
+  } catch (error) {
+    console.error(`Error extracting property ${path}:`, error);
     return defaultValue;
   }
 }
 
-// Create a typed selector for Supabase responses
+/**
+ * Type guard for checking if an object came from Supabase with the expected structure
+ * @param obj Object to check
+ * @param requiredFields Fields that must exist on the object
+ * @returns Boolean indicating if the object has the required structure
+ */
+export function isValidSupabaseResult(obj: any, requiredFields: string[]): boolean {
+  if (!obj || typeof obj !== 'object') return false;
+  return requiredFields.every(field => {
+    const parts = field.split('.');
+    let current = obj;
+    
+    for (const part of parts) {
+      if (current === null || current === undefined || !current.hasOwnProperty(part)) {
+        return false;
+      }
+      current = current[part];
+    }
+    
+    return true;
+  });
+}
+
+/**
+ * Create a typed selector for Supabase responses
+ * @param tableName Table to query
+ * @returns A function that queries the table and returns typed data
+ */
 export function createTypedSelector<T>(tableName: string) {
   return async (query: string) => {
-    const { data, error } = await (supabase as any).from(tableName).select(query);
+    // Use imported supabase client
+    const { data, error } = await supabase.from(tableName).select(query);
     if (error) throw error;
     return data as T[];
   };

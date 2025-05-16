@@ -1,5 +1,6 @@
-import { UserRoleWithName } from "../types/userManagementTypes";
-import { UserWithRoles } from "@/types/auth";
+
+import { UserRoleWithName, UserWithRoles } from "../types/userManagementTypes";
+import { castToUserRole } from "@/types/auth";
 
 /**
  * Procesa datos de la vista user_roles_with_name y los convierte al formato UserWithRoles
@@ -45,13 +46,20 @@ export function processUserData(data: any[], isFromView = false): UserWithRoles[
       // Añadir este rol al array de roles del usuario
       const userEntry = usersMap.get(userId);
       if (userEntry && row.role) {
+        // Use type casting to ensure role is a valid UserRole
         userEntry.roles.push({
           id: row.id || "",
           user_id: userId,
-          role: row.role,
+          role: castToUserRole(row.role),
           almacen_id: row.almacen_id || null,
           created_at: row.created_at || new Date().toISOString(),
-          almacen_nombre: isFromView ? row.almacen_nombre : (row.almacenes?.nombre || null)
+          // Use optional chaining for potentially null properties
+          almacen_nombre: isFromView ? row.almacen_nombre : (row.almacenes?.nombre || null),
+          // Include almacenes object if available (for compatibility)
+          ...(row.almacenes && { almacenes: { 
+            id: row.almacenes.id || "", 
+            nombre: row.almacenes.nombre || "" 
+          }})
         });
       }
     });

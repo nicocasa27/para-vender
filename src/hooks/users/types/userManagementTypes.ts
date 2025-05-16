@@ -39,6 +39,18 @@ export interface RoleWithStore {
   almacen_nombre?: string | null;
 }
 
+export interface UserRoleWithName {
+  id: string;
+  user_id: string;
+  role: UserRole;
+  almacen_id: string | null;
+  created_at?: string;
+  email?: string | null;
+  full_name?: string | null;
+  almacen_nombre?: string | null;
+  tenant_id?: string | null;
+}
+
 export interface UserWithRoles {
   id: string;
   email: string;

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 // Example function with correct return type
 export function exampleFunction(): UserDataQueryResult {
   return {
-    data: { id: "example-id", email: "example@example.com" },
+    data: null,
     message: "Example data",
     success: true
   };
@@ -26,7 +26,7 @@ export async function fetchUserData(): Promise<UserWithRoles[]> {
       profiles.map(async (profile) => {
         const { data: roles, error: rolesError } = await supabase
           .from('user_roles')
-          .select('*, almacenes(*)')
+          .select('*, almacenes(id,nombre)')
           .eq('user_id', profile.id);
           
         if (rolesError) throw rolesError;
@@ -37,16 +37,17 @@ export async function fetchUserData(): Promise<UserWithRoles[]> {
           full_name: profile.full_name || "",
           created_at: profile.created_at,
           roles: roles.map(role => {
-            // Safely access nested properties
-            const almacenNombre = role.almacenes && typeof role.almacenes === 'object' 
-              ? role.almacenes.nombre || null 
-              : null;
+            // Safely access nested properties with nullish coalescing
+            const safeAlmacenes = role.almacenes || { id: "", nombre: "" };
               
             return {
-              ...role,
-              role: castToUserRole(role.role), // Cast to valid UserRole type
-              created_at: role.created_at || new Date().toISOString(), // Ensure created_at is never null
-              almacen_nombre: almacenNombre
+              id: role.id,
+              user_id: role.user_id,
+              role: castToUserRole(role.role),
+              almacen_id: role.almacen_id,
+              created_at: role.created_at || new Date().toISOString(),
+              almacen_nombre: safeAlmacenes.nombre,
+              almacenes: safeAlmacenes
             };
           }) || []
         };

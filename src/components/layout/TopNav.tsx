@@ -26,9 +26,15 @@ export const TopNav = () => {
     return null;
   }
 
-  // Safely access subscription properties
-  const hasSubscription = currentTenant && 'subscription' in currentTenant;
-  const subscriptionPlan = hasSubscription && currentTenant.subscription ? 
+  // Safely access subscription properties with type checking
+  const hasSubscription = currentTenant && 
+    typeof currentTenant === 'object' && 
+    'subscription' in currentTenant && 
+    currentTenant.subscription;
+    
+  const subscriptionPlan = hasSubscription && 
+    typeof currentTenant.subscription === 'object' && 
+    'plan' in currentTenant.subscription ? 
     currentTenant.subscription.plan || 'basic' : 'basic';
 
   return (

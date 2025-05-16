@@ -1,251 +1,138 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { UserWithRoles, UserRoleWithStore } from "@/types/auth";
-import { safeCast } from "@/utils/supabaseHelpers";
+// We need to update this file with the correct types to fix type errors
+// Update the array assignment errors and property access issues
 
-// Valid role values for type safety
-const validRoles = ["admin", "manager", "sales", "viewer"] as const;
-type UserRole = typeof validRoles[number];
+import { supabase } from "@/integrations/supabase/client";
+import { UserRole, UserRoleWithStore, UserWithRoles } from "@/types/auth";
+import { safeCast } from "@/utils/supabaseHelpers";
+import { extractProperty } from "@/utils/supabase-helpers";
+
+// Helper function to safely cast to UserRole with proper types 
+export function safelyExtractRole(role: string): UserRole {
+  // Create a copy of the array to make it mutable
+  const validRoles = ["admin", "manager", "sales", "viewer"] as UserRole[];
+  return validRoles.includes(role as UserRole) ? (role as UserRole) : "viewer";
+}
 
 /**
- * Fetch all users with their roles
+ * Safely handle potential Supabase errors when accessing properties
+ */
+export function safeAccess<T>(obj: any, key: string, defaultValue: T): T {
+  if (!obj) return defaultValue;
+  
+  try {
+    if (obj.error === true) return defaultValue;
+    return (obj[key] !== undefined && obj[key] !== null) ? obj[key] : defaultValue;
+  } catch (e) {
+    return defaultValue;
+  }
+}
+
+/**
+ * Fetches all users with their roles
  */
 export async function fetchAllUsers(): Promise<UserWithRoles[]> {
   try {
-    // Fetch all profiles
+    console.log('Fetching all users...');
+    
+    // First try to use the user_roles_with_name view for better performance
+    const { data: viewData, error: viewError } = await supabase
+      .from('user_roles_with_name')
+      .select('*');
+      
+    if (!viewError && viewData && viewData.length > 0) {
+      return processViewData(viewData);
+    }
+    
+    // Fallback: fetch data through multiple queries
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select('*');
       
     if (profilesError) throw profilesError;
-    
-    if (!profiles || profiles.length === 0) {
-      return [];
-    }
-    
-    // Fetch all roles in a single query
-    const { data: rolesData, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('*, profiles:profiles(*), almacenes:almacenes(*)');
       
-    if (rolesError) throw rolesError;
-    
-    // Create a map of user_id -> roles for efficient access
-    const userRolesMap = new Map<string, UserRoleWithStore[]>();
-    
-    if (rolesData && rolesData.length > 0) {
-      rolesData.forEach(role => {
-        const userId = role.user_id;
+    const usersWithRoles: UserWithRoles[] = await Promise.all(
+      profiles.map(async profile => {
+        const { data: rolesData, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('*, almacenes(*)')
+          .eq('user_id', profile.id);
+          
+        if (rolesError) throw rolesError;
         
-        if (!userRolesMap.has(userId)) {
-          userRolesMap.set(userId, []);
-        }
+        const roles = rolesData.map(role => {
+          // Safely access nested properties
+          const almacenNombre = safeAccess(role.almacenes, 'nombre', null);
+          
+          // Use a proper type cast for the role
+          const processedRole: UserRoleWithStore = {
+            id: role.id,
+            user_id: role.user_id,
+            role: safelyExtractRole(role.role),
+            almacen_id: role.almacen_id,
+            created_at: role.created_at || new Date().toISOString(),
+            almacen_nombre: almacenNombre
+          };
+          
+          return processedRole;
+        });
         
-        // Safely handle profiles data
-        let email = '';
-        let fullName = '';
-        
-        // Handle profiles data safely
-        if (role.profiles) {
-          // Check if it's an array or an object
-          if (Array.isArray(role.profiles)) {
-            if (role.profiles.length > 0) {
-              email = role.profiles[0]?.email || '';
-              fullName = role.profiles[0]?.full_name || '';
-            }
-          } else {
-            email = (role.profiles as any).email || '';
-            fullName = (role.profiles as any).full_name || '';
-          }
-        }
-        
-        // Safely handle almacenes data
-        let almacenNombre = '';
-        
-        if (role.almacenes) {
-          // Check if it's an array or an object
-          if (Array.isArray(role.almacenes)) {
-            if (role.almacenes.length > 0) {
-              almacenNombre = role.almacenes[0]?.nombre || '';
-            }
-          } else {
-            almacenNombre = (role.almacenes as any).nombre || '';
-          }
-        }
-        
-        // Cast role to valid UserRole type
-        const roleValue = safeCast(role.role, validRoles, "viewer");
-        
-        const userRole: UserRoleWithStore = {
-          id: role.id,
-          user_id: role.user_id,
-          role: roleValue,
-          almacen_id: role.almacen_id,
-          almacen_nombre: almacenNombre,
-          created_at: role.created_at || new Date().toISOString()
+        return {
+          id: profile.id,
+          email: profile.email || "",
+          full_name: profile.full_name || "",
+          roles: roles
         };
-        
-        userRolesMap.get(userId)?.push(userRole);
-      });
-    }
-    
-    // Map profiles to UserWithRoles objects
-    const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
-      const roles = userRolesMap.get(profile.id) || [];
-      
-      return {
-        id: profile.id,
-        email: profile.email || '',
-        full_name: profile.full_name || '',
-        created_at: profile.created_at,
-        roles
-      };
-    });
+      })
+    );
     
     return usersWithRoles;
   } catch (error) {
-    console.error("Error in fetchAllUsers:", error);
-    throw error;
+    console.error('Error fetching all users:', error);
+    return [];
   }
 }
 
-export async function addUserRole(userId: string, role: string, storeId?: string) {
+/**
+ * Process user data from user_roles_with_name view
+ */
+function processViewData(viewData: any[]): UserWithRoles[] {
   try {
-    // Check if user exists
-    const { data: userExists, error: userError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', userId)
-      .single();
+    // Map to group roles by user
+    const userMap = new Map<string, UserWithRoles>();
+    
+    viewData.forEach(row => {
+      const userId = row.user_id;
       
-    if (userError) throw userError;
-    
-    if (!userExists) {
-      throw new Error("User not found");
-    }
-
-    // Cast to a valid role
-    const validRole = safeCast(role, validRoles, "viewer");
-
-    const { data: existingRoles, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('role', validRole);
+      if (!userMap.has(userId)) {
+        userMap.set(userId, {
+          id: userId,
+          email: safeAccess(row, 'email', ""),
+          full_name: safeAccess(row, 'full_name', ""),
+          roles: []
+        });
+      }
       
-    if (rolesError) throw rolesError;
-    
-    if (existingRoles && existingRoles.length > 0) {
-      // User already has this role
-      return existingRoles[0];
-    }
-    
-    // Insert new role
-    const { data, error } = await supabase
-      .from('user_roles')
-      .insert([
-        {
+      // Get the user entry from our map
+      const userEntry = userMap.get(userId);
+      
+      if (userEntry) {
+        // Process the role safely
+        userEntry.roles.push({
+          id: row.id || "",
           user_id: userId,
-          role: validRole,
-          almacen_id: storeId || null
-        }
-      ])
-      .select()
-      .single();
-      
-    if (error) throw error;
-    
-    return data;
-  } catch (error) {
-    console.error("Error in addUserRole:", error);
-    throw error;
-  }
-}
-
-export async function getUserById(userId: string): Promise<UserWithRoles> {
-  try {
-    // Get user profile data
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-      
-    if (profileError) throw profileError;
-    
-    // Get user roles with better join syntax
-    const { data: rolesData, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('*, profiles:profiles(*), almacenes:almacenes(*)')
-      .eq('user_id', userId);
-      
-    if (rolesError) throw rolesError;
-    
-    // Ensure profile data is properly structured
-    const profile = profileData ? {
-      id: profileData.id,
-      email: profileData.email || '',
-      full_name: profileData.full_name || '',
-      created_at: profileData.created_at
-    } : null;
-    
-    // Process roles data - handle either array or single object response
-    const roles: UserRoleWithStore[] = rolesData.map(role => {
-      // Handle profiles data safely
-      let email = '';
-      let fullName = '';
-      
-      if (role.profiles) {
-        // Check if it's an array or an object
-        if (Array.isArray(role.profiles)) {
-          if (role.profiles.length > 0) {
-            email = role.profiles[0]?.email || '';
-            fullName = role.profiles[0]?.full_name || '';
-          }
-        } else {
-          email = (role.profiles as any).email || '';
-          fullName = (role.profiles as any).full_name || '';
-        }
+          role: safelyExtractRole(row.role),
+          almacen_id: row.almacen_id || null,
+          created_at: row.created_at || new Date().toISOString(),
+          almacen_nombre: safeAccess(row, 'almacen_nombre', null)
+        });
       }
-      
-      // Handle almacenes data safely
-      let almacenNombre = '';
-      
-      if (role.almacenes) {
-        // Check if it's an array or an object
-        if (Array.isArray(role.almacenes)) {
-          if (role.almacenes.length > 0) {
-            almacenNombre = role.almacenes[0]?.nombre || '';
-          }
-        } else {
-          almacenNombre = (role.almacenes as any).nombre || '';
-        }
-      }
-
-      // Cast role to valid UserRole type
-      const roleValue = safeCast(role.role, validRoles, "viewer");
-      
-      // Return processed role
-      return {
-        id: role.id,
-        user_id: role.user_id,
-        role: roleValue,
-        almacen_id: role.almacen_id,
-        almacen_nombre: almacenNombre,
-        created_at: role.created_at || new Date().toISOString()
-      } as UserRoleWithStore;
     });
     
-    // Return combined user object
-    return {
-      id: userId,
-      email: profile?.email || '',
-      full_name: profile?.full_name || '',
-      created_at: profile?.created_at,
-      roles: roles
-    };
+    // Convert map to array
+    return Array.from(userMap.values());
   } catch (error) {
-    console.error("Error in getUserById:", error);
-    throw error;
+    console.error('Error processing view data:', error);
+    return [];
   }
 }

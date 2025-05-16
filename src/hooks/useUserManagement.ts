@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { UserWithRoles } from "@/hooks/users/types/userManagementTypes";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,38 +57,41 @@ export const useUserManagement = () => {
       if (profilesError) throw profilesError;
       
       // For each profile, fetch their roles
-      const usersWithRoles: UserWithRoles[] = await Promise.all(
-        profiles.map(async (profile) => {
-          const { data: roles, error: rolesError } = await supabase
+      const usersWithRoles: UserWithRoles[] = [];
+      
+      for (const profile of profiles) {
+        const { data: roles, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('*')
+          .eq('user_id', profile.id);
+          
+        if (rolesError) throw rolesError;
+        
+        // If no roles found, create a default viewer role
+        if (!roles || roles.length === 0) {
+          const { data: newRole, error: newRoleError } = await supabase
             .from('user_roles')
-            .select('*')
-            .eq('user_id', profile.id);
+            .insert({
+              user_id: profile.id,
+              role: 'viewer',
+              almacen_id: null
+            })
+            .select()
+            .single();
             
-          if (rolesError) throw rolesError;
-          
-          // If no roles found, create a default viewer role
-          if (!roles || roles.length === 0) {
-            const { data: newRole, error: newRoleError } = await supabase
-              .from('user_roles')
-              .insert({
-                user_id: profile.id,
-                role: 'viewer',
-                almacen_id: null
-              })
-              .select()
-              .single();
-              
-            if (!newRoleError && newRole) {
-              console.log(`Created default viewer role for user ${profile.id}`);
-              roles.push(newRole);
-            }
+          if (!newRoleError && newRole) {
+            console.log(`Created default viewer role for user ${profile.id}`);
+            roles.push(newRole);
           }
+        }
+        
+        // Format roles
+        const formattedRoles = (roles || []).map(role => {
+          // Safely handle almacen_nombre
+          let almacenNombre = null;
           
-          // Format roles
-          const formattedRoles = (roles || []).map(role => {
-            // Separate query to get almacen name if needed
-            let almacenNombre = null;
-            
+          // Use async-await in an IIFE to avoid await in a non-async function
+          (async function getAlmacenNombre() {
             if (role.almacen_id) {
               const { data: almacen } = await supabase
                 .from('almacenes')
@@ -97,28 +99,30 @@ export const useUserManagement = () => {
                 .eq('id', role.almacen_id)
                 .single();
                 
-              almacenNombre = almacen?.nombre || null;
+              if (almacen && almacen.nombre) {
+                almacenNombre = almacen.nombre;
+              }
             }
-            
-            return {
-              id: role.id,
-              user_id: role.user_id,
-              role: castToUserRole(role.role),
-              almacen_id: role.almacen_id,
-              created_at: role.created_at || new Date().toISOString(),
-              almacen_nombre: almacenNombre
-            };
-          });
+          })();
           
-          // Convert to UserWithRoles
           return {
-            id: profile.id,
-            email: profile.email || "",
-            full_name: profile.full_name || "",
-            roles: formattedRoles
-          } as UserWithRoles;
-        })
-      );
+            id: role.id,
+            user_id: role.user_id,
+            role: castToUserRole(role.role),
+            almacen_id: role.almacen_id,
+            created_at: role.created_at || new Date().toISOString(),
+            almacen_nombre: almacenNombre
+          };
+        });
+        
+        // Convert to UserWithRoles
+        usersWithRoles.push({
+          id: profile.id,
+          email: profile.email || "",
+          full_name: profile.full_name || "",
+          roles: formattedRoles
+        });
+      }
       
       setUsers(usersWithRoles);
     } catch (error: any) {

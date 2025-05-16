@@ -1,67 +1,70 @@
 
 /**
- * Safely transform Supabase query results to ensure type safety
- * @param data Raw data from Supabase query
- * @param transformer Function to transform each item
- * @returns Array of transformed items
+ * Utilities for safely handling Supabase queries and results
  */
-export function transformSupabaseData<T, R>(
-  data: T[] | null | undefined,
-  transformer: (item: T) => R
-): R[] {
-  if (!data || !Array.isArray(data)) return [];
-  return data.map(item => transformer(item));
+
+// Safely get property from an object that might contain errors
+export function safeGet<T>(obj: any, key: string, defaultValue: T): T {
+  if (!obj) return defaultValue;
+  
+  try {
+    // Check if it's a Supabase error object
+    if (obj.error === true) return defaultValue;
+    return obj[key] !== undefined ? obj[key] : defaultValue;
+  } catch (e) {
+    console.warn(`Error accessing property ${key}:`, e);
+    return defaultValue;
+  }
 }
 
-/**
- * Safely extract a property from a Supabase query result
- * @param obj Object that might contain a nested property
- * @param path Path to the property (e.g., "almacenes.nombre")
- * @param defaultValue Default value if property doesn't exist
- * @returns The property value or default
- */
-export function extractProperty<T = any>(
-  obj: any,
-  path: string,
-  defaultValue: T
-): T {
+// Get a nested property safely, handling potential errors
+export function getNestedProperty<T>(obj: any, path: string, defaultValue: T): T {
+  if (!obj) return defaultValue;
+  
   try {
     const parts = path.split('.');
     let current = obj;
     
     for (const part of parts) {
-      if (current === null || current === undefined) {
-        return defaultValue;
-      }
+      // If we encounter an error object or null/undefined, return default
+      if (!current || current.error === true) return defaultValue;
       current = current[part];
+      if (current === undefined) return defaultValue;
     }
     
-    return (current === null || current === undefined) ? defaultValue : current as T;
-  } catch (error) {
-    console.error(`Error extracting property ${path}:`, error);
+    return current === null ? defaultValue : current;
+  } catch (e) {
+    console.warn(`Error accessing property path ${path}:`, e);
     return defaultValue;
   }
 }
 
-/**
- * Type guard for checking if an object came from Supabase with the expected structure
- * @param obj Object to check
- * @param requiredFields Fields that must exist on the object
- * @returns Boolean indicating if the object has the required structure
- */
-export function isValidSupabaseResult(obj: any, requiredFields: string[]): boolean {
-  if (!obj || typeof obj !== 'object') return false;
-  return requiredFields.every(field => {
-    const parts = field.split('.');
-    let current = obj;
-    
-    for (const part of parts) {
-      if (current === null || current === undefined || !current.hasOwnProperty(part)) {
-        return false;
-      }
-      current = current[part];
+// Check if Supabase result has the expected shape
+export function isValidResult(data: any, requiredProps: string[]): boolean {
+  if (!data || typeof data !== 'object') return false;
+  
+  return requiredProps.every(prop => {
+    try {
+      return getNestedProperty(data, prop, undefined) !== undefined;
+    } catch (e) {
+      return false;
     }
-    
-    return true;
   });
+}
+
+// Create a wrapper for safely handling SelectQueryErrors from Supabase
+export function wrapSupabaseResult<T>(result: any, transformer: (data: any) => T, defaultValue: T): T {
+  if (!result || result.error === true) return defaultValue;
+  try {
+    return transformer(result);
+  } catch (e) {
+    console.warn("Error transforming Supabase result:", e);
+    return defaultValue;
+  }
+}
+
+// Cast string to enum safely with fallback
+export function safeEnum<T extends string>(value: unknown, validValues: readonly T[], defaultValue: T): T {
+  if (typeof value !== 'string') return defaultValue;
+  return (validValues as readonly string[]).includes(value) ? (value as T) : defaultValue;
 }

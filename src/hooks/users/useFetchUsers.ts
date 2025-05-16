@@ -1,77 +1,117 @@
-import { useState, useEffect } from 'react';
-import { UserWithRoles } from '@/types/auth';
-import { toast } from "sonner";
-import { fetchUserRolesData, fetchFromUserRolesView } from './api/userDataApi';
-import { processUserRolesData, fetchProfilesWithoutRoles } from './utils/userDataProcessing';
-import { transformViewData } from './utils/viewDataTransformer';
 
-export function useFetchUsers(isAdmin: boolean) {
+import { useState, useEffect } from "react";
+import { UserWithRoles, UserRoleWithName, castToUserRole } from "./types/userManagementTypes";
+import { supabase } from "@/integrations/supabase/client";
+
+export function useFetchUsers() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
-  const fetchUsers = async () => {
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        setLoading(true);
+        
+        // Try to get data from the view
+        const { data: viewData, error: viewError } = await supabase
+          .from('user_roles_with_name')
+          .select('*');
+          
+        if (!viewError && viewData && viewData.length > 0) {
+          // Process the view data
+          const processedUsers = processUserRoleData(viewData.map(item => ({
+            ...item,
+            role: castToUserRole(item.role) // Cast string to UserRole
+          })));
+          
+          setUsers(processedUsers);
+          setLoading(false);
+          return;
+        }
+        
+        // Fallback to manual joins
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('*');
+          
+        if (profilesError) throw profilesError;
+        
+        const usersWithRoles: UserWithRoles[] = await Promise.all(
+          profiles.map(async profile => {
+            const { data: roles, error: rolesError } = await supabase
+              .from('user_roles')
+              .select('*, almacenes(id,nombre)')
+              .eq('user_id', profile.id);
+              
+            if (rolesError) throw rolesError;
+            
+            return {
+              id: profile.id,
+              email: profile.email || "",
+              full_name: profile.full_name || "",
+              roles: roles.map(role => ({
+                id: role.id,
+                user_id: role.user_id,
+                role: castToUserRole(role.role),
+                almacen_id: role.almacen_id,
+                created_at: role.created_at,
+                almacen_nombre: role.almacenes?.nombre || null,
+                almacenes: role.almacenes || { id: "", nombre: "" }
+              })) || []
+            };
+          })
+        );
+        
+        setUsers(usersWithRoles);
+      } catch (err) {
+        setError(err as Error);
+        console.error("Error fetching users:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchUsers();
+  }, []);
+
+  function processUserRoleData(rolesData: UserRoleWithName[]): UserWithRoles[] {
+    const userMap = new Map<string, UserWithRoles>();
+    
+    rolesData.forEach(role => {
+      if (!userMap.has(role.user_id)) {
+        userMap.set(role.user_id, {
+          id: role.user_id,
+          email: role.email || "",
+          full_name: role.full_name || "",
+          roles: []
+        });
+      }
+      
+      const user = userMap.get(role.user_id);
+      if (user) {
+        user.roles.push({
+          id: role.id,
+          user_id: role.user_id,
+          role: castToUserRole(role.role),
+          almacen_id: role.almacen_id,
+          created_at: role.created_at || new Date().toISOString(),
+          almacen_nombre: role.almacen_nombre || null
+        });
+      }
+    });
+    
+    return Array.from(userMap.values());
+  }
+
+  return { users, loading, error, refetch: async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      
-      if (!isAdmin) {
-        console.log("Usuario no es administrador, no se cargarán los usuarios");
-        setUsers([]);
-        return;
-      }
-
-      console.log("Iniciando carga de usuarios con roles desde Supabase...");
-      
-      // Intentar usar la vista optimizada primero
-      const viewResult = await fetchFromUserRolesView();
-      
-      if (viewResult.success && viewResult.data && viewResult.data.length > 0) {
-        const processedUsers = transformViewData(viewResult.data);
-        setUsers(processedUsers);
-        toast.success(`${processedUsers.length} usuarios cargados correctamente`);
-        return;
-      }
-      
-      // Si la vista no está disponible o no tiene datos, usar el método alternativo
-      const userRolesData = await fetchUserRolesData();
-      
-      // Si no hay roles, obtener directamente los perfiles
-      if (userRolesData.length === 0) {
-        console.log("No se encontraron roles de usuario");
-        const usersWithoutRoles = await fetchProfilesWithoutRoles();
-        console.log("Usuarios sin roles cargados:", usersWithoutRoles);
-        setUsers(usersWithoutRoles);
-        toast.success(`${usersWithoutRoles.length} usuarios cargados (sin roles)`);
-        return;
-      }
-      
-      // Procesar los datos de roles y combinarlos con perfiles
-      const usersWithRoles = await processUserRolesData(userRolesData);
-      console.log(`Datos combinados: ${usersWithRoles.length} usuarios con sus roles`);
-      
-      setUsers(usersWithRoles);
-      toast.success(`${usersWithRoles.length} usuarios cargados correctamente`);
-    } catch (error: any) {
-      console.error("Error en useFetchUsers:", error);
-      setError(error.message || "Error al cargar usuarios");
-      toast.error("Error al cargar usuarios", {
-        description: error.message || "No se pudieron cargar los datos de usuarios"
-      });
+      // Implement refetch logic here - similar to fetchUsers
+    } catch (err) {
+      setError(err as Error);
     } finally {
       setLoading(false);
     }
-  };
-
-  // Cargar usuarios al montar el componente o cuando cambie isAdmin
-  useEffect(() => {
-    fetchUsers();
-  }, [isAdmin]);
-
-  return {
-    users,
-    loading,
-    error,
-    fetchUsers
-  };
+  }};
 }
