@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,7 +56,6 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
         .select(`
           id, 
           total, 
-          estado, 
           created_at,
           cliente,
           almacenes(nombre),
@@ -87,7 +85,7 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
       }
 
       // Transform the data
-      const salesData = await Promise.all(ventas.map(async (venta) => {
+      const salesData = await Promise.all(ventas.map(async (venta: any) => {
         // Get a product from this sale
         const { data: detalles, error: detallesError } = await supabase
           .from('detalles_venta')
@@ -110,7 +108,7 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
         const customerName = venta.cliente || 'Cliente Anónimo';
         const initials = customerName
           .split(' ')
-          .map(word => word[0])
+          .map((word: string) => word[0])
           .join('')
           .toUpperCase()
           .substring(0, 2);
@@ -122,7 +120,7 @@ export const RecentSalesTable = ({ storeIds = [] }: RecentSalesTableProps) => {
           product: productName,
           date: venta.created_at,
           amount: venta.total,
-          status: venta.estado,
+          status: 'completada', // Default status as 'completada' since 'estado' column doesn't exist
           store: venta.almacenes ? (venta.almacenes as any).nombre : 'Desconocida',
         };
       }));

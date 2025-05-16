@@ -35,6 +35,7 @@ export interface Sale {
   total: number;
   created_at: string;
   almacen_id?: string;
+  estado?: string;
 }
 
 export interface InventoryItem {

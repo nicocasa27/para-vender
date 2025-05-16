@@ -10,9 +10,11 @@ export const MainLayout: React.FC = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <SideNav open={sidebarOpen} setOpen={setSidebarOpen} />
+      {/* Pass props using correct prop names from the SideNav component definition */}
+      <SideNav isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
       <main className="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-spring">
-        <TopNav sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        {/* Pass props using correct prop names from the TopNav component definition */}
+        <TopNav isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
         <ScrollArea className="flex-1 overflow-auto p-4 md:p-6 animate-fade-in">
           <div className="mx-auto w-full max-w-7xl">
             <Outlet />

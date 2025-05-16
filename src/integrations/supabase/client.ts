@@ -16,3 +16,14 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true
   }
 });
+
+// Supabase TypeScript helpers
+export const handleSupabaseError = (error: any, fallbackData: any = null): any => {
+  console.error("Supabase error:", error);
+  return fallbackData; 
+};
+
+// Type guard for Supabase data
+export function isSupabaseData<T>(data: T | null | Error): data is T {
+  return data !== null && !(data instanceof Error);
+}

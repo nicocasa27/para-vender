@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { safeAccess } from "@/utils/safe-access";
 
 interface ProductMovementHistoryProps {
   productId: string;
@@ -51,7 +52,25 @@ export function ProductMovementHistory({ productId }: ProductMovementHistoryProp
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setMovements(data || []);
+      
+      // Safely cast the data with default properties when needed
+      const safeMovements = (data || []).map((item: any) => ({
+        id: item.id,
+        tipo: item.tipo,
+        cantidad: item.cantidad,
+        created_at: item.created_at,
+        notas: item.notas,
+        almacen_origen_id: item.almacen_origen_id,
+        almacen_destino_id: item.almacen_destino_id,
+        almacen_origen: {
+          nombre: safeAccess(item.almacen_origen, 'nombre', 'Desconocido')
+        },
+        almacen_destino: {
+          nombre: safeAccess(item.almacen_destino, 'nombre', 'Desconocido')
+        }
+      }));
+      
+      setMovements(safeMovements);
     } catch (error) {
       console.error('Error loading movements:', error);
     } finally {
