@@ -24,8 +24,16 @@ export interface DashboardStats {
   };
 }
 
-export const fetchDashboardStats = async (): Promise<DashboardStats> => {
+export const fetchDashboardStats = async (tenantId?: string): Promise<DashboardStats> => {
   try {
+    // Get current tenant id from localStorage if not provided
+    if (!tenantId) {
+      tenantId = localStorage.getItem('currentTenantId');
+      if (!tenantId) {
+        throw new Error("No se ha seleccionado una organización");
+      }
+    }
+
     // Obtener fecha actual (hoy)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -41,6 +49,7 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
     const { data: ventasHoy, error: errorVentasHoy } = await supabase
       .from('ventas')
       .select('total')
+      .eq('tenant_id', tenantId)
       .gte('created_at', todayStr);
     
     if (errorVentasHoy) {
@@ -52,6 +61,7 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
     const { data: ventasAyer, error: errorVentasAyer } = await supabase
       .from('ventas')
       .select('total')
+      .eq('tenant_id', tenantId)
       .gte('created_at', yesterdayStr)
       .lt('created_at', todayStr);
     
@@ -63,7 +73,8 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
     // Ventas totales (todas las que existen)
     const { data: ventasTotales, error: errorVentasTotales } = await supabase
       .from('ventas')
-      .select('total');
+      .select('total')
+      .eq('tenant_id', tenantId);
     
     if (errorVentasTotales) {
       console.error('Error al obtener ventas totales:', errorVentasTotales);
@@ -82,6 +93,7 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
     const { data: clientesHoy, error: errorClientesHoy } = await supabase
       .from('ventas')
       .select('cliente')
+      .eq('tenant_id', tenantId)
       .gte('created_at', todayStr)
       .not('cliente', 'is', null);
     
@@ -94,6 +106,7 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
     const { data: clientesAyer, error: errorClientesAyer } = await supabase
       .from('ventas')
       .select('cliente')
+      .eq('tenant_id', tenantId)
       .gte('created_at', yesterdayStr)
       .lt('created_at', todayStr)
       .not('cliente', 'is', null);
@@ -112,6 +125,7 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
     const { data: detallesHoy, error: errorDetallesHoy } = await supabase
       .from('detalles_venta')
       .select('cantidad, ventas:venta_id(created_at)')
+      .eq('tenant_id', tenantId)
       .gte('ventas.created_at', todayStr);
     
     if (errorDetallesHoy) {
@@ -123,6 +137,7 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
     const { data: detallesAyer, error: errorDetallesAyer } = await supabase
       .from('detalles_venta')
       .select('cantidad, ventas:venta_id(created_at)')
+      .eq('tenant_id', tenantId)
       .gte('ventas.created_at', yesterdayStr)
       .lt('ventas.created_at', todayStr);
     
@@ -139,6 +154,7 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
     const { data: transferenciasHoy, error: errorTransferenciasHoy } = await supabase
       .from('movimientos')
       .select('id')
+      .eq('tenant_id', tenantId)
       .eq('tipo', 'transferencia')
       .gte('created_at', todayStr);
     
@@ -151,6 +167,7 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
     const { data: transferenciasAyer, error: errorTransferenciasAyer } = await supabase
       .from('movimientos')
       .select('id')
+      .eq('tenant_id', tenantId)
       .eq('tipo', 'transferencia')
       .gte('created_at', yesterdayStr)
       .lt('created_at', todayStr);

@@ -7,15 +7,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { MainLayout } from "./components/layout/MainLayout";
 import { AuthProvider } from "./contexts/auth/AuthContext";
+import { TenantProvider } from "./contexts/tenant/TenantContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AdminInitializer } from "./components/admin/AdminInitializer";
 import Dashboard from "./pages/Dashboard";
 import PointOfSale from "./pages/PointOfSale";
 import Analytics from "./pages/Analytics";
-import Analiticas2 from "./pages/Analiticas2"; // Importar la nueva página
+import Analiticas2 from "./pages/Analiticas2";
 import UserRoles from "./pages/UserRoles";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
+import Welcome from "./pages/Welcome";
+import Subscription from "./pages/Subscription";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
@@ -25,9 +28,9 @@ import InventoryPage from "./pages/Inventory";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1, // Reduce retries to prevent looping
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      refetchOnWindowFocus: false, // Disable refetch on window focus
+      retry: 1,
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
     },
   },
 });
@@ -47,13 +50,22 @@ const App = () => {
               
               {/* Protected routes */}
               <Route element={<ProtectedRoute />}>
-                <Route element={<MainLayout />}>
+                {/* Welcome page (tenant selection) */}
+                <Route path="/welcome" element={<Welcome />} />
+                
+                {/* Routes that require tenant context */}
+                <Route element={
+                  <TenantProvider>
+                    <MainLayout />
+                  </TenantProvider>
+                }>
                   <Route path="/" element={<Index />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/inventory" element={<InventoryPage />} />
                   <Route path="/pos" element={<PointOfSale />} />
                   <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/analiticas2" element={<Analiticas2 />} /> {/* Añadir la ruta para Analiticas2 */}
+                  <Route path="/analiticas2" element={<Analiticas2 />} />
+                  <Route path="/subscription" element={<Subscription />} />
                   
                   {/* User roles route */}
                   <Route path="/user-roles" element={<UserRoles />} />

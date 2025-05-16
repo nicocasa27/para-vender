@@ -1,112 +1,87 @@
 
-import { Link, useLocation } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import {
-  LayoutDashboard,
-  Package,
-  ShoppingCart,
-  BarChart4,
-  ChevronLeft,
-  ChevronRight,
-  Store,
-  Users,
-  BarChart2
-} from "lucide-react";
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { 
+  LayoutDashboard, 
+  ShoppingCart, 
+  BarChart2, 
+  PieChart, 
+  Package, 
+  Users, 
+  User,
+  CreditCard
+} from 'lucide-react';
+import { useAuth } from '../../hooks/auth/useAuth';
+import { useTenant } from '@/contexts/tenant/TenantContext';
 
-interface SideNavProps {
-  open: boolean;
-  setOpen: (open: boolean) => void;
+interface NavItemProps {
+  to: string;
+  label: string;
+  icon: React.ReactNode;
 }
 
-export const SideNav: React.FC<SideNavProps> = ({ open, setOpen }) => {
-  const location = useLocation();
-  
-  const navItems = [
-    {
-      title: "Dashboard",
-      href: "/",
-      icon: LayoutDashboard,
-    },
-    {
-      title: "Inventario",
-      href: "/inventory",
-      icon: Package,
-    },
-    {
-      title: "Punto de Venta",
-      href: "/pos",
-      icon: ShoppingCart,
-    },
-    {
-      title: "Análisis",
-      href: "/analytics",
-      icon: BarChart4,
-    },
-    {
-      title: "Analíticas 2",
-      href: "/analiticas2",
-      icon: BarChart2,
-    },
-    {
-      title: "Roles de Usuario",
-      href: "/user-roles",
-      icon: Users,
-    },
-  ];
+const NavItem: React.FC<NavItemProps> = ({ to, label, icon }) => {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary ${
+          isActive ? 'bg-muted font-medium text-primary' : 'text-muted-foreground'
+        }`
+      }
+    >
+      {icon}
+      {label}
+    </NavLink>
+  );
+};
+
+export const SideNav: React.FC = () => {
+  const { hasRole } = useAuth();
+  const { subscription } = useTenant();
+
+  const isAdmin = hasRole('admin');
+  const isPremium = subscription?.plan === 'premium' || subscription?.plan === 'standard';
 
   return (
-    <div
-      className={cn(
-        "h-screen border-r bg-sidebar overflow-hidden transition-all duration-300 ease-spring",
-        open ? "w-64" : "w-16"
-      )}
-    >
-      <div className="flex h-16 items-center border-b px-4">
-        <div className="flex items-center gap-2 transition-all duration-300">
-          <div className={cn("flex items-center justify-center transition-all duration-300",
-                           !open && "w-full")}>
-            <Store className="h-8 w-8 text-primary" />
-          </div>
-          {open && (
-            <span className="font-display text-lg font-semibold tracking-tight animate-fade-in">
-              Mi-Tiendita
-            </span>
-          )}
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn("absolute right-0 mx-2 text-sidebar-foreground hover:text-foreground",
-                      !open && "right-auto")}
-          onClick={() => setOpen(!open)}
-        >
-          {open ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-        </Button>
-      </div>
-      <ScrollArea className="h-[calc(100vh-4rem)]">
-        <div className="px-2 py-4">
-          <nav className="space-y-1">
-            {navItems.map((item) => (
-              <Link key={item.href} to={item.href}>
-                <div
-                  className={cn(
-                    "flex items-center py-2 px-3 rounded-md text-sm font-medium transition-all",
-                    location.pathname === item.href
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                  )}
-                >
-                  <item.icon className={cn("h-5 w-5 transition-all", 
-                                         open ? "mr-2" : "mx-auto")} />
-                  {open && <span>{item.title}</span>}
+    <div className="pb-12 w-64 border-r min-h-screen">
+      <div className="space-y-4 py-4">
+        <div className="px-3 py-2">
+          <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
+            Navegación
+          </h2>
+          <div className="space-y-1">
+            <NavItem to="/dashboard" label="Dashboard" icon={<LayoutDashboard size={20} />} />
+            <NavItem to="/inventory" label="Inventario" icon={<Package size={20} />} />
+            <NavItem to="/pos" label="Punto de Venta" icon={<ShoppingCart size={20} />} />
+            
+            {/* Analytics section - only for premium */}
+            {isPremium && (
+              <>
+                <h2 className="mt-6 px-4 text-lg font-semibold tracking-tight">
+                  Analíticas
+                </h2>
+                <div className="space-y-1">
+                  <NavItem to="/analytics" label="Vista General" icon={<BarChart2 size={20} />} />
+                  <NavItem to="/analiticas2" label="Reportes" icon={<PieChart size={20} />} />
                 </div>
-              </Link>
-            ))}
-          </nav>
+              </>
+            )}
+            
+            {/* Admin section */}
+            <h2 className="mt-6 px-4 text-lg font-semibold tracking-tight">
+              Administración
+            </h2>
+            <div className="space-y-1">
+              <NavItem to="/subscription" label="Suscripción" icon={<CreditCard size={20} />} />
+              {isAdmin && (
+                <NavItem to="/user-roles" label="Usuarios y Roles" icon={<Users size={20} />} />
+              )}
+              <NavItem to="/profile" label="Mi Perfil" icon={<User size={20} />} />
+            </div>
+          </div>
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
-}
+};

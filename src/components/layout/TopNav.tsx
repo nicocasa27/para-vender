@@ -1,89 +1,84 @@
 
-import { Bell, Menu, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from '@/hooks/auth/useAuth';
+import { useTenant } from "@/contexts/tenant/TenantContext";
+import { UserCircle2, Settings } from "lucide-react";
+import { TenantSelector } from "@/components/tenant/TenantSelector";
+import { CreateTenantDialog } from "@/components/tenant/CreateTenantDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { useAuth } from "@/contexts/auth";
-import { Link } from "react-router-dom";
 
-interface TopNavProps {
-  sidebarOpen: boolean;
-  setSidebarOpen: (open: boolean) => void;
-}
+export const TopNav = () => {
+  const { user, signOut } = useAuth();
+  const { currentTenant } = useTenant();
+  const navigate = useNavigate();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-export const TopNav: React.FC<TopNavProps> = ({ sidebarOpen, setSidebarOpen }) => {
-  const { user, userRoles, signOut } = useAuth();
-  
+  // Redirect to welcome page if no tenant is selected
+  if (!currentTenant) {
+    navigate("/welcome");
+    return null;
+  }
+
   return (
-    <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-30">
-      <div className="flex h-16 items-center px-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="mr-2 md:hidden"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle sidebar</span>
-        </Button>
-        <h1 className="text-lg font-semibold">Mi-Tiendita</h1>
-        <div className="ml-auto flex items-center space-x-4">
-          <Button variant="ghost" size="icon">
-            <Bell className="h-5 w-5" />
-          </Button>
-          <Separator orientation="vertical" className="h-8" />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="" alt="Profile" />
-                  <AvatarFallback>
-                    <User className="h-4 w-4" />
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {user?.user_metadata?.full_name || "Usuario"}
-                  </p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    {user?.email}
-                  </p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              
-              {userRoles.some(role => role.role === 'admin') && (
-                <DropdownMenuItem asChild>
-                  <Link to="/users">Gestionar Usuarios</Link>
-                </DropdownMenuItem>
-              )}
-              
-              <DropdownMenuItem asChild>
-                <Link to="/profile">Perfil</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/settings">Configuración</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => signOut()}>
-                Cerrar sesión
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+    <div className="border-b px-4 py-3 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <TenantSelector onCreateNew={() => setCreateDialogOpen(true)} />
+        {currentTenant.subscription && (
+          <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+            {currentTenant.subscription.plan === 'premium' 
+              ? 'Premium' 
+              : currentTenant.subscription.plan === 'standard' 
+                ? 'Estándar' 
+                : 'Básico'}
+          </span>
+        )}
       </div>
+      
+      <div className="flex items-center gap-4">
+        <DropdownMenu>
+          <DropdownMenuTrigger className="outline-none">
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:block text-right">
+                <p className="text-sm font-medium">{user?.email}</p>
+                <p className="text-xs text-muted-foreground">
+                  {currentTenant ? currentTenant.name : ""}
+                </p>
+              </span>
+              <UserCircle2 className="w-9 h-9" />
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => navigate("/profile")}>
+              <Settings className="mr-2 h-4 w-4" />
+              Mi Perfil
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => navigate("/welcome")}
+            >
+              Cambiar Organización
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => signOut()}
+            >
+              Cerrar Sesión
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      
+      <CreateTenantDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+      />
     </div>
   );
 };

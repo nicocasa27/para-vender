@@ -6,11 +6,13 @@ import {
   InventorySummary 
 } from "@/components/dashboard";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
+import { useTenant } from "@/contexts/tenant/TenantContext";
 import { DollarSign, ShoppingBag, Truck, Coins } from "lucide-react";
 import { fetchDashboardStats, DashboardStats } from "@/services/dashboard";
 
 const Dashboard = () => {
   const { stores, isLoading: loadingStores } = useCurrentStores();
+  const { currentTenant } = useTenant();
   const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,9 +25,11 @@ const Dashboard = () => {
   
   useEffect(() => {
     const loadDashboardStats = async () => {
+      if (!currentTenant) return;
+      
       setIsLoading(true);
       try {
-        const stats = await fetchDashboardStats();
+        const stats = await fetchDashboardStats(currentTenant.id);
         setDashboardStats(stats);
       } catch (error) {
         console.error("Error cargando estadísticas del dashboard:", error);
@@ -37,16 +41,21 @@ const Dashboard = () => {
     loadDashboardStats();
     
     // Actualizar los datos cada 5 minutos
-    const interval = setInterval(loadDashboardStats, 5 * 60 * 1000);
+    const interval = setInterval(() => {
+      if (currentTenant) {
+        loadDashboardStats();
+      }
+    }, 5 * 60 * 1000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [currentTenant]);
 
   return (
     <div className="space-y-8 animate-fade-in">
       <div>
         <h2 className="text-3xl font-bold tracking-tight mb-2">Dashboard</h2>
         <p className="text-muted-foreground">
+          {currentTenant ? `${currentTenant.name} - ` : ''}
           Resumen de las métricas más importantes de su negocio.
         </p>
       </div>
