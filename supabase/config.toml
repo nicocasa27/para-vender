@@ -1,8 +1,1 @@
-
-# This is the config.toml file for Supabase Functions
-
-[functions.delete-user]
-verify_jwt = true
-
-[functions.sync-users]
-verify_jwt = false
+project_id = "yniffahoakkkkfovzgux"
