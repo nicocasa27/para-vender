@@ -1,16 +1,14 @@
 
-import { UserDataQueryResult, UserWithRoles } from "../types/userManagementTypes";
+import { UserDataQueryResult, UserWithRoles, castToUserRole } from "../types/userManagementTypes";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 // Example function with correct return type
 export function exampleFunction(): UserDataQueryResult {
   return {
-    id: "example-id",
-    email: "example@example.com",
-    full_name: "Example User",
-    created_at: new Date().toISOString(),
-    roles: []
+    data: { id: "example-id", email: "example@example.com" },
+    message: "Example data",
+    success: true
   };
 }
 
@@ -36,13 +34,21 @@ export async function fetchUserData(): Promise<UserWithRoles[]> {
         return {
           id: profile.id,
           email: profile.email || "",
-          full_name: profile.full_name,
+          full_name: profile.full_name || "",
           created_at: profile.created_at,
-          roles: roles.map(role => ({
-            ...role,
-            created_at: role.created_at || new Date().toISOString(), // Ensure created_at is never null
-            almacen_nombre: role.almacenes?.nombre || null
-          })) || []
+          roles: roles.map(role => {
+            // Safely access nested properties
+            const almacenNombre = role.almacenes && typeof role.almacenes === 'object' 
+              ? role.almacenes.nombre || null 
+              : null;
+              
+            return {
+              ...role,
+              role: castToUserRole(role.role), // Cast to valid UserRole type
+              created_at: role.created_at || new Date().toISOString(), // Ensure created_at is never null
+              almacen_nombre: almacenNombre
+            };
+          }) || []
         };
       })
     );
@@ -67,14 +73,16 @@ export function getUserData(): UserDataQueryResult {
       roles: []
     };
     
-    return userData;
+    return {
+      data: userData,
+      message: "Successfully retrieved user data",
+      success: true
+    };
   } catch (error) {
     return {
-      id: '',
-      email: '',
-      full_name: null,
-      created_at: new Date().toISOString(),
-      roles: []
+      data: null,
+      message: "Error retrieving user data",
+      success: false
     };
   }
 }
@@ -84,19 +92,21 @@ export function updateUserData(userId: string, data: any): UserDataQueryResult {
   try {
     // Implementation details here
     return {
-      id: userId,
-      email: data.email || '',
-      full_name: data.full_name || null,
-      created_at: data.created_at || new Date().toISOString(),
-      roles: data.roles || []
+      data: {
+        id: userId,
+        email: data.email || '',
+        full_name: data.full_name || null,
+        created_at: data.created_at || new Date().toISOString(),
+        roles: data.roles || []
+      },
+      message: "User data updated successfully",
+      success: true
     };
   } catch (error) {
     return {
-      id: '',
-      email: '',
-      full_name: null,
-      created_at: new Date().toISOString(),
-      roles: []
+      data: null,
+      message: "Error updating user data",
+      success: false
     };
   }
 }

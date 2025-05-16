@@ -29,3 +29,9 @@ export interface UserWithRoles {
     full_name: string | null;
   };
 }
+
+// Helper function to cast string to UserRole with safe fallback
+export function castToUserRole(role: string): UserRole {
+  const validRoles: UserRole[] = ["admin", "manager", "sales", "viewer"];
+  return validRoles.includes(role as UserRole) ? (role as UserRole) : "viewer";
+}

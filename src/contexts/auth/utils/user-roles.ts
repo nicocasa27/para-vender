@@ -1,6 +1,10 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole, UserRoleWithStore } from "@/types/auth";
+import { safeCast } from "@/utils/supabaseHelpers";
+
+// Valid role values for type safety
+const validRoles: UserRole[] = ["admin", "manager", "sales", "viewer"];
 
 /**
  * Verifica que el usuario tenga un rol por defecto y lo crea si no existe
@@ -112,7 +116,7 @@ export async function createDefaultRole(userId: string): Promise<boolean> {
       .from('user_roles')
       .insert({
         user_id: userId,
-        role: 'viewer' as UserRole,
+        role: 'viewer',
         almacen_id: null
       });
       
@@ -191,9 +195,9 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
       const mappedRoles: UserRoleWithStore[] = roles.map(role => ({
         id: role.id,
         user_id: role.user_id,
-        role: role.role,
+        role: safeCast(role.role, validRoles, "viewer"),
         almacen_id: role.almacen_id,
-        created_at: role.created_at,
+        created_at: role.created_at || new Date().toISOString(),
         almacen_nombre: role.almacenes?.nombre || null
       }));
       
@@ -211,9 +215,9 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
     const mappedRoles: UserRoleWithStore[] = viewRoles.map(role => ({
       id: role.id,
       user_id: role.user_id,
-      role: role.role,
+      role: safeCast(role.role, validRoles, "viewer"),
       almacen_id: role.almacen_id,
-      created_at: role.created_at,
+      created_at: role.created_at || new Date().toISOString(),
       almacen_nombre: role.almacen_nombre || null
     }));
     
@@ -256,4 +260,3 @@ export function checkHasRole(
   // Verificación general de rol
   return userRoles.some(r => r.role === role);
 }
-

@@ -26,15 +26,20 @@ export const TopNav = () => {
     return null;
   }
 
+  // Safely access subscription properties
+  const hasSubscription = currentTenant && 'subscription' in currentTenant;
+  const subscriptionPlan = hasSubscription && currentTenant.subscription ? 
+    currentTenant.subscription.plan || 'basic' : 'basic';
+
   return (
     <div className="border-b px-4 py-3 flex items-center justify-between">
       <div className="flex items-center gap-2">
         <TenantSelector onCreateNew={() => setCreateDialogOpen(true)} />
-        {currentTenant.subscription && (
+        {hasSubscription && (
           <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
-            {currentTenant.subscription.plan === 'premium' 
+            {subscriptionPlan === 'premium' 
               ? 'Premium' 
-              : currentTenant.subscription.plan === 'standard' 
+              : subscriptionPlan === 'standard' 
                 ? 'Estándar' 
                 : 'Básico'}
           </span>

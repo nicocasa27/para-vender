@@ -1,5 +1,11 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { UserWithRoles, UserRoleWithStore } from "@/types/auth";
+import { safeCast } from "@/utils/supabaseHelpers";
+
+// Valid role values for type safety
+const validRoles = ["admin", "manager", "sales", "viewer"] as const;
+type UserRole = typeof validRoles[number];
 
 /**
  * Fetch all users with their roles
@@ -20,11 +26,7 @@ export async function fetchAllUsers(): Promise<UserWithRoles[]> {
     // Fetch all roles in a single query
     const { data: rolesData, error: rolesError } = await supabase
       .from('user_roles')
-      .select(`
-        *,
-        profiles(*),
-        almacenes(*)
-      `);
+      .select('*, profiles:profiles(*), almacenes:almacenes(*)');
       
     if (rolesError) throw rolesError;
     
@@ -39,48 +41,48 @@ export async function fetchAllUsers(): Promise<UserWithRoles[]> {
           userRolesMap.set(userId, []);
         }
         
-        // Safely handle nested properties
-        const profilesData = role.profiles;
+        // Safely handle profiles data
         let email = '';
         let fullName = '';
         
-        if (profilesData) {
-          if (Array.isArray(profilesData)) {
-            if (profilesData.length > 0) {
-              // Access properties safely from the first item in the array
-              email = profilesData[0]?.email || '';
-              fullName = profilesData[0]?.full_name || '';
+        // Handle profiles data safely
+        if (role.profiles) {
+          // Check if it's an array or an object
+          if (Array.isArray(role.profiles)) {
+            if (role.profiles.length > 0) {
+              email = role.profiles[0]?.email || '';
+              fullName = role.profiles[0]?.full_name || '';
             }
           } else {
-            // Handle object case
-            email = profilesData.email || '';
-            fullName = profilesData.full_name || '';
+            email = (role.profiles as any).email || '';
+            fullName = (role.profiles as any).full_name || '';
           }
         }
         
         // Safely handle almacenes data
-        const almacenesData = role.almacenes;
         let almacenNombre = '';
         
-        if (almacenesData) {
-          if (Array.isArray(almacenesData)) {
-            if (almacenesData.length > 0) {
-              // Access nombre safely from the first item in the array
-              almacenNombre = almacenesData[0]?.nombre || '';
+        if (role.almacenes) {
+          // Check if it's an array or an object
+          if (Array.isArray(role.almacenes)) {
+            if (role.almacenes.length > 0) {
+              almacenNombre = role.almacenes[0]?.nombre || '';
             }
           } else {
-            // Handle object case
-            almacenNombre = almacenesData.nombre || '';
+            almacenNombre = (role.almacenes as any).nombre || '';
           }
         }
+        
+        // Cast role to valid UserRole type
+        const roleValue = safeCast(role.role, validRoles, "viewer");
         
         const userRole: UserRoleWithStore = {
           id: role.id,
           user_id: role.user_id,
-          role: role.role,
+          role: roleValue,
           almacen_id: role.almacen_id,
           almacen_nombre: almacenNombre,
-          created_at: role.created_at
+          created_at: role.created_at || new Date().toISOString()
         };
         
         userRolesMap.get(userId)?.push(userRole);
@@ -93,8 +95,8 @@ export async function fetchAllUsers(): Promise<UserWithRoles[]> {
       
       return {
         id: profile.id,
-        email: profile.email,
-        full_name: profile.full_name,
+        email: profile.email || '',
+        full_name: profile.full_name || '',
         created_at: profile.created_at,
         roles
       };
@@ -122,11 +124,14 @@ export async function addUserRole(userId: string, role: string, storeId?: string
       throw new Error("User not found");
     }
 
+    // Cast to a valid role
+    const validRole = safeCast(role, validRoles, "viewer");
+
     const { data: existingRoles, error: rolesError } = await supabase
       .from('user_roles')
       .select('*')
       .eq('user_id', userId)
-      .eq('role', role);
+      .eq('role', validRole);
       
     if (rolesError) throw rolesError;
     
@@ -141,7 +146,7 @@ export async function addUserRole(userId: string, role: string, storeId?: string
       .insert([
         {
           user_id: userId,
-          role,
+          role: validRole,
           almacen_id: storeId || null
         }
       ])
@@ -168,14 +173,10 @@ export async function getUserById(userId: string): Promise<UserWithRoles> {
       
     if (profileError) throw profileError;
     
-    // Get user roles
+    // Get user roles with better join syntax
     const { data: rolesData, error: rolesError } = await supabase
       .from('user_roles')
-      .select(`
-        *,
-        profiles!user_roles_user_id_fkey(id, email, full_name),
-        almacenes(nombre)
-      `)
+      .select('*, profiles:profiles(*), almacenes:almacenes(*)')
       .eq('user_id', userId);
       
     if (rolesError) throw rolesError;
@@ -183,56 +184,55 @@ export async function getUserById(userId: string): Promise<UserWithRoles> {
     // Ensure profile data is properly structured
     const profile = profileData ? {
       id: profileData.id,
-      email: profileData.email,
-      full_name: profileData.full_name,
+      email: profileData.email || '',
+      full_name: profileData.full_name || '',
       created_at: profileData.created_at
     } : null;
     
     // Process roles data - handle either array or single object response
-    const roles = rolesData.map(role => {
-      const profilesData = role.profiles;
+    const roles: UserRoleWithStore[] = rolesData.map(role => {
+      // Handle profiles data safely
       let email = '';
       let fullName = '';
       
-      // Handle the profiles data which might be an array or object
-      if (profilesData) {
-        if (Array.isArray(profilesData)) {
-          // Handle array case
-          if (profilesData.length > 0) {
-            email = profilesData[0].email || '';
-            fullName = profilesData[0].full_name || '';
+      if (role.profiles) {
+        // Check if it's an array or an object
+        if (Array.isArray(role.profiles)) {
+          if (role.profiles.length > 0) {
+            email = role.profiles[0]?.email || '';
+            fullName = role.profiles[0]?.full_name || '';
           }
         } else {
-          // Handle object case
-          email = profilesData.email || '';
-          fullName = profilesData.full_name || '';
+          email = (role.profiles as any).email || '';
+          fullName = (role.profiles as any).full_name || '';
         }
       }
       
-      // Handle almacenes data which might be an array or object
-      const almacenesData = role.almacenes;
+      // Handle almacenes data safely
       let almacenNombre = '';
       
-      if (almacenesData) {
-        if (Array.isArray(almacenesData)) {
-          // Handle array case
-          if (almacenesData.length > 0) {
-            almacenNombre = almacenesData[0].nombre || '';
+      if (role.almacenes) {
+        // Check if it's an array or an object
+        if (Array.isArray(role.almacenes)) {
+          if (role.almacenes.length > 0) {
+            almacenNombre = role.almacenes[0]?.nombre || '';
           }
         } else {
-          // Handle object case
-          almacenNombre = almacenesData.nombre || '';
+          almacenNombre = (role.almacenes as any).nombre || '';
         }
       }
+
+      // Cast role to valid UserRole type
+      const roleValue = safeCast(role.role, validRoles, "viewer");
       
       // Return processed role
       return {
         id: role.id,
         user_id: role.user_id,
-        role: role.role,
+        role: roleValue,
         almacen_id: role.almacen_id,
         almacen_nombre: almacenNombre,
-        created_at: role.created_at
+        created_at: role.created_at || new Date().toISOString()
       } as UserRoleWithStore;
     });
     

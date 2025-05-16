@@ -1,5 +1,5 @@
 
-// Adding types needed for UserDataQueryResult to resolve build errors
+// Define types for user management
 
 export interface UserDataQueryResult {
   data: any;
@@ -10,7 +10,7 @@ export interface UserDataQueryResult {
 export type Role = "admin" | "manager" | "sales" | "viewer";
 export type UserRole = "admin" | "manager" | "sales" | "viewer";
 
-export interface UserRole {
+export interface UserRoleObj {
   id: string;
   user_id: string;
   role: UserRole;
@@ -45,4 +45,19 @@ export interface UserWithRoles {
   full_name: string;
   created_at?: string;
   roles: RoleWithStore[];
+}
+
+// Helper function to safely cast a string to UserRole
+export function castToUserRole(role: string): UserRole {
+  const validRoles: UserRole[] = ["admin", "manager", "sales", "viewer"];
+  if (validRoles.includes(role as UserRole)) {
+    return role as UserRole;
+  }
+  return "viewer"; // Default role if invalid
+}
+
+// Helper function to safely handle Supabase query results
+export function safeGetProperty<T, K extends keyof T>(obj: T | null | undefined, key: K): T[K] | null {
+  if (!obj) return null;
+  return obj[key];
 }
