@@ -6,7 +6,7 @@ import {
   InventorySummary 
 } from "@/components/dashboard";
 import { useCurrentStores } from "@/hooks/useCurrentStores";
-import { DollarSign, ShoppingBag, Truck } from "lucide-react";
+import { DollarSign, ShoppingBag, Truck, Coins } from "lucide-react";
 import { fetchDashboardStats, DashboardStats } from "@/services/dashboard";
 
 const Dashboard = () => {
@@ -51,7 +51,7 @@ const Dashboard = () => {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-4">
         <StatCard
           title="Ventas Hoy"
           value={isLoading ? "Cargando..." : `$${dashboardStats?.ventasHoy.total.toLocaleString() || 0}`}
@@ -74,6 +74,13 @@ const Dashboard = () => {
           icon={Truck}
           description={`+${dashboardStats?.transferencias.porcentaje || 0}% respecto a ayer`}
           trend={dashboardStats?.transferencias.porcentaje}
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Ventas Totales"
+          value={isLoading ? "Cargando..." : `$${dashboardStats?.ventasTotales.total.toLocaleString() || 0}`}
+          icon={Coins}
+          description="Total histórico de ventas"
           isLoading={isLoading}
         />
       </div>

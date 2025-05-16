@@ -19,6 +19,9 @@ export interface DashboardStats {
     total: number;
     porcentaje: number;
   };
+  ventasTotales: {
+    total: number;
+  };
 }
 
 export const fetchDashboardStats = async (): Promise<DashboardStats> => {
@@ -57,10 +60,23 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
       throw errorVentasAyer;
     }
     
+    // Ventas totales (todas las que existen)
+    const { data: ventasTotales, error: errorVentasTotales } = await supabase
+      .from('ventas')
+      .select('total');
+    
+    if (errorVentasTotales) {
+      console.error('Error al obtener ventas totales:', errorVentasTotales);
+      throw errorVentasTotales;
+    }
+    
     // Calcular totales y porcentajes
     const totalVentasHoy = ventasHoy?.reduce((sum, venta) => sum + (venta.total || 0), 0) || 0;
     const totalVentasAyer = ventasAyer?.reduce((sum, venta) => sum + (venta.total || 0), 0) || 1; // Evitar división por cero
     const porcentajeVentas = Math.round(((totalVentasHoy - totalVentasAyer) / totalVentasAyer) * 100);
+    
+    // Total histórico de ventas
+    const sumaVentasTotales = ventasTotales?.reduce((sum, venta) => sum + (venta.total || 0), 0) || 0;
     
     // Clientes únicos hoy (basado en ventas con campo cliente no nulo)
     const { data: clientesHoy, error: errorClientesHoy } = await supabase
@@ -164,6 +180,9 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
       transferencias: {
         total: totalTransferenciasHoy,
         porcentaje: porcentajeTransferencias
+      },
+      ventasTotales: {
+        total: Math.round(sumaVentasTotales)
       }
     };
   } catch (error) {
@@ -175,7 +194,8 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
       ventasHoy: { total: 0, porcentaje: 0 },
       nuevosClientes: { total: 0, porcentaje: 0 },
       productosVendidos: { total: 0, porcentaje: 0 },
-      transferencias: { total: 0, porcentaje: 0 }
+      transferencias: { total: 0, porcentaje: 0 },
+      ventasTotales: { total: 0 }
     };
   }
 };
