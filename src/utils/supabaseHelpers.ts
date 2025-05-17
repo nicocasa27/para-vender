@@ -91,9 +91,10 @@ export function isValidSupabaseResult(obj: any, requiredFields: string[]): boole
  * @param tableName Table to query
  * @returns A function that queries the table and returns typed data
  */
-export function createTypedSelector<T>(tableName: keyof typeof supabase.schema) {
+export function createTypedSelector<T>(tableName: string) {
+  // Using any type for the selector since we can't easily constrain it to the specific database schema
   return async (query: string) => {
-    const { data, error } = await supabase.from(tableName).select(query);
+    const { data, error } = await supabase.from(tableName as any).select(query);
     if (error) throw error;
     return data as T[];
   };

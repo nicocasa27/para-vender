@@ -89,22 +89,23 @@ export async function fetchProductData() {
       };
     }
     
-    // Safely access properties - Fix for type errors
-    const categoriaId = product.categoria_id || null;
-    const unidadId = product.unidad_id || null;
+    // Safely access properties using extractProperty helper to handle possible error objects
+    const categoriaId = extractProperty(product, 'categoria_id', null);
+    const unidadId = extractProperty(product, 'unidad_id', null);
     
     const categoria = categoriaId ? categoriasMap.get(categoriaId) : null;
     const unidad = unidadId ? unidadesMap.get(unidadId) : null;
     
+    // Use type assertion to avoid spread type error
     return {
-      ...product,
+      ...(product as Record<string, any>),
       categorias: categoria ? { nombre: categoria.nombre } : { nombre: "Sin categoría" },
       unidades: unidad ? { nombre: unidad.nombre } : { nombre: "u" },
       almacenes: { nombre: "Sin sucursal" }
     };
   }) || [];
   
-  console.log("Products fetched:", enrichedProductsData?.length || 0);
+  console.log("Products fetched:", enrichedProductsData.length || 0);
 
   const { data: inventoryData, error: inventoryError } = await supabase
     .from('inventario')
