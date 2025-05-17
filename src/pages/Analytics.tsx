@@ -52,7 +52,7 @@ export default function Analytics() {
     setLoading(true);
     
     try {
-      // Use fetch for RPC calls instead of supabase.rpc to avoid type issues
+      // Fix for "get_ventas_por_categoria" function call
       const { data: salesCategoryData, error: salesCategoryError } = await supabase.rpc(
         'get_ventas_por_categoria',
         { store_ids: storeIds }
@@ -60,9 +60,10 @@ export default function Analytics() {
       
       if (salesCategoryError) throw salesCategoryError;
       if (salesCategoryData) {
-        setSalesByCategory(salesCategoryData);
+        setSalesByCategory(Array.isArray(salesCategoryData) ? salesCategoryData : []);
       }
       
+      // Fix for "get_top_productos" function call
       const { data: topProductsData, error: topProductsError } = await supabase.rpc(
         'get_top_productos',
         { store_ids: storeIds }
@@ -70,9 +71,10 @@ export default function Analytics() {
       
       if (topProductsError) throw topProductsError;
       if (topProductsData) {
-        setTopProducts(topProductsData);
+        setTopProducts(Array.isArray(topProductsData) ? topProductsData : []);
       }
       
+      // Fix for "get_ventas_por_dia" function call
       const { data: salesTimeData, error: salesTimeError } = await supabase.rpc(
         'get_ventas_por_dia',
         { store_ids: storeIds }
@@ -80,7 +82,7 @@ export default function Analytics() {
       
       if (salesTimeError) throw salesTimeError;
       if (salesTimeData) {
-        setRevenueOverTime(salesTimeData);
+        setRevenueOverTime(Array.isArray(salesTimeData) ? salesTimeData : []);
       }
       
     } catch (error) {

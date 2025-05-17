@@ -89,8 +89,12 @@ export async function fetchProductData() {
       };
     }
     
-    const categoria = product.categoria_id ? categoriasMap.get(product.categoria_id) : null;
-    const unidad = product.unidad_id ? unidadesMap.get(product.unidad_id) : null;
+    // Safely access properties - Fix for type errors
+    const categoriaId = product.categoria_id || null;
+    const unidadId = product.unidad_id || null;
+    
+    const categoria = categoriaId ? categoriasMap.get(categoriaId) : null;
+    const unidad = unidadId ? unidadesMap.get(unidadId) : null;
     
     return {
       ...product,
@@ -98,7 +102,7 @@ export async function fetchProductData() {
       unidades: unidad ? { nombre: unidad.nombre } : { nombre: "u" },
       almacenes: { nombre: "Sin sucursal" }
     };
-  });
+  }) || [];
   
   console.log("Products fetched:", enrichedProductsData?.length || 0);
 
