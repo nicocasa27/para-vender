@@ -64,7 +64,11 @@ export interface UserWithRoles {
   };
 }
 
-// Helper function to safely cast a string to UserRole
+/**
+ * Helper function to safely cast a string to UserRole
+ * @param role The role string to cast
+ * @returns A valid UserRole
+ */
 export function castToUserRole(role: string): UserRole {
   const validRoles: UserRole[] = ["admin", "manager", "sales", "viewer"];
   if (validRoles.includes(role as UserRole)) {
