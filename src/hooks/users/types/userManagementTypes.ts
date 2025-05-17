@@ -1,4 +1,5 @@
 
+
 // Define types for user management
 
 export interface UserDataQueryResult {

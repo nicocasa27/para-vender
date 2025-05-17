@@ -1,4 +1,5 @@
 
+
 // Adding types needed for UserDataQueryResult to resolve build errors
 
 export interface UserDataQueryResult {
@@ -40,4 +41,10 @@ export interface UserWithRoles {
   email: string;
   full_name: string;
   roles: RoleWithStore[];
+}
+
+// Add the castToUserRole function to the dev-server version
+export function castToUserRole(role: string): string {
+  const validRoles = ["admin", "manager", "sales", "viewer"];
+  return validRoles.includes(role) ? role : "viewer";
 }
