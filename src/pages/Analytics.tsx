@@ -21,6 +21,12 @@ import { LowStockTable } from "@/components/analytics/LowStockTable";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart3Icon, TrendingUp, ShoppingBag, Clock, Calendar, DollarSign, TrendingDown, Receipt, PercentIcon, AlertCircle } from "lucide-react";
 
+// Define a type for the RPC function response
+type RPCResponse<T> = {
+  data: T | null;
+  error: any;
+}
+
 export default function Analytics() {
   const { stores, isLoading: loadingStores } = useCurrentStores();
   const [salesByCategory, setSalesByCategory] = useState<CategoryDataPoint[]>([]);
@@ -52,33 +58,33 @@ export default function Analytics() {
     setLoading(true);
     
     try {
-      // Fix for "get_ventas_por_categoria" function call - Use type assertion to handle the RPC call properly
+      // Fix for "get_ventas_por_categoria" function call - Use explicit typing with as to override TS error
       const { data: salesCategoryData, error: salesCategoryError } = await supabase.rpc(
-        'get_ventas_por_categoria',
+        'get_ventas_por_categoria' as any,
         { store_ids: storeIds }
-      ) as unknown as { data: CategoryDataPoint[] | null, error: any };
+      ) as RPCResponse<CategoryDataPoint[]>;
       
       if (salesCategoryError) throw salesCategoryError;
       if (salesCategoryData) {
         setSalesByCategory(Array.isArray(salesCategoryData) ? salesCategoryData : []);
       }
       
-      // Fix for "get_top_productos" function call - Use type assertion to handle the RPC call properly
+      // Fix for "get_top_productos" function call - Use explicit typing with as to override TS error
       const { data: topProductsData, error: topProductsError } = await supabase.rpc(
-        'get_top_productos',
+        'get_top_productos' as any,
         { store_ids: storeIds }
-      ) as unknown as { data: ProductDataPoint[] | null, error: any };
+      ) as RPCResponse<ProductDataPoint[]>;
       
       if (topProductsError) throw topProductsError;
       if (topProductsData) {
         setTopProducts(Array.isArray(topProductsData) ? topProductsData : []);
       }
       
-      // Fix for "get_ventas_por_dia" function call - Use type assertion to handle the RPC call properly
+      // Fix for "get_ventas_por_dia" function call - Use explicit typing with as to override TS error
       const { data: salesTimeData, error: salesTimeError } = await supabase.rpc(
-        'get_ventas_por_dia',
+        'get_ventas_por_dia' as any,
         { store_ids: storeIds }
-      ) as unknown as { data: SalesDataPoint[] | null, error: any };
+      ) as RPCResponse<SalesDataPoint[]>;
       
       if (salesTimeError) throw salesTimeError;
       if (salesTimeData) {
