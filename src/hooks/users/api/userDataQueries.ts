@@ -2,6 +2,14 @@
 import { UserDataQueryResult, UserWithRoles, castToUserRole } from "../types/userManagementTypes";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { extractProperty } from "@/utils/supabaseHelpers";
+
+/**
+ * Check if an object is a Supabase error object
+ */
+function isErrorObject(obj: any): boolean {
+  return obj && typeof obj === 'object' && obj.error === true;
+}
 
 // Example function with correct return type
 export function exampleFunction(): UserDataQueryResult {
@@ -38,8 +46,11 @@ export async function fetchUserData(): Promise<UserWithRoles[]> {
           created_at: profile.created_at,
           roles: roles.map(role => {
             // Safely access nested properties with type checking
-            const safeAlmacenes = role.almacenes && !role.almacenes.error 
-              ? { id: role.almacenes.id || "", nombre: role.almacenes.nombre || "" }
+            const safeAlmacenes = role.almacenes && !isErrorObject(role.almacenes)
+              ? { 
+                  id: extractProperty(role.almacenes, 'id', ""),
+                  nombre: extractProperty(role.almacenes, 'nombre', "")
+                }
               : null;
               
             return {

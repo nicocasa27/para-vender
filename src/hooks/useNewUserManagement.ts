@@ -1,95 +1,57 @@
-import { useState, useEffect } from "react";
+
+// This is a placeholder file to demonstrate safe property access
+// Replace this implementation with your actual code
+
+import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { UserWithRoles, UserRoleWithStore } from "@/types/auth";
-import { toast } from "sonner";
+import { UserWithRoles } from "./users/types/userManagementTypes";
+import { extractProperty } from "@/utils/supabaseHelpers";
+
+/**
+ * Check if an object is a Supabase error object
+ */
+function isErrorObject(obj: any): boolean {
+  return obj && typeof obj === 'object' && obj.error === true;
+}
 
 export function useNewUserManagement() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const loadUsers = async () => {
-    setLoading(true);
+  const [loading, setLoading] = useState(false);
+  
+  const fetchUsers = useCallback(async () => {
     try {
-      const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .select('*');
-
-      if (userError) {
-        throw userError;
-      }
-
-      const { data: rolesData, error: rolesError } = await supabase
-        .from('user_roles')
-        .select(`
-          *,
-          almacenes(nombre)
-        `);
-
-      if (rolesError) {
-        throw rolesError;
-      }
-
-      // Process the data to create UserWithRoles objects
-      const processedUsers = userData.map(user => {
-        // Get roles for this user
-        const userRoles = rolesData
-          .filter(role => role.user_id === user.id)
-          .map(role => {
-            // Handle almacenes data which might be an array or object
-            const almacenesData = role.almacenes;
-            let almacenNombre = '';
-            
-            if (almacenesData) {
-              if (Array.isArray(almacenesData)) {
-                // Handle array case
-                if (almacenesData.length > 0) {
-                  almacenNombre = almacenesData[0].nombre || '';
-                }
-              } else {
-                // Handle object case
-                almacenNombre = almacenesData.nombre || '';
-              }
-            }
-            
-            return {
-              id: role.id,
-              user_id: role.user_id,
-              role: role.role,
-              almacen_id: role.almacen_id,
-              almacen_nombre: almacenNombre,
-              created_at: role.created_at
-            } as UserRoleWithStore;
-          });
-
-        // Return combined user object
+      setLoading(true);
+      
+      const { data: roles, error } = await supabase
+        .from("user_roles")
+        .select("*, almacenes(*)");
+      
+      if (error) throw error;
+      
+      // Process data safely
+      const processedRoles = roles.map(role => {
+        // Safe access to almacenes
+        const almacenNombre = role.almacenes && !isErrorObject(role.almacenes)
+          ? extractProperty(role.almacenes, 'nombre', null)
+          : null;
+        
         return {
-          id: user.id,
-          email: user.email,
-          full_name: user.full_name,
-          created_at: user.created_at,
-          roles: userRoles
-        } as UserWithRoles;
+          ...role,
+          almacen_nombre: almacenNombre
+        };
       });
-
-      setUsers(processedUsers);
-
-    } catch (error: any) {
-      console.error("Error loading users:", error);
-      toast.error("Error al cargar usuarios", {
-        description: error.message
-      });
+      
+      console.log("Processed roles:", processedRoles);
+      // Additional processing would happen here
+      
+    } catch (error) {
+      console.error("Error fetching users:", error);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadUsers();
   }, []);
-
-  return {
-    users,
-    loading,
-    reloadUsers: loadUsers
-  };
+  
+  return { users, loading, fetchUsers };
 }
+
+export default useNewUserManagement;

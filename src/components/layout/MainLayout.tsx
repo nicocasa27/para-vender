@@ -10,10 +10,10 @@ export const MainLayout: React.FC = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Use the props that SideNav actually accepts */}
-      <SideNav isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      {/* Sidebar */}
+      <SideNav />
+      
       <main className="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-spring">
-        {/* TopNav doesn't need any props according to the error */}
         <TopNav />
         <ScrollArea className="flex-1 overflow-auto p-4 md:p-6 animate-fade-in">
           <div className="mx-auto w-full max-w-7xl">

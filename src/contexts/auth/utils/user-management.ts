@@ -4,8 +4,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole, UserRoleWithStore, UserWithRoles } from "@/types/auth";
-import { safeCast } from "@/utils/supabaseHelpers";
-import { extractProperty } from "@/utils/supabaseHelpers";
+import { extractProperty, safeCast } from "@/utils/supabaseHelpers";
 
 // Helper function to safely cast to UserRole with proper types 
 export function safelyExtractRole(role: string): UserRole {
@@ -62,8 +61,8 @@ export async function fetchAllUsers(): Promise<UserWithRoles[]> {
         
         const roles = rolesData.map(role => {
           // Safely access nested properties
-          const almacenNombre = role.almacenes && !role.almacenes.error 
-            ? role.almacenes.nombre 
+          const almacenNombre = role.almacenes && !isErrorObject(role.almacenes)
+            ? extractProperty(role.almacenes, 'nombre', null)
             : null;
           
           // Use a proper type cast for the role
@@ -137,4 +136,9 @@ function processViewData(viewData: any[]): UserWithRoles[] {
     console.error('Error processing view data:', error);
     return [];
   }
+}
+
+// Helper function to check if an object is an error object
+function isErrorObject(obj: any): boolean {
+  return obj && typeof obj === 'object' && obj.error === true;
 }

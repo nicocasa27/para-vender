@@ -1,9 +1,9 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRoleWithStore } from '@/types/auth';
-import { fetchUserRoles, createDefaultRole } from '../utils/user-roles';
+import { fetchUserRoles } from '../utils/user-roles';
+import { createDefaultRole } from '../utils/user-management-defaults';
 import { toast } from 'sonner';
 
 const MAX_ROLE_LOADING_RETRIES = 3;

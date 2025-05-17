@@ -46,6 +46,12 @@ export function processUserData(data: any[], isFromView = false): UserWithRoles[
       // Añadir este rol al array de roles del usuario
       const userEntry = usersMap.get(userId);
       if (userEntry && row.role) {
+        // Safely handle properties that might be errors
+        const isAlmacenesError = row.almacenes && row.almacenes.error === true;
+        const almacenNombre = isFromView
+          ? row.almacen_nombre
+          : (!isAlmacenesError && row.almacenes ? row.almacenes.nombre : null);
+        
         // Use type casting to ensure role is a valid UserRole
         userEntry.roles.push({
           id: row.id || "",
@@ -53,13 +59,14 @@ export function processUserData(data: any[], isFromView = false): UserWithRoles[
           role: castToUserRole(row.role),
           almacen_id: row.almacen_id || null,
           created_at: row.created_at || new Date().toISOString(),
-          // Use optional chaining for potentially null properties
-          almacen_nombre: isFromView ? row.almacen_nombre : (row.almacenes?.nombre || null),
-          // Include almacenes object if available (for compatibility)
-          ...(row.almacenes && !row.almacenes.error && { almacenes: { 
-            id: row.almacenes.id || "", 
-            nombre: row.almacenes.nombre || "" 
-          }})
+          almacen_nombre: almacenNombre,
+          // Only include almacenes if available and not an error
+          ...(row.almacenes && !isAlmacenesError && {
+            almacenes: { 
+              id: row.almacenes.id || "", 
+              nombre: row.almacenes.nombre || "" 
+            }
+          })
         });
       }
     });

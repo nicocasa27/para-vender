@@ -78,3 +78,21 @@ export function safeGetProperty<T, K extends keyof T>(obj: T | null | undefined,
   if (!obj) return null;
   return obj[key];
 }
+
+// Utility for checking if object has error property
+export function isErrorObject(obj: any): boolean {
+  return obj && typeof obj === 'object' && obj.error === true;
+}
+
+// Safe property accessor for handling SelectQueryError objects
+export function safeAccess<T>(obj: any, property: string, defaultValue: T): T {
+  if (!obj || obj.error === true) {
+    return defaultValue;
+  }
+  
+  try {
+    return (obj[property] !== undefined) ? obj[property] : defaultValue;
+  } catch (e) {
+    return defaultValue;
+  }
+}

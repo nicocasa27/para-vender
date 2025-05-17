@@ -6,6 +6,14 @@ import { useUserDeletion } from './users/useUserDeletion';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { castToUserRole } from '@/types/auth';
+import { extractProperty } from '@/utils/supabaseHelpers';
+
+/**
+ * Check if an object is a Supabase error object
+ */
+function isErrorObject(obj: any): boolean {
+  return obj && typeof obj === 'object' && obj.error === true;
+}
 
 export function useUsersAndRoles(isAdmin: boolean) {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
@@ -119,8 +127,8 @@ export function useUsersAndRoles(isAdmin: boolean) {
         // Si el usuario no tiene roles asignados explícitamente, le asignamos el rol predeterminado 'viewer'
         const roles: RoleWithStore[] = userRoles.length > 0 ? userRoles.map(role => {
           // Safe access to almacenes with error handling
-          const almacenNombre = role.almacenes && !role.almacenes.error 
-            ? role.almacenes.nombre 
+          const almacenNombre = role.almacenes && !isErrorObject(role.almacenes)
+            ? extractProperty(role.almacenes, 'nombre', null)
             : null;
             
           return {

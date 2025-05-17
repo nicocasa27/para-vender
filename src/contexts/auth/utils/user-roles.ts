@@ -3,19 +3,20 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole, UserRoleWithStore } from "@/types/auth";
+import { extractProperty, safeCast } from "@/utils/supabaseHelpers";
 
 /**
  * Safely cast a string to UserRole
  */
-function safeRoleCast(role: string): UserRole {
-  const validRoles = ["admin", "manager", "sales", "viewer"] as UserRole[];
-  return validRoles.includes(role as UserRole) ? (role as UserRole) : "viewer";
+export function safeRoleCast(role: string): UserRole {
+  const validRoles = ["admin", "manager", "sales", "viewer"] as const;
+  return safeCast(role, validRoles, "viewer");
 }
 
 /**
  * Safely handle potentially null properties
  */
-function safeProperty<T>(obj: any, prop: string, defaultValue: T): T {
+export function safeProperty<T>(obj: any, prop: string, defaultValue: T): T {
   if (!obj) return defaultValue;
   try {
     if (obj.error === true) return defaultValue;
@@ -129,9 +130,9 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
     console.log(`Found ${roles.length} roles for user from regular query`);
     
     return roles.map(role => {
-      // Safe access to potentially null/error properties
-      const almacenNombre = role.almacenes && !role.almacenes.error 
-        ? role.almacenes.nombre 
+      // Safely access potentially null properties
+      const almacenNombre = role.almacenes && !isErrorObject(role.almacenes)
+        ? extractProperty(role.almacenes, 'nombre', null)
         : null;
       
       return {
@@ -148,4 +149,9 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
     console.error("Error fetching user roles:", error);
     return [];
   }
+}
+
+// Helper function to check if an object is an error object
+function isErrorObject(obj: any): boolean {
+  return obj && typeof obj === 'object' && obj.error === true;
 }

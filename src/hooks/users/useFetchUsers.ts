@@ -2,6 +2,14 @@
 import { useState, useEffect } from "react";
 import { UserWithRoles, UserRoleWithName, castToUserRole } from "./types/userManagementTypes";
 import { supabase } from "@/integrations/supabase/client";
+import { extractProperty } from "@/utils/supabaseHelpers";
+
+/**
+ * Check if an object is a Supabase error object
+ */
+function isErrorObject(obj: any): boolean {
+  return obj && typeof obj === 'object' && obj.error === true;
+}
 
 export function useFetchUsers() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
@@ -19,13 +27,13 @@ export function useFetchUsers() {
           .select('*');
           
         if (!viewError && viewData && viewData.length > 0) {
-          // Process the view data
-          const processedUsers = processUserRoleData(viewData.map(item => ({
+          // Process the view data - mapping strings to UserRole type
+          const mappedData = viewData.map(item => ({
             ...item,
-            // Ensure role is properly cast to UserRole
             role: castToUserRole(item.role)
-          } as UserRoleWithName)));
+          }));
           
+          const processedUsers = processUserRoleData(mappedData);
           setUsers(processedUsers);
           setLoading(false);
           return;
@@ -53,8 +61,11 @@ export function useFetchUsers() {
               full_name: profile.full_name || "",
               roles: roles.map(role => {
                 // Safe access to almacenes with error handling
-                const safeAlmacenes = role.almacenes && !role.almacenes.error 
-                  ? { id: role.almacenes.id || "", nombre: role.almacenes.nombre || "" }
+                const safeAlmacenes = role.almacenes && !isErrorObject(role.almacenes)
+                  ? { 
+                      id: extractProperty(role.almacenes, 'id', ""),
+                      nombre: extractProperty(role.almacenes, 'nombre', "")
+                    }
                   : null;
                 
                 return {
@@ -120,9 +131,10 @@ export function useFetchUsers() {
       setLoading(true);
       try {
         // Implement refetch logic here - similar to fetchUsers
+        // This is a placeholder
+        setLoading(false);
       } catch (err) {
         setError(err as Error);
-      } finally {
         setLoading(false);
       }
     }

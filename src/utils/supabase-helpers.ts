@@ -68,3 +68,33 @@ export function safeEnum<T extends string>(value: unknown, validValues: readonly
   if (typeof value !== 'string') return defaultValue;
   return (validValues as readonly string[]).includes(value) ? (value as T) : defaultValue;
 }
+
+// Extract a property safely
+export function extractProperty<T = any>(obj: any, path: string, defaultValue: T): T {
+  if (!obj) return defaultValue;
+  
+  try {
+    // Handle SelectQueryError objects
+    if (obj.error === true) return defaultValue;
+    
+    const parts = path.split('.');
+    let current = obj;
+    
+    for (const part of parts) {
+      if (current === null || current === undefined) {
+        return defaultValue;
+      }
+      current = current[part];
+    }
+    
+    return (current === null || current === undefined) ? defaultValue : current as T;
+  } catch (error) {
+    console.error(`Error extracting property ${path}:`, error);
+    return defaultValue;
+  }
+}
+
+// Check if an object is a Supabase error object
+export function isErrorObject(obj: any): boolean {
+  return obj && typeof obj === 'object' && obj.error === true;
+}

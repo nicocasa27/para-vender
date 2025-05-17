@@ -28,6 +28,11 @@ export function extractProperty<T = any>(
   defaultValue: T
 ): T {
   try {
+    if (!obj) return defaultValue;
+    
+    // Handle SelectQueryError objects
+    if (obj.error === true) return defaultValue;
+    
     const parts = path.split('.');
     let current = obj;
     
@@ -91,4 +96,11 @@ export function createTypedSelector<T>(tableName: string) {
     if (error) throw error;
     return data as T[];
   };
+}
+
+/**
+ * Check if a value is a Supabase SelectQueryError
+ */
+export function isSelectQueryError(value: any): boolean {
+  return value && typeof value === 'object' && value.error === true;
 }
