@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/auth/useAuth';
+import { TenantPlan, SubscriptionStatus, Tenant as TenantType } from './types';
 
 export interface Tenant {
   id: string;
@@ -107,9 +108,13 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
       if (subError && subError.code !== 'PGRST116') throw subError;
 
       if (subData) {
+        // Cast string values to the required enum types
+        const planValue = subData.plan as TenantPlan;
+        const statusValue = subData.status as SubscriptionStatus;
+        
         setSubscription({
-          plan: subData.plan,
-          status: subData.status,
+          plan: planValue,
+          status: statusValue,
           trial_ends_at: subData.trial_ends_at,
           current_period_end: subData.current_period_end
         });
@@ -118,7 +123,7 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
         const { data: limitData, error: limitError } = await supabase
           .from('plan_limits')
           .select('*')
-          .eq('plan', subData.plan)
+          .eq('plan', planValue)
           .single();
 
         if (limitError) throw limitError;

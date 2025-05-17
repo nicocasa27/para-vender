@@ -87,10 +87,11 @@ export function isValidSupabaseResult(obj: any, requiredFields: string[]): boole
 
 /**
  * Create a typed selector for Supabase responses
+ * Use with explicit table name literals instead of dynamic string values
  * @param tableName Table to query
  * @returns A function that queries the table and returns typed data
  */
-export function createTypedSelector<T>(tableName: string) {
+export function createTypedSelector<T>(tableName: keyof typeof supabase.schema) {
   return async (query: string) => {
     const { data, error } = await supabase.from(tableName).select(query);
     if (error) throw error;
@@ -103,4 +104,11 @@ export function createTypedSelector<T>(tableName: string) {
  */
 export function isSelectQueryError(value: any): boolean {
   return value && typeof value === 'object' && value.error === true;
+}
+
+/**
+ * Check if an object is a Supabase error object
+ */
+export function isErrorObject(obj: any): boolean {
+  return obj && typeof obj === 'object' && obj.error === true;
 }

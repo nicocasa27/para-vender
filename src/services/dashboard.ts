@@ -1,6 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { isErrorObject, extractProperty } from "@/utils/supabaseHelpers";
 
 export interface DashboardStats {
   ventasHoy: {
@@ -92,10 +92,10 @@ export const fetchDashboardStats = async (tenantId?: string): Promise<DashboardS
     // Clientes únicos hoy (basado en ventas con campo cliente no nulo)
     const { data: clientesHoy, error: errorClientesHoy } = await supabase
       .from('ventas')
-      .select('cliente')
+      .select('user_id') // Use user_id instead of cliente which doesn't exist
       .eq('tenant_id', tenantId)
       .gte('created_at', todayStr)
-      .not('cliente', 'is', null);
+      .not('user_id', 'is', null);
     
     if (errorClientesHoy) {
       console.error('Error al obtener clientes de hoy:', errorClientesHoy);
@@ -105,11 +105,11 @@ export const fetchDashboardStats = async (tenantId?: string): Promise<DashboardS
     // Clientes únicos ayer
     const { data: clientesAyer, error: errorClientesAyer } = await supabase
       .from('ventas')
-      .select('cliente')
+      .select('user_id') // Use user_id instead of cliente which doesn't exist
       .eq('tenant_id', tenantId)
       .gte('created_at', yesterdayStr)
       .lt('created_at', todayStr)
-      .not('cliente', 'is', null);
+      .not('user_id', 'is', null);
     
     if (errorClientesAyer) {
       console.error('Error al obtener clientes de ayer:', errorClientesAyer);
@@ -117,8 +117,8 @@ export const fetchDashboardStats = async (tenantId?: string): Promise<DashboardS
     }
     
     // Eliminar duplicados para contar clientes únicos
-    const clientesUnicosHoy = new Set(clientesHoy.map(c => c.cliente)).size;
-    const clientesUnicosAyer = new Set(clientesAyer.map(c => c.cliente)).size || 1;
+    const clientesUnicosHoy = new Set(clientesHoy.map(c => c.user_id)).size;
+    const clientesUnicosAyer = new Set(clientesAyer.map(c => c.user_id)).size || 1;
     const porcentajeClientes = Math.round(((clientesUnicosHoy - clientesUnicosAyer) / clientesUnicosAyer) * 100);
     
     // Productos vendidos hoy (cantidad total)

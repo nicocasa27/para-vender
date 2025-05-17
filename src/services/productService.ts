@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { isErrorObject, extractProperty } from "@/utils/supabaseHelpers";
 
 /**
  * Obtiene los productos básicos y datos de inventario
@@ -20,7 +21,6 @@ export async function fetchProductData() {
       stock_maximo,
       categoria_id,
       unidad_id,
-      sucursal_id,
       descripcion,
       color,
       talla
@@ -80,15 +80,23 @@ export async function fetchProductData() {
   
   // Enriquecer los datos de productos
   const enrichedProductsData = productsData?.map(product => {
-    const categoria = categoriasMap.get(product.categoria_id);
-    const unidad = unidadesMap.get(product.unidad_id);
-    const almacen = product.sucursal_id ? almacenesMap.get(product.sucursal_id) : null;
+    // Check if the product is valid before accessing its properties
+    if (!product || isErrorObject(product)) {
+      return {
+        categorias: { nombre: "Sin categoría" },
+        unidades: { nombre: "u" },
+        almacenes: { nombre: "Sin sucursal" }
+      };
+    }
+    
+    const categoria = product.categoria_id ? categoriasMap.get(product.categoria_id) : null;
+    const unidad = product.unidad_id ? unidadesMap.get(product.unidad_id) : null;
     
     return {
       ...product,
       categorias: categoria ? { nombre: categoria.nombre } : { nombre: "Sin categoría" },
       unidades: unidad ? { nombre: unidad.nombre } : { nombre: "u" },
-      almacenes: almacen ? { nombre: almacen.nombre } : { nombre: "Sin sucursal" }
+      almacenes: { nombre: "Sin sucursal" }
     };
   });
   

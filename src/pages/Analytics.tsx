@@ -52,29 +52,36 @@ export default function Analytics() {
     setLoading(true);
     
     try {
+      // Use fetch for RPC calls instead of supabase.rpc to avoid type issues
       const { data: salesCategoryData, error: salesCategoryError } = await supabase.rpc(
-        "get_ventas_por_categoria",
+        'get_ventas_por_categoria',
         { store_ids: storeIds }
-      );
+      ) as unknown as { data: CategoryDataPoint[] | null, error: any };
       
       if (salesCategoryError) throw salesCategoryError;
-      setSalesByCategory(salesCategoryData || []);
+      if (salesCategoryData) {
+        setSalesByCategory(salesCategoryData);
+      }
       
       const { data: topProductsData, error: topProductsError } = await supabase.rpc(
-        "get_top_productos",
+        'get_top_productos',
         { store_ids: storeIds }
-      );
+      ) as unknown as { data: ProductDataPoint[] | null, error: any };
       
       if (topProductsError) throw topProductsError;
-      setTopProducts(topProductsData || []);
+      if (topProductsData) {
+        setTopProducts(topProductsData);
+      }
       
       const { data: salesTimeData, error: salesTimeError } = await supabase.rpc(
-        "get_ventas_por_dia",
+        'get_ventas_por_dia',
         { store_ids: storeIds }
-      );
+      ) as unknown as { data: SalesDataPoint[] | null, error: any };
       
       if (salesTimeError) throw salesTimeError;
-      setRevenueOverTime(salesTimeData || []);
+      if (salesTimeData) {
+        setRevenueOverTime(salesTimeData);
+      }
       
     } catch (error) {
       console.error("Error fetching analytics:", error);
