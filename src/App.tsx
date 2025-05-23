@@ -50,28 +50,27 @@ const App = () => {
               
               {/* Protected routes */}
               <Route element={<ProtectedRoute />}>
-                {/* Welcome page (tenant selection) */}
-                <Route path="/welcome" element={<Welcome />} />
-                
                 {/* Routes that require tenant context */}
-                <Route element={
-                  <TenantProvider>
-                    <MainLayout />
-                  </TenantProvider>
-                }>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/inventory" element={<InventoryPage />} />
-                  <Route path="/pos" element={<PointOfSale />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/analiticas2" element={<Analiticas2 />} />
-                  <Route path="/subscription" element={<Subscription />} />
+                <Route element={<TenantProvider />}>
+                  {/* Welcome page (tenant selection) */}
+                  <Route path="/welcome" element={<Welcome />} />
                   
-                  {/* User roles route */}
-                  <Route path="/user-roles" element={<UserRoles />} />
-                  
-                  {/* All authenticated users */}
-                  <Route path="/profile" element={<Profile />} />
+                  {/* Routes that also require MainLayout */}
+                  <Route element={<MainLayout />}>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/inventory" element={<InventoryPage />} />
+                    <Route path="/pos" element={<PointOfSale />} />
+                    <Route path="/analytics" element={<Analytics />} />
+                    <Route path="/analiticas2" element={<Analiticas2 />} />
+                    <Route path="/subscription" element={<Subscription />} />
+                    
+                    {/* User roles route */}
+                    <Route path="/user-roles" element={<UserRoles />} />
+                    
+                    {/* All authenticated users */}
+                    <Route path="/profile" element={<Profile />} />
+                  </Route>
                 </Route>
               </Route>
               
