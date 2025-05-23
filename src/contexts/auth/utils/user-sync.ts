@@ -142,12 +142,58 @@ export async function repairUserSync(userId: string): Promise<boolean> {
     
     console.log("Reparando sincronización para usuario:", { userId, email, fullName });
     
+    // Hacer una limpieza previa para asegurar que todo esté correcto
+    // Esto elimina roles duplicados si existieran
+    try {
+      const { data: existingRoles } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('user_id', userId);
+        
+      if (existingRoles && existingRoles.length > 1) {
+        console.log("Eliminando roles duplicados antes de reparar");
+        // Mantener solo el primer rol y eliminar los demás
+        const keepRoleId = existingRoles[0].id;
+        
+        for (let i = 1; i < existingRoles.length; i++) {
+          await supabase
+            .from('user_roles')
+            .delete()
+            .eq('id', existingRoles[i].id);
+        }
+        
+        console.log(`Se conservó el rol ${keepRoleId} y se eliminaron ${existingRoles.length - 1} roles duplicados`);
+      }
+    } catch (cleanupError) {
+      console.error("Error en limpieza previa:", cleanupError);
+      // Continuar con la reparación a pesar del error en la limpieza
+    }
+    
     const success = await syncUserToTables(userId, email, fullName);
     
     if (success) {
       toast.success("Usuario reparado exitosamente", {
         description: "Todos los datos están ahora sincronizados"
       });
+      
+      // Intentar también llamar a la función edge para asegurar sincronización completa
+      try {
+        const { data: syncData, error: syncError } = await supabase.functions.invoke("sync-users", {
+          body: { 
+            forceUpdate: true,
+            forceSyncAll: false,
+            specificUserId: userId
+          },
+        });
+        
+        if (syncError) {
+          console.warn("Error en función edge sync-users:", syncError);
+        } else {
+          console.log("Función edge sync-users ejecutada:", syncData);
+        }
+      } catch (edgeFunctionError) {
+        console.warn("No se pudo ejecutar función edge:", edgeFunctionError);
+      }
     }
     
     return success;

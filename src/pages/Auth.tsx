@@ -88,6 +88,28 @@ export default function Auth() {
             return;
           }
           
+          // Also verify that the user has roles assigned
+          const { data: roles, error: rolesError } = await supabase
+            .from('user_roles')
+            .select('id')
+            .eq('user_id', data.session.user.id);
+            
+          if (rolesError || !roles || roles.length === 0) {
+            console.warn("Auth page: User has no roles assigned, attempting repair");
+            // Try to repair user by creating default role
+            const { error: insertError } = await supabase
+              .from('user_roles')
+              .insert({
+                user_id: data.session.user.id,
+                role: 'viewer',
+                almacen_id: null
+              });
+              
+            if (insertError) {
+              console.error("Error creating default role during session check:", insertError);
+            }
+          }
+          
           // Only redirect if the user exists in the profiles table
           navigate('/dashboard');
         } catch (error) {
@@ -158,11 +180,27 @@ export default function Auth() {
         
         toast.info("Sincronizando usuario...");
         
-        // Esperar un momento para que Supabase procese el usuario
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // IMPORTANTE: Esperar un momento para que Supabase procese el usuario
+        // Este tiempo de espera es necesario para evitar condiciones de carrera
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // Sincronizar inmediatamente con las tablas de la aplicación usando nuestra función
-        const syncSuccess = await syncUserToTables(data.user.id, registerEmail, registerFullName);
+        // Intentar sincronizar varias veces para garantizar que se cree correctamente
+        let syncSuccess = false;
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (!syncSuccess && attempts < maxAttempts) {
+          attempts++;
+          console.log(`Intento ${attempts}/${maxAttempts} de sincronización para usuario ${data.user.id}`);
+          
+          // Sincronizar con las tablas de la aplicación usando nuestra función
+          syncSuccess = await syncUserToTables(data.user.id, registerEmail, registerFullName);
+          
+          if (!syncSuccess && attempts < maxAttempts) {
+            console.log(`Esperando antes de volver a intentar sincronización...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
         
         if (syncSuccess) {
           console.log("Usuario sincronizado correctamente");
@@ -186,6 +224,36 @@ export default function Auth() {
             console.warn("No se pudo ejecutar función edge:", edgeFunctionError);
           }
           
+          // Verificar que realmente se crearon los roles
+          const { data: finalCheck, error: checkError } = await supabase
+            .from('user_roles')
+            .select('id')
+            .eq('user_id', data.user.id);
+            
+          if (checkError || !finalCheck || finalCheck.length === 0) {
+            console.warn("No se encontraron roles después de la sincronización, intentando crear directamente");
+            
+            try {
+              const { error: directRoleError } = await supabase
+                .from('user_roles')
+                .insert({
+                  user_id: data.user.id,
+                  role: 'viewer',
+                  almacen_id: null
+                });
+                
+              if (directRoleError) {
+                console.error("Error al crear rol directo:", directRoleError);
+              } else {
+                console.log("Rol creado directamente como fallback");
+              }
+            } catch (directError) {
+              console.error("Error en creación directa de rol:", directError);
+            }
+          } else {
+            console.log(`Se verificaron ${finalCheck.length} roles creados correctamente`);
+          }
+          
           toast.success("Cuenta creada exitosamente", {
             description: "Ya puedes iniciar sesión con tus credenciales."
           });
@@ -200,9 +268,14 @@ export default function Auth() {
           setRegisterPassword("");
           setRegisterFullName("");
         } else {
-          toast.error("Error al configurar la cuenta", {
-            description: "La cuenta se creó pero hay problemas de configuración. Contacta al administrador."
+          console.error(`No se pudo sincronizar usuario después de ${maxAttempts} intentos`);
+          toast.warning("Cuenta creada con advertencias", {
+            description: "La cuenta se creó pero puede haber problemas. Usa el botón 'Reparar Usuario' si es necesario."
           });
+          
+          // Cambiar a login de todos modos
+          setActiveTab("login");
+          setLoginEmail(registerEmail);
         }
       } else {
         throw new Error("No se recibió información del usuario después del registro");
