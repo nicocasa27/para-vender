@@ -625,17 +625,21 @@ export type Database = {
       }
     }
     Functions: {
-      get_user_tenant_ids: {
-        Args: Record<PropertyKey, never>
-        Returns: string[]
-      }
-      is_tenant_admin: {
-        Args: { tenant_uuid: string }
+      is_user_tenant_admin: {
+        Args: { check_tenant_id: string }
         Returns: boolean
       }
       user_belongs_to_tenant: {
         Args: { tenant_uuid: string }
         Returns: boolean
+      }
+      user_tenant_access: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          tenant_id: string
+          user_id: string
+          role: string
+        }[]
       }
     }
     Enums: {
