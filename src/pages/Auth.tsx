@@ -10,8 +10,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Store, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { syncUserToTables } from "@/contexts/auth/utils/user-sync";
-import { AuthRepairButton } from "@/components/auth/AuthRepairButton";
 
 export default function Auth() {
   const [activeTab, setActiveTab] = useState<string>("login");
@@ -22,86 +20,34 @@ export default function Auth() {
   const [registerFullName, setRegisterFullName] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [isCleaningSession, setIsCleaningSession] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const { signIn, user } = useAuth();
   const navigate = useNavigate();
 
-  // Clean any existing session when loading the authentication page
-  useEffect(() => {
-    const cleanSession = async () => {
-      try {
-        setIsCleaningSession(true);
-        
-        // Clean localStorage and sessionStorage data
-        localStorage.removeItem('supabase.auth.token');
-        sessionStorage.removeItem('supabase.auth.token');
-        
-        // Also clear any other potential Supabase related storage items
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith('supabase.')) {
-            localStorage.removeItem(key);
-          }
-        }
-        
-        for (let i = 0; i < sessionStorage.length; i++) {
-          const key = sessionStorage.key(i);
-          if (key && key.startsWith('supabase.')) {
-            sessionStorage.removeItem(key);
-          }
-        }
-        
-        // Sign out from Supabase
-        await supabase.auth.signOut();
-        
-        console.log("Auth page: Session cleaned on load");
-      } catch (error) {
-        console.error("Error cleaning session:", error);
-      } finally {
-        setIsCleaningSession(false);
-      }
-    };
-    
-    cleanSession();
-  }, []);
-  
-  // Redirect to dashboard if already authenticated
+  // Check for existing session and redirect if authenticated
   useEffect(() => {
     const checkSession = async () => {
-      if (isCleaningSession) return;
-      
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        // Verify that the user exists in profiles table before redirecting
-        try {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', data.session.user.id)
-            .maybeSingle();
-            
-          if (profileError || !profile) {
-            console.error("Auth page: User found in session but not in profiles");
-            await supabase.auth.signOut();
-            localStorage.removeItem('supabase.auth.token');
-            sessionStorage.removeItem('supabase.auth.token');
-            return;
-          }
-          
-          // Only redirect if the user exists in the profiles table
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
           navigate('/dashboard');
-        } catch (error) {
-          console.error("Error checking profile:", error);
-          // If there's an error, don't redirect and clean the session
-          await supabase.auth.signOut();
-          localStorage.removeItem('supabase.auth.token');
-          sessionStorage.removeItem('supabase.auth.token');
         }
+      } catch (error) {
+        console.error("Error checking session:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     
     checkSession();
-  }, [navigate, isCleaningSession]);
+  }, [navigate]);
+  
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (user && !isLoading) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate, isLoading]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,10 +60,8 @@ export default function Auth() {
     try {
       setIsLoggingIn(true);
       await signIn(loginEmail, loginPassword);
-      // Navigate is handled in the signIn method
     } catch (error: any) {
       console.error("Error al iniciar sesión:", error);
-      // Error handling is done in the signIn method
     } finally {
       setIsLoggingIn(false);
     }
@@ -137,7 +81,6 @@ export default function Auth() {
       toast.info("Creando cuenta...");
       console.log("Iniciando proceso de registro para:", registerEmail);
       
-      // Registrar en Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: registerEmail,
         password: registerPassword,
@@ -154,31 +97,7 @@ export default function Auth() {
       }
 
       if (data.user) {
-        console.log("Usuario registrado en Auth:", data.user.id);
-        
-        // Esperar un momento para que el trigger automático funcione
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Verificar si el trigger automático funcionó
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', data.user.id)
-          .maybeSingle();
-          
-        // Si no se creó automáticamente, hacerlo manualmente
-        if (!profile) {
-          console.log("Trigger automático no funcionó, sincronizando manualmente");
-          const syncSuccess = await syncUserToTables(data.user.id, registerEmail, registerFullName);
-          
-          if (!syncSuccess) {
-            toast.warning("Cuenta creada con advertencias", {
-              description: "La cuenta se creó pero puede haber problemas. Usa el botón 'Reparar Usuario' si es necesario."
-            });
-          }
-        } else {
-          console.log("Usuario sincronizado automáticamente por trigger");
-        }
+        console.log("Usuario registrado exitosamente:", data.user.id);
         
         toast.success("Cuenta creada exitosamente", {
           description: "Ya puedes iniciar sesión con tus credenciales."
@@ -191,8 +110,6 @@ export default function Auth() {
         setRegisterEmail("");
         setRegisterPassword("");
         setRegisterFullName("");
-      } else {
-        throw new Error("No se recibió información del usuario después del registro");
       }
     } catch (error: any) {
       console.error("Error al registrarse:", error);
@@ -217,13 +134,13 @@ export default function Auth() {
     }
   };
 
-  if (isCleaningSession) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <Store className="h-12 w-12 text-primary mx-auto animate-pulse mb-4" />
           <p className="text-sm text-muted-foreground">
-            Preparando página de autenticación...
+            Cargando...
           </p>
         </div>
       </div>
@@ -241,14 +158,6 @@ export default function Auth() {
           <p className="text-sm text-muted-foreground mt-1">
             Sistema de gestión para tu negocio
           </p>
-          {user && (
-            <div className="mt-4 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
-              <p className="text-sm text-yellow-800">
-                Usuario detectado pero puede tener problemas de sincronización
-              </p>
-              <AuthRepairButton />
-            </div>
-          )}
         </div>
 
         <Tabs 
