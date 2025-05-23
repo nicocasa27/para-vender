@@ -11,7 +11,7 @@ interface UseRoleLoaderParams {
 }
 
 /**
- * Hook para cargar los roles de usuario
+ * Hook optimizado para cargar los roles de usuario
  */
 export function useRoleLoader({
   setRolesLoading,
@@ -19,11 +19,11 @@ export function useRoleLoader({
   setRoleLoadingAttempt,
   pendingRoleLoadRef
 }: UseRoleLoaderParams) {
-  const MAX_ROLE_LOADING_RETRIES = 3;
-  const ROLE_LOADING_RETRY_DELAY = 1000; // ms
+  const MAX_ROLE_LOADING_RETRIES = 2; // Reducido de 3 a 2
+  const ROLE_LOADING_RETRY_DELAY = 500; // Reducido de 1000ms a 500ms
 
   /**
-   * Carga los roles de un usuario
+   * Carga los roles de un usuario con cache optimizado
    */
   const loadUserRoles = async (userId: string, forceRefresh = false): Promise<UserRoleWithStore[]> => {
     if (!userId) return [];
@@ -83,7 +83,7 @@ export function useRoleLoader({
   };
 
   /**
-   * Actualiza los roles de un usuario
+   * Actualiza los roles de un usuario de forma optimizada
    */
   const refreshUserRoles = async (user: User | null, force = true): Promise<UserRoleWithStore[]> => {
     if (!user) {

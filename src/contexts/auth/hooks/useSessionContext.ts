@@ -1,13 +1,13 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRoleWithStore } from '@/types/auth';
 import { fetchUserRoles } from '../utils/user-roles';
 import { createDefaultRole } from '../utils/user-management-defaults';
-import { toast } from 'sonner';
 
-const MAX_ROLE_LOADING_RETRIES = 3;
-const ROLE_LOADING_RETRY_DELAY = 1000; // ms
+const MAX_ROLE_LOADING_RETRIES = 2; // Reducido de 3 a 2
+const ROLE_LOADING_RETRY_DELAY = 500; // Reducido de 1000ms a 500ms
 
 export function useSessionContext() {
   const [session, setSession] = useState<Session | null>(null);
@@ -17,12 +17,20 @@ export function useSessionContext() {
   const [rolesLoading, setRolesLoading] = useState(false);
   const [roleLoadingAttempt, setRoleLoadingAttempt] = useState(0);
   const pendingRoleLoadRef = useRef<Promise<UserRoleWithStore[]> | null>(null);
+  const rolesCache = useRef<{ [userId: string]: UserRoleWithStore[] }>({});
 
-  // Función para cargar los roles del usuario
+  // Función optimizada para cargar los roles del usuario con cache
   const loadUserRoles = async (userId: string, forceRefresh = false): Promise<UserRoleWithStore[]> => {
     if (!userId) return [];
     
     console.log("Auth: Loading roles for user:", userId, forceRefresh ? "(forced refresh)" : "");
+    
+    // Verificar cache primero si no es refresh forzado
+    if (!forceRefresh && rolesCache.current[userId]) {
+      console.log("Auth: Using cached roles");
+      setUserRoles(rolesCache.current[userId]);
+      return rolesCache.current[userId];
+    }
     
     if (pendingRoleLoadRef.current && !forceRefresh) {
       console.log("Auth: Using existing pending role load request");
@@ -41,8 +49,8 @@ export function useSessionContext() {
           attempt++;
           console.log(`Auth: Fetching roles attempt ${attempt}/${MAX_ROLE_LOADING_RETRIES}`);
           
-          // Asegurarse de que el usuario tenga al menos un rol por defecto
-          if (attempt === 1 || roles.length === 0) {
+          // Solo crear rol por defecto en el primer intento
+          if (attempt === 1) {
             await createDefaultRole(userId);
           }
           
@@ -51,6 +59,8 @@ export function useSessionContext() {
           if (fetchedRoles.length > 0) {
             console.log(`Auth: Successfully fetched ${fetchedRoles.length} roles on attempt ${attempt}`);
             roles = fetchedRoles;
+            // Guardar en cache
+            rolesCache.current[userId] = roles;
             break;
           }
           
@@ -81,48 +91,37 @@ export function useSessionContext() {
     return roleLoadPromise;
   };
 
-  // Función para actualizar manualmente los roles del usuario
+  // Función simplificada para actualizar roles
   const refreshUserRoles = async (force = true): Promise<UserRoleWithStore[]> => {
     if (!user) {
       console.log("Auth: Can't refresh roles, no user logged in");
       return [];
     }
     
-    console.log("Auth: Manually refreshing user roles for:", user.id, force ? "(forced)" : "");
+    console.log("Auth: Refreshing user roles for:", user.id, force ? "(forced)" : "");
     
     try {
+      // Limpiar cache si es refresh forzado
+      if (force) {
+        delete rolesCache.current[user.id];
+      }
+      
       const roles = await loadUserRoles(user.id, force);
       
       if (roles.length === 0) {
         console.warn("Auth: No roles found after refresh");
-        // Solo mostrar toast si es un refresh manual (force=true)
-        if (force) {
-          toast.warning("No se encontraron roles", {
-            description: "No tienes ningún rol asignado en el sistema"
-          });
-        }
       } else {
         console.log("Auth: Successfully refreshed roles:", roles);
-        // Solo mostrar toast si es un refresh manual (force=true)
-        if (force) {
-          toast.success(`${roles.length} roles cargados correctamente`);
-        }
       }
       
       return roles;
     } catch (error) {
       console.error("Auth: Error refreshing roles:", error);
-      // Solo mostrar toast si es un refresh manual (force=true)
-      if (force) {
-        toast.error("Error al actualizar roles", {
-          description: "Intenta nuevamente más tarde"
-        });
-      }
       return [];
     }
   };
 
-  // Configurar el listener de autenticación
+  // Configurar el listener de autenticación optimizado
   useEffect(() => {
     console.log("Auth: Setting up auth state listener");
     setLoading(true);
@@ -135,31 +134,25 @@ export function useSessionContext() {
           setSession(currentSession);
           setUser(currentSession.user);
           
-          // Verificar si el perfil existe y crearlo si no existe
-          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+          // Solo procesar perfiles y roles en eventos específicos
+          if (event === 'SIGNED_IN') {
             try {
-              // Verificar si el perfil existe
-              const { data: existingProfile, error: profileCheckError } = await supabase
+              // Verificar perfil solo en sign in
+              const { data: existingProfile } = await supabase
                 .from('profiles')
                 .select('id')
                 .eq('id', currentSession.user.id)
                 .maybeSingle();
                 
-              if (profileCheckError) {
-                console.error("Error checking profile:", profileCheckError);
-              }
-              
-              // Si el perfil no existe, crearlo
               if (!existingProfile) {
                 console.log("Profile not found, creating it");
                 
-                // Obtener información del usuario desde los metadatos
                 const fullName = currentSession.user.user_metadata.full_name || 
                                  currentSession.user.user_metadata.name || 
                                  currentSession.user.email?.split('@')[0] || 
                                  "Usuario";
                 
-                const { error: insertError } = await supabase
+                await supabase
                   .from('profiles')
                   .insert({
                     id: currentSession.user.id,
@@ -167,32 +160,28 @@ export function useSessionContext() {
                     full_name: fullName
                   });
                   
-                if (insertError) {
-                  console.error("Error creating profile:", insertError);
-                } else {
-                  console.log("Profile created successfully");
-                  
-                  // Crear un rol por defecto para el usuario si se creó el perfil correctamente
-                  await createDefaultRole(currentSession.user.id);
-                }
+                console.log("Profile created successfully");
               }
             } catch (error) {
-              console.error("Exception during profile check/creation:", error);
+              console.error("Error during profile check/creation:", error);
             }
             
-            console.log("Auth: User signed in, force refreshing roles");
+            console.log("Auth: User signed in, loading roles");
             await loadUserRoles(currentSession.user.id, true);
           } else if (event === 'TOKEN_REFRESHED') {
-            console.log("Auth: Token refreshed, checking if roles need refresh");
+            // En token refresh, solo cargar roles si no los tenemos
             if (userRoles.length === 0) {
-              console.log("Auth: No roles found after token refresh, reloading");
-              await loadUserRoles(currentSession.user.id, true);
-            } else {
-              console.log("Auth: Roles already loaded, skipping refresh after token refresh");
+              console.log("Auth: Token refreshed, loading roles");
+              await loadUserRoles(currentSession.user.id, false);
             }
           } else {
-            console.log("Auth: User authenticated in state change, fetching roles");
-            await loadUserRoles(currentSession.user.id);
+            // Para otros eventos, usar cache si está disponible
+            console.log("Auth: User authenticated, checking for cached roles");
+            if (!rolesCache.current[currentSession.user.id]) {
+              await loadUserRoles(currentSession.user.id, false);
+            } else {
+              setUserRoles(rolesCache.current[currentSession.user.id]);
+            }
           }
         } else {
           console.log("Auth: No user in state change, clearing auth state");
@@ -206,6 +195,8 @@ export function useSessionContext() {
           setSession(null);
           setUser(null);
           setUserRoles([]);
+          // Limpiar cache
+          rolesCache.current = {};
         }
         
         setLoading(false);
@@ -222,48 +213,13 @@ export function useSessionContext() {
           setSession(currentSession);
           setUser(currentSession.user);
           
-          // Verificar si existe el perfil y crearlo si no existe
-          try {
-            const { data: existingProfile, error: profileCheckError } = await supabase
-              .from('profiles')
-              .select('id')
-              .eq('id', currentSession.user.id)
-              .maybeSingle();
-              
-            if (profileCheckError) {
-              console.error("Error checking profile during init:", profileCheckError);
-            }
-            
-            if (!existingProfile) {
-              console.log("Profile not found during init, creating it");
-              
-              // Obtener información del usuario desde los metadatos
-              const fullName = currentSession.user.user_metadata.full_name || 
-                               currentSession.user.user_metadata.name || 
-                               currentSession.user.email?.split('@')[0] || 
-                               "Usuario";
-              
-              const { error: insertError } = await supabase
-                .from('profiles')
-                .insert({
-                  id: currentSession.user.id,
-                  email: currentSession.user.email,
-                  full_name: fullName
-                });
-                
-              if (insertError) {
-                console.error("Error creating profile during init:", insertError);
-              } else {
-                console.log("Profile created successfully during init");
-              }
-            }
-          } catch (error) {
-            console.error("Exception during profile check/creation at init:", error);
+          // En inicialización, verificar cache primero
+          if (rolesCache.current[currentSession.user.id]) {
+            console.log("Auth: Using cached roles for initialization");
+            setUserRoles(rolesCache.current[currentSession.user.id]);
+          } else {
+            await loadUserRoles(currentSession.user.id, false);
           }
-          
-          // Asegurarse de que el usuario tenga al menos un rol
-          await createDefaultRole(currentSession.user.id);
-          await loadUserRoles(currentSession.user.id, true);
         } else {
           console.log("Auth: No existing session found");
           setSession(null);

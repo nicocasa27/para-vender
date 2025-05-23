@@ -51,7 +51,11 @@ const App = () => {
               {/* Protected routes */}
               <Route element={<ProtectedRoute />}>
                 {/* Routes that require tenant context */}
-                <Route element={<TenantProvider />}>
+                <Route element={
+                  <TenantProvider>
+                    <></>
+                  </TenantProvider>
+                }>
                   {/* Welcome page (tenant selection) */}
                   <Route path="/welcome" element={<Welcome />} />
                   
