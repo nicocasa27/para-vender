@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
@@ -9,6 +10,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Store, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { syncUserToTables } from "@/contexts/auth/utils/user-sync";
+import { AuthRepairButton } from "@/components/auth/AuthRepairButton";
 
 export default function Auth() {
   const [activeTab, setActiveTab] = useState<string>("login");
@@ -19,9 +22,8 @@ export default function Auth() {
   const [registerFullName, setRegisterFullName] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [isCleaningSession, setIsCleaningSession] = useState(true);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
   // Clean any existing session when loading the authentication page
@@ -121,67 +123,6 @@ export default function Auth() {
     }
   };
 
-  // Función reforzada para sincronizar el usuario después del registro
-  const syncNewUser = async (userId: string) => {
-    if (!userId) return;
-    
-    try {
-      setIsSyncing(true);
-      
-      console.log("Auth: Realizando llamada directa a la API de Supabase para sincronizar usuario:", userId);
-      
-      // Primera sincronización: intentar crear el perfil directamente
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: userId,
-          email: registerEmail,
-          full_name: registerFullName
-        });
-        
-      if (profileError) {
-        console.error("Error creando/actualizando perfil:", profileError);
-      } else {
-        console.log("Perfil creado/actualizado correctamente");
-      }
-      
-      // Segunda sincronización: intentar crear rol por defecto
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: 'viewer',
-          almacen_id: null
-        });
-        
-      if (roleError) {
-        console.error("Error creando rol por defecto:", roleError);
-      } else {
-        console.log("Rol por defecto creado correctamente");
-      }
-      
-      // Tercera sincronización: llamar a la función edge para asegurar la sincronización
-      const { data, error } = await supabase.functions.invoke("sync-users", {
-        body: { 
-          forceUpdate: true,
-          forceSyncAll: false,
-          specificUserId: userId
-        },
-      });
-      
-      if (error) {
-        console.error("Error llamando a la función sync-users:", error);
-        throw error;
-      }
-      
-      console.log("Resultado de sincronización para nuevo usuario:", data);
-    } catch (error) {
-      console.error("Error al sincronizar nuevo usuario:", error);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -192,22 +133,37 @@ export default function Auth() {
     
     try {
       setIsRegistering(true);
-      const result = await signUp(registerEmail, registerPassword, registerFullName);
       
-      if (result?.user?.id) {
-        // Forzar sincronización del usuario recién creado
-        await syncNewUser(result.user.id);
-      }
-      
-      toast.success("Cuenta creada exitosamente", {
-        description: "Ya puedes iniciar sesión con tus credenciales."
+      // Primero registrar en Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: registerEmail,
+        password: registerPassword,
+        options: {
+          data: {
+            full_name: registerFullName,
+          },
+        },
       });
-      setActiveTab("login");
-      
-      // Limpiar los campos del formulario de registro
-      setRegisterEmail("");
-      setRegisterPassword("");
-      setRegisterFullName("");
+
+      if (error) throw error;
+
+      if (data.user) {
+        console.log("Usuario registrado en Auth:", data.user.id);
+        
+        // Sincronizar inmediatamente con las tablas de la aplicación
+        await syncUserToTables(data.user.id, registerEmail, registerFullName);
+        
+        toast.success("Cuenta creada exitosamente", {
+          description: "Ya puedes iniciar sesión con tus credenciales."
+        });
+        
+        setActiveTab("login");
+        
+        // Limpiar los campos del formulario de registro
+        setRegisterEmail("");
+        setRegisterPassword("");
+        setRegisterFullName("");
+      }
     } catch (error: any) {
       console.error("Error al registrarse:", error);
       toast.error("Error al crear la cuenta", {
@@ -242,6 +198,14 @@ export default function Auth() {
           <p className="text-sm text-muted-foreground mt-1">
             Sistema de gestión para tu negocio
           </p>
+          {user && (
+            <div className="mt-4 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-sm text-yellow-800">
+                Usuario detectado pero puede tener problemas de sincronización
+              </p>
+              <AuthRepairButton />
+            </div>
+          )}
         </div>
 
         <Tabs 
@@ -266,25 +230,26 @@ export default function Auth() {
               <form onSubmit={handleLogin}>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Correo electrónico</Label>
+                    <Label htmlFor="email">Email</Label>
                     <Input
                       id="email"
                       type="email"
-                      placeholder="correo@ejemplo.com"
+                      placeholder="usuario@ejemplo.com"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
+                      disabled={isLoggingIn}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Contraseña</Label>
-                    </div>
+                    <Label htmlFor="password">Contraseña</Label>
                     <Input
                       id="password"
                       type="password"
+                      placeholder="••••••••"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
+                      disabled={isLoggingIn}
                       required
                     />
                   </div>
@@ -295,14 +260,10 @@ export default function Auth() {
                     className="w-full" 
                     disabled={isLoggingIn}
                   >
-                    {isLoggingIn ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Iniciando sesión...
-                      </>
-                    ) : (
-                      "Iniciar sesión"
+                    {isLoggingIn && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
+                    {isLoggingIn ? "Iniciando sesión..." : "Iniciar sesión"}
                   </Button>
                 </CardFooter>
               </form>
@@ -314,7 +275,7 @@ export default function Auth() {
               <CardHeader>
                 <CardTitle>Crear cuenta</CardTitle>
                 <CardDescription>
-                  Complete el formulario para registrarse en el sistema
+                  Ingrese sus datos para crear una nueva cuenta
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleRegister}>
@@ -323,20 +284,23 @@ export default function Auth() {
                     <Label htmlFor="fullName">Nombre completo</Label>
                     <Input
                       id="fullName"
-                      placeholder="Nombre completo"
+                      type="text"
+                      placeholder="Juan Pérez"
                       value={registerFullName}
                       onChange={(e) => setRegisterFullName(e.target.value)}
+                      disabled={isRegistering}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="registerEmail">Correo electrónico</Label>
+                    <Label htmlFor="registerEmail">Email</Label>
                     <Input
                       id="registerEmail"
                       type="email"
-                      placeholder="correo@ejemplo.com"
+                      placeholder="usuario@ejemplo.com"
                       value={registerEmail}
                       onChange={(e) => setRegisterEmail(e.target.value)}
+                      disabled={isRegistering}
                       required
                     />
                   </div>
@@ -345,36 +309,25 @@ export default function Auth() {
                     <Input
                       id="registerPassword"
                       type="password"
+                      placeholder="••••••••"
                       value={registerPassword}
                       onChange={(e) => setRegisterPassword(e.target.value)}
+                      disabled={isRegistering}
                       required
-                      minLength={6}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      La contraseña debe tener al menos 6 caracteres
-                    </p>
                   </div>
                 </CardContent>
-                <CardFooter className="flex flex-col gap-2">
+                <CardFooter>
                   <Button 
                     type="submit" 
                     className="w-full" 
-                    disabled={isRegistering || isSyncing}
+                    disabled={isRegistering}
                   >
-                    {isRegistering || isSyncing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {isRegistering ? "Registrando..." : "Sincronizando usuario..."}
-                      </>
-                    ) : (
-                      "Registrarse"
+                    {isRegistering && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
+                    {isRegistering ? "Creando cuenta..." : "Crear cuenta"}
                   </Button>
-                  {isSyncing && (
-                    <p className="text-xs text-muted-foreground">
-                      Esto puede tomar unos segundos. Estamos preparando tu cuenta...
-                    </p>
-                  )}
                 </CardFooter>
               </form>
             </Card>
