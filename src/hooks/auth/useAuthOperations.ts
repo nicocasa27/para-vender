@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { UserRole } from '@/types/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast as sonnerToast } from "sonner";
-import { createDefaultRole } from '@/contexts/auth/auth-utils';
 
 interface UseAuthOperationsProps {
   refreshUserRoles: () => Promise<any[]>;
@@ -27,13 +26,6 @@ export function useAuthOperations({
     try {
       console.log("Auth: Attempting to sign in with email:", email);
       
-      // Limpiar sesión existente para evitar problemas
-      await supabase.auth.signOut();
-      
-      // Limpiar datos almacenados localmente para evitar conflictos
-      localStorage.removeItem('supabase.auth.token');
-      sessionStorage.removeItem('supabase.auth.token');
-      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -44,49 +36,10 @@ export function useAuthOperations({
       }
 
       if (!data.user) {
-        throw new Error("No se encontró información de usuario en Supabase");
+        throw new Error("No se encontró información de usuario");
       }
 
       console.log("Auth: Sign in successful for user:", data.user.id);
-      
-      // Verify user exists in Supabase profiles table
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', data.user.id)
-        .single();
-        
-      if (profileError || !profile) {
-        console.error("Auth: User found in auth but not in profiles, not allowing login");
-        await supabase.auth.signOut();
-        throw new Error("Tu cuenta no existe en el sistema. Por favor contacta al administrador.");
-      }
-      
-      // Verify user has roles in Supabase
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('id')
-        .eq('user_id', data.user.id);
-        
-      if (rolesError) {
-        console.error("Auth: Error checking roles:", rolesError);
-      }
-      
-      if (!roles || roles.length === 0) {
-        console.warn("Auth: No roles found for user, creating default role");
-        await createDefaultRole(data.user.id);
-      }
-      
-      const userRoles = await refreshUserRoles();
-      
-      if (userRoles.length === 0) {
-        console.warn("Auth: No roles found after sign in");
-        sonnerToast.warning("No se encontraron roles asignados", {
-          description: "Es posible que necesites contactar a un administrador para obtener permisos"
-        });
-      } else {
-        console.log("Auth: Successfully loaded roles after sign in:", userRoles);
-      }
 
       sonnerToast.success("Inicio de sesión exitoso", {
         description: "Bienvenido de nuevo"
@@ -99,18 +52,13 @@ export function useAuthOperations({
     } catch (error: any) {
       console.error("Auth: Sign in error:", error);
       
-      // Asegurar que cualquier sesión parcial sea eliminada
-      await supabase.auth.signOut();
-      localStorage.removeItem('supabase.auth.token');
-      sessionStorage.removeItem('supabase.auth.token');
-      
       sonnerToast.error("Error de inicio de sesión", {
-        description: error.message || "Credenciales inválidas o problema de conexión"
+        description: error.message || "Credenciales inválidas"
       });
       
       return Promise.reject(error);
     }
-  }, [navigate, refreshUserRoles]);
+  }, [navigate]);
 
   /**
    * Registra un nuevo usuario
@@ -119,22 +67,6 @@ export function useAuthOperations({
     try {
       console.log("Auth: Attempting to sign up with email:", email);
       
-      // Limpiar sesión existente para evitar problemas
-      await supabase.auth.signOut();
-      localStorage.removeItem('supabase.auth.token');
-      sessionStorage.removeItem('supabase.auth.token');
-      
-      // Verificar primero si el usuario ya existe en Supabase Auth
-      const { data: checkData, error: checkError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (!checkError && checkData.user) {
-        throw new Error("Este usuario ya existe. Por favor inicia sesión en lugar de registrarte.");
-      }
-      
-      // Create user in Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -142,7 +74,6 @@ export function useAuthOperations({
           data: {
             full_name: fullName,
           },
-          emailRedirectTo: window.location.origin + '/auth',
         },
       });
 
@@ -151,31 +82,10 @@ export function useAuthOperations({
       }
 
       if (!data.user) {
-        throw new Error("No se pudo crear el usuario en Supabase");
+        throw new Error("No se pudo crear el usuario");
       }
       
-      console.log("Auth: User created successfully in Supabase Auth:", data.user.id);
-      
-      // Immediately call the sync-users function to ensure the user is created in all tables
-      const { error: syncError } = await supabase.functions.invoke("sync-users", {
-        body: { 
-          forceUpdate: true,
-          forceSyncAll: false,
-          specificUserId: data.user.id
-        },
-      });
-      
-      if (syncError) {
-        console.error("Auth: Error calling sync-users function:", syncError);
-        sonnerToast.warning("El usuario se creó pero podría no tener todos los permisos", {
-          description: "Por favor contacta al administrador"
-        });
-      } else {
-        console.log("Auth: User successfully synchronized with all tables");
-      }
-      
-      // Now sign out so they can log in properly
-      await supabase.auth.signOut();
+      console.log("Auth: User created successfully:", data.user.id);
       
       sonnerToast.success("Registro exitoso", {
         description: "Tu cuenta ha sido creada correctamente. Ya puedes iniciar sesión."
@@ -199,10 +109,6 @@ export function useAuthOperations({
   const signOut = useCallback(async () => {
     try {
       console.log("Auth: Attempting to sign out");
-      
-      // Limpiar datos almacenados localmente antes de cerrar sesión
-      localStorage.removeItem('supabase.auth.token');
-      sessionStorage.removeItem('supabase.auth.token');
       
       const { error } = await supabase.auth.signOut();
       

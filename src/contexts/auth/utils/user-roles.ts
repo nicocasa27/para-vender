@@ -1,157 +1,83 @@
 
-// Fix type issues in user-roles.ts
-
 import { supabase } from "@/integrations/supabase/client";
-import { UserRole, UserRoleWithStore } from "@/types/auth";
-import { extractProperty, safeCast } from "@/utils/supabaseHelpers";
+import { UserRoleWithStore } from "@/types/auth";
 
 /**
- * Safely cast a string to UserRole
+ * Obtiene los roles de un usuario
  */
-export function safeRoleCast(role: string): UserRole {
-  const validRoles = ["admin", "manager", "sales", "viewer"] as const;
-  return safeCast(role, validRoles, "viewer");
-}
-
-/**
- * Safely handle potentially null properties
- */
-export function safeProperty<T>(obj: any, prop: string, defaultValue: T): T {
-  if (!obj) return defaultValue;
+export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[]> {
+  if (!userId) return [];
+  
   try {
-    if (obj.error === true) return defaultValue;
-    return (obj[prop] !== undefined && obj[prop] !== null) ? obj[prop] : defaultValue;
-  } catch (e) {
-    console.error(`Error accessing property ${prop}:`, e);
-    return defaultValue;
+    console.log("Fetching roles for user:", userId);
+    
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select(`
+        id,
+        user_id,
+        role,
+        almacen_id,
+        created_at,
+        almacenes (
+          nombre
+        )
+      `)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error("Error fetching user roles:", error);
+      throw error;
+    }
+
+    const roles: UserRoleWithStore[] = (data || []).map(role => ({
+      id: role.id,
+      user_id: role.user_id,
+      role: role.role as any,
+      almacen_id: role.almacen_id,
+      created_at: role.created_at,
+      almacen_nombre: role.almacenes?.nombre || null
+    }));
+
+    console.log("Fetched roles:", roles);
+    return roles;
+  } catch (error) {
+    console.error("Error in fetchUserRoles:", error);
+    return [];
   }
 }
 
 /**
- * Check if a user has a specific role
+ * Crea un rol por defecto para un usuario
  */
-export function checkHasRole(roles: UserRoleWithStore[], role: UserRole, storeId?: string): boolean {
-  // Admin always has access to everything
-  if (roles.some(r => r.role === "admin")) return true;
+export async function createDefaultRole(userId: string): Promise<void> {
+  if (!userId) return;
   
-  // Check for specific role and optional storeId
-  return roles.some(r => {
-    if (r.role !== role) return false;
-    if (storeId && r.almacen_id !== storeId) return false;
-    return true;
-  });
-}
-
-/**
- * Create a default role for a user if they don't have any roles
- */
-export async function createDefaultRole(userId: string): Promise<boolean> {
   try {
     console.log("Creating default role for user:", userId);
     
-    // Check if user already has roles
-    const { data: existingRoles, error: checkError } = await supabase
-      .from('user_roles')
-      .select('id')
-      .eq('user_id', userId);
-      
-    if (checkError) {
-      console.error("Error checking existing roles:", checkError);
-      return false;
+    // Verificar si ya tiene roles
+    const existingRoles = await fetchUserRoles(userId);
+    if (existingRoles.length > 0) {
+      console.log("User already has roles, skipping default role creation");
+      return;
     }
     
-    if (existingRoles && existingRoles.length > 0) {
-      console.log("User already has roles, not creating default");
-      return true;
-    }
-    
-    // Create default viewer role
-    const { error: insertError } = await supabase
+    const { error } = await supabase
       .from('user_roles')
       .insert({
         user_id: userId,
         role: 'viewer',
         almacen_id: null
       });
-      
-    if (insertError) {
-      console.error("Error creating default role:", insertError);
-      return false;
-    }
-    
-    console.log("Default role created successfully for user:", userId);
-    return true;
-  } catch (error) {
-    console.error("Exception creating default role:", error);
-    return false;
-  }
-}
 
-/**
- * Fetch roles for a specific user
- */
-export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[]> {
-  try {
-    console.log(`Fetching roles for user ${userId}`);
-    
-    // Try view first
-    const { data: viewData, error: viewError } = await supabase
-      .from('user_roles_with_name')
-      .select('*')
-      .eq('user_id', userId);
-      
-    if (!viewError && viewData && viewData.length > 0) {
-      console.log(`Found ${viewData.length} roles for user from view`);
-      
-      return viewData.map(row => ({
-        id: row.id,
-        user_id: row.user_id,
-        role: safeRoleCast(row.role), 
-        almacen_id: row.almacen_id,
-        created_at: row.created_at || new Date().toISOString(),
-        almacen_nombre: row.almacen_nombre || null
-      }));
+    if (error) {
+      console.error("Error creating default role:", error);
+      throw error;
     }
     
-    // Fallback to regular query
-    console.log("View query failed, falling back to regular query");
-    const { data: roles, error } = await supabase
-      .from('user_roles')
-      .select('*, almacenes(*)')
-      .eq('user_id', userId);
-      
-    if (error) throw error;
-    
-    if (!roles || roles.length === 0) {
-      console.log("No roles found for user");
-      return [];
-    }
-    
-    console.log(`Found ${roles.length} roles for user from regular query`);
-    
-    return roles.map(role => {
-      // Safely access potentially null properties
-      const almacenNombre = role.almacenes && !isErrorObject(role.almacenes)
-        ? extractProperty(role.almacenes, 'nombre', null)
-        : null;
-      
-      return {
-        id: role.id,
-        user_id: role.user_id,
-        role: safeRoleCast(role.role),
-        almacen_id: role.almacen_id,
-        created_at: role.created_at || new Date().toISOString(),
-        almacen_nombre: almacenNombre
-      };
-    });
-    
+    console.log("Default role created successfully");
   } catch (error) {
-    console.error("Error fetching user roles:", error);
-    return [];
+    console.error("Error in createDefaultRole:", error);
   }
-}
-
-// Helper function to check if an object is an error object
-function isErrorObject(obj: any): boolean {
-  return obj && typeof obj === 'object' && obj.error === true;
 }
