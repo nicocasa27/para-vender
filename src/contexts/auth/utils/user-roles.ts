@@ -33,7 +33,7 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
     const roles: UserRoleWithStore[] = (data || []).map(role => ({
       id: role.id,
       user_id: role.user_id,
-      role: role.role as any,
+      role: role.role as UserRole,
       almacen_id: role.almacen_id,
       created_at: role.created_at,
       almacen_nombre: role.almacenes?.nombre || null
