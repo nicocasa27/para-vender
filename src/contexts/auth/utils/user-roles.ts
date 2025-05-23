@@ -11,33 +11,54 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
   try {
     console.log("Fetching roles for user:", userId);
     
-    const { data, error } = await supabase
+    // First get the user roles
+    const { data: userRolesData, error: rolesError } = await supabase
       .from('user_roles')
-      .select(`
-        id,
-        user_id,
-        role,
-        almacen_id,
-        created_at,
-        almacenes (
-          nombre
-        )
-      `)
+      .select('*')
       .eq('user_id', userId);
 
-    if (error) {
-      console.error("Error fetching user roles:", error);
-      throw error;
+    if (rolesError) {
+      console.error("Error fetching user roles:", rolesError);
+      throw rolesError;
     }
 
-    const roles: UserRoleWithStore[] = (data || []).map(role => ({
-      id: role.id,
-      user_id: role.user_id,
-      role: role.role as UserRole,
-      almacen_id: role.almacen_id,
-      created_at: role.created_at,
-      almacen_nombre: role.almacenes?.nombre || null
-    }));
+    if (!userRolesData || userRolesData.length === 0) {
+      console.log("No roles found for user:", userId);
+      return [];
+    }
+
+    // Get store names for roles that have almacen_id
+    const storeIds = userRolesData
+      .filter(role => role.almacen_id)
+      .map(role => role.almacen_id);
+
+    let storesData: any[] = [];
+    if (storeIds.length > 0) {
+      const { data: stores, error: storesError } = await supabase
+        .from('almacenes')
+        .select('id, nombre')
+        .in('id', storeIds);
+
+      if (storesError) {
+        console.error("Error fetching stores:", storesError);
+      } else {
+        storesData = stores || [];
+      }
+    }
+
+    // Combine the data
+    const roles: UserRoleWithStore[] = userRolesData.map(role => {
+      const store = storesData.find(store => store.id === role.almacen_id);
+      
+      return {
+        id: role.id,
+        user_id: role.user_id,
+        role: role.role as UserRole,
+        almacen_id: role.almacen_id,
+        created_at: role.created_at,
+        almacen_nombre: store?.nombre || null
+      };
+    });
 
     console.log("Fetched roles:", roles);
     return roles;
