@@ -22,6 +22,7 @@ export async function syncUserToTables(userId: string, email: string, fullName: 
     }
     
     if (!existingProfile) {
+      console.log("Creando nuevo perfil para usuario:", userId);
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -36,7 +37,21 @@ export async function syncUserToTables(userId: string, email: string, fullName: 
       }
       console.log("Perfil creado exitosamente");
     } else {
-      console.log("Perfil ya existe");
+      console.log("Perfil ya existe, actualizando si es necesario");
+      // Actualizar perfil existente con los datos más recientes
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          email: email,
+          full_name: fullName
+        })
+        .eq('id', userId);
+        
+      if (updateError) {
+        console.error("Error al actualizar perfil:", updateError);
+        throw updateError;
+      }
+      console.log("Perfil actualizado exitosamente");
     }
     
     // 2. Verificar si ya tiene roles asignados
@@ -52,6 +67,7 @@ export async function syncUserToTables(userId: string, email: string, fullName: 
     
     // 3. Si no tiene roles, crear rol por defecto
     if (!existingRoles || existingRoles.length === 0) {
+      console.log("Creando rol por defecto para usuario:", userId);
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({
@@ -66,8 +82,35 @@ export async function syncUserToTables(userId: string, email: string, fullName: 
       }
       console.log("Rol por defecto creado exitosamente");
     } else {
-      console.log("Usuario ya tiene roles asignados");
+      console.log("Usuario ya tiene roles asignados:", existingRoles.length);
     }
+    
+    // 4. Verificar que todo se creó correctamente
+    const { data: finalProfile, error: finalProfileError } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .eq('id', userId)
+      .single();
+      
+    if (finalProfileError || !finalProfile) {
+      console.error("Error en verificación final del perfil:", finalProfileError);
+      throw new Error("No se pudo verificar que el perfil se creó correctamente");
+    }
+    
+    const { data: finalRoles, error: finalRolesError } = await supabase
+      .from('user_roles')
+      .select('id, role')
+      .eq('user_id', userId);
+      
+    if (finalRolesError || !finalRoles || finalRoles.length === 0) {
+      console.error("Error en verificación final de roles:", finalRolesError);
+      throw new Error("No se pudo verificar que los roles se crearon correctamente");
+    }
+    
+    console.log("Sincronización completada exitosamente:", {
+      profile: finalProfile,
+      roles: finalRoles
+    });
     
     return true;
   } catch (error: any) {
@@ -97,7 +140,17 @@ export async function repairUserSync(userId: string): Promise<boolean> {
                      email.split('@')[0] || 
                      "Usuario";
     
-    return await syncUserToTables(userId, email, fullName);
+    console.log("Reparando sincronización para usuario:", { userId, email, fullName });
+    
+    const success = await syncUserToTables(userId, email, fullName);
+    
+    if (success) {
+      toast.success("Usuario reparado exitosamente", {
+        description: "Todos los datos están ahora sincronizados"
+      });
+    }
+    
+    return success;
   } catch (error: any) {
     console.error("Error al reparar sincronización:", error);
     toast.error("Error al reparar usuario", {

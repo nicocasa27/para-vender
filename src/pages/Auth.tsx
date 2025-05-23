@@ -23,7 +23,7 @@ export default function Auth() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [isCleaningSession, setIsCleaningSession] = useState(true);
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, user } = useAuth();
   const navigate = useNavigate();
 
   // Clean any existing session when loading the authentication page
@@ -134,6 +134,9 @@ export default function Auth() {
     try {
       setIsRegistering(true);
       
+      toast.info("Creando cuenta...");
+      console.log("Iniciando proceso de registro para:", registerEmail);
+      
       // Primero registrar en Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: registerEmail,
@@ -145,29 +148,82 @@ export default function Auth() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error en signUp:", error);
+        throw error;
+      }
 
       if (data.user) {
         console.log("Usuario registrado en Auth:", data.user.id);
         
-        // Sincronizar inmediatamente con las tablas de la aplicación
-        await syncUserToTables(data.user.id, registerEmail, registerFullName);
+        toast.info("Sincronizando usuario...");
         
-        toast.success("Cuenta creada exitosamente", {
-          description: "Ya puedes iniciar sesión con tus credenciales."
-        });
+        // Esperar un momento para que Supabase procese el usuario
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        setActiveTab("login");
+        // Sincronizar inmediatamente con las tablas de la aplicación usando nuestra función
+        const syncSuccess = await syncUserToTables(data.user.id, registerEmail, registerFullName);
         
-        // Limpiar los campos del formulario de registro
-        setRegisterEmail("");
-        setRegisterPassword("");
-        setRegisterFullName("");
+        if (syncSuccess) {
+          console.log("Usuario sincronizado correctamente");
+          
+          // Intentar también llamar a la función edge para asegurar sincronización completa
+          try {
+            const { data: syncData, error: syncError } = await supabase.functions.invoke("sync-users", {
+              body: { 
+                forceUpdate: true,
+                forceSyncAll: false,
+                specificUserId: data.user.id
+              },
+            });
+            
+            if (syncError) {
+              console.warn("Error en función edge sync-users:", syncError);
+            } else {
+              console.log("Función edge sync-users ejecutada:", syncData);
+            }
+          } catch (edgeFunctionError) {
+            console.warn("No se pudo ejecutar función edge:", edgeFunctionError);
+          }
+          
+          toast.success("Cuenta creada exitosamente", {
+            description: "Ya puedes iniciar sesión con tus credenciales."
+          });
+          
+          setActiveTab("login");
+          
+          // Pre-llenar el campo de email en el login
+          setLoginEmail(registerEmail);
+          
+          // Limpiar los campos del formulario de registro
+          setRegisterEmail("");
+          setRegisterPassword("");
+          setRegisterFullName("");
+        } else {
+          toast.error("Error al configurar la cuenta", {
+            description: "La cuenta se creó pero hay problemas de configuración. Contacta al administrador."
+          });
+        }
+      } else {
+        throw new Error("No se recibió información del usuario después del registro");
       }
     } catch (error: any) {
       console.error("Error al registrarse:", error);
+      
+      let errorMessage = "Hubo un problema al registrarse";
+      
+      if (error.message.includes("User already registered")) {
+        errorMessage = "Este email ya está registrado. Intenta iniciar sesión.";
+        setActiveTab("login");
+        setLoginEmail(registerEmail);
+      } else if (error.message.includes("Email rate limit exceeded")) {
+        errorMessage = "Demasiados intentos. Espera unos minutos e intenta de nuevo.";
+      } else if (error.message.includes("Password")) {
+        errorMessage = "La contraseña debe tener al menos 6 caracteres.";
+      }
+      
       toast.error("Error al crear la cuenta", {
-        description: error.message || "Hubo un problema al registrarse"
+        description: errorMessage
       });
     } finally {
       setIsRegistering(false);
