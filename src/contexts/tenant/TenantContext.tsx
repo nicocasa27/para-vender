@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { TenantPlan, SubscriptionStatus, Tenant as TenantType } from './types';
+import { handleError, createRetryableFunction } from '@/utils/errorHandler';
+import { TenantErrorDisplay } from '@/components/tenant/TenantErrorDisplay';
 
 export interface Tenant {
   id: string;
@@ -57,11 +59,8 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load user's tenants with enhanced error handling and retry logic
-  const loadTenants = async (retryCount = 0) => {
-    const MAX_RETRIES = 3;
-    const RETRY_DELAY = 1000 * (retryCount + 1); // Progressive delay
-
+  // Función optimizada para cargar tenants sin recursión
+  const loadTenantsCore = async () => {
     if (!user) {
       console.log("TenantContext: No user found, clearing tenant data");
       setTenants([]);
@@ -71,17 +70,11 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
       return;
     }
 
+    console.log(`TenantContext: Loading tenants for user: ${user.id}`);
+    
     try {
-      console.log(`TenantContext: Loading tenants for user: ${user.id} (attempt ${retryCount + 1})`);
-      setLoading(true);
-      setError(null);
-      
-      // Add timeout to prevent hanging requests
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 10000)
-      );
-
-      const queryPromise = supabase
+      // Usar una consulta más simple y directa
+      const { data, error: tenantsError } = await supabase
         .from('tenant_users')
         .select(`
           tenant_id,
@@ -99,20 +92,9 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
         `)
         .eq('user_id', user.id);
 
-      const { data, error: tenantsError } = await Promise.race([
-        queryPromise,
-        timeoutPromise
-      ]) as any;
-
       if (tenantsError) {
-        console.error(`TenantContext: Error loading tenants (attempt ${retryCount + 1}):`, tenantsError);
-        
-        // Check if it's a recursion error or connection issue
-        if (tenantsError.message?.includes('recursion') || tenantsError.message?.includes('infinite')) {
-          throw new Error('Error de configuración del sistema. Contacta al soporte técnico.');
-        }
-        
-        throw tenantsError;
+        const errorDetails = handleError(tenantsError, 'loading tenants');
+        throw new Error(errorDetails.message);
       }
 
       if (!data || data.length === 0) {
@@ -144,61 +126,34 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
         console.log("TenantContext: No valid initial tenant found");
         setCurrentTenant(null);
       }
+      
+      setError(null);
     } catch (error: any) {
-      console.error(`TenantContext: Error in loadTenants (attempt ${retryCount + 1}):`, error);
-      
-      // Retry logic for network errors
-      if (retryCount < MAX_RETRIES && 
-          (error.message?.includes('timeout') || 
-           error.message?.includes('network') || 
-           error.message?.includes('fetch'))) {
-        console.log(`TenantContext: Retrying in ${RETRY_DELAY}ms...`);
-        setTimeout(() => loadTenants(retryCount + 1), RETRY_DELAY);
-        return;
-      }
-      
-      const errorMessage = error.message || "Error al cargar las organizaciones";
-      setError(errorMessage);
-      
-      // Only show toast on final failure
-      if (retryCount >= MAX_RETRIES || !errorMessage.includes('timeout')) {
-        toast.error("Error al cargar organizaciones", {
-          description: errorMessage,
-          action: {
-            label: "Reintentar",
-            onClick: () => refreshTenants()
-          }
-        });
-      }
+      console.error("TenantContext: Error loading tenants:", error);
+      const errorDetails = handleError(error, 'tenant loading');
+      setError(errorDetails.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Load subscription and plan limits with enhanced error handling
+  // Crear función retryable
+  const loadTenants = createRetryableFunction(loadTenantsCore, 2, 1000);
+
+  // Load subscription and plan limits optimizadamente
   const loadSubscriptionDetails = async (tenantId: string) => {
     try {
       console.log("TenantContext: Loading subscription details for tenant:", tenantId);
       
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Subscription load timeout')), 5000)
-      );
-
-      // Load subscription with timeout
-      const subPromise = supabase
+      const { data: subData, error: subError } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('tenant_id', tenantId)
         .maybeSingle();
 
-      const { data: subData, error: subError } = await Promise.race([
-        subPromise,
-        timeoutPromise
-      ]) as any;
-
-      if (subError && !subError.message?.includes('timeout')) {
+      if (subError) {
         console.error("TenantContext: Error loading subscription:", subError);
-        // Don't throw, just log and continue with defaults
+        // Don't throw, just use defaults
       }
 
       if (subData) {
@@ -232,7 +187,6 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
           allow_custom_domain: false
         });
       } else {
-        console.log("TenantContext: No subscription found, using basic plan defaults");
         // Set basic plan defaults
         setPlanLimits({
           max_products: 100,
@@ -281,16 +235,18 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
       await loadSubscriptionDetails(tenantId);
     } catch (error: any) {
       console.error("TenantContext: Error switching tenant:", error);
+      const errorDetails = handleError(error, 'switching tenant');
       toast.error("Error al cambiar de organización", {
-        description: error.message
+        description: errorDetails.message
       });
     }
   };
 
-  // Refresh tenants with debouncing
+  // Refresh tenants
   const refreshTenants = async () => {
     console.log("TenantContext: Refreshing tenants");
-    setError(null); // Clear previous errors
+    setError(null);
+    setLoading(true);
     await loadTenants();
   };
 
@@ -320,10 +276,8 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
         .single();
 
       if (tenantError) {
-        if (tenantError.code === '23505') { // Unique constraint violation
-          throw new Error('Ya existe una organización con ese nombre o identificador');
-        }
-        throw tenantError;
+        const errorDetails = handleError(tenantError, 'creating tenant');
+        throw new Error(errorDetails.message);
       }
 
       // Add user as tenant admin
@@ -335,7 +289,10 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
           role: 'admin'
         }]);
 
-      if (membershipError) throw membershipError;
+      if (membershipError) {
+        const errorDetails = handleError(membershipError, 'adding tenant membership');
+        throw new Error(errorDetails.message);
+      }
 
       // Create a trial subscription
       const trialEnd = new Date();
@@ -370,38 +327,40 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
       return newTenant;
     } catch (error: any) {
       console.error("TenantContext: Error creating tenant:", error);
+      const errorDetails = handleError(error, 'creating tenant');
       toast.error("Error al crear la organización", {
-        description: error.message || "Error desconocido"
+        description: errorDetails.message
       });
       return null;
     }
   };
 
-  // Load tenants when user changes with cleanup
+  // Load tenants when user changes
   useEffect(() => {
-    let isMounted = true;
-    
-    const loadTenantsIfMounted = async () => {
-      if (isMounted && user) {
-        console.log("TenantContext: User changed, loading tenants");
-        await loadTenants();
-      } else if (isMounted && !user) {
-        console.log("TenantContext: No user, clearing tenant data");
-        setTenants([]);
-        setCurrentTenant(null);
-        setSubscription(null);
-        setPlanLimits(null);
-        setError(null);
-        setLoading(false);
-      }
-    };
-
-    loadTenantsIfMounted();
-
-    return () => {
-      isMounted = false;
-    };
+    if (user) {
+      console.log("TenantContext: User changed, loading tenants");
+      loadTenants();
+    } else {
+      console.log("TenantContext: No user, clearing tenant data");
+      setTenants([]);
+      setCurrentTenant(null);
+      setSubscription(null);
+      setPlanLimits(null);
+      setError(null);
+      setLoading(false);
+    }
   }, [user]);
+
+  // Si hay un error crítico, mostrar el componente de error
+  if (error && (error.includes('configuración') || error.includes('recursion') || error.includes('infinite'))) {
+    return (
+      <TenantErrorDisplay 
+        error={error} 
+        onRetry={refreshTenants} 
+        loading={loading} 
+      />
+    );
+  }
 
   return (
     <TenantContext.Provider value={{
