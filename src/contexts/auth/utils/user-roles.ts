@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { UserRoleWithStore } from "@/types/auth";
+import { UserRoleWithStore, UserRole } from "@/types/auth";
 
 /**
  * Obtiene los roles de un usuario
@@ -45,6 +45,32 @@ export async function fetchUserRoles(userId: string): Promise<UserRoleWithStore[
     console.error("Error in fetchUserRoles:", error);
     return [];
   }
+}
+
+/**
+ * Verifica si un usuario tiene un rol específico
+ */
+export function checkHasRole(userRoles: UserRoleWithStore[], role: UserRole, storeId?: string): boolean {
+  if (!userRoles || userRoles.length === 0) {
+    return false;
+  }
+
+  // Si es admin, tiene acceso a todo
+  if (userRoles.some(r => r.role === 'admin')) {
+    return true;
+  }
+
+  // Verificar el rol específico
+  return userRoles.some(userRole => {
+    const hasRole = userRole.role === role;
+    
+    if (!storeId) {
+      return hasRole;
+    }
+    
+    // Si se especifica una tienda, verificar que coincida
+    return hasRole && (userRole.almacen_id === storeId || userRole.almacen_id === null);
+  });
 }
 
 /**
