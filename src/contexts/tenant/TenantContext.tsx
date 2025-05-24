@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/auth/useAuth';
 import { TenantPlan, SubscriptionStatus, Tenant as TenantType } from './types';
 import { handleError, createRetryableFunction } from '@/utils/errorHandler';
 import { TenantErrorDisplay } from '@/components/tenant/TenantErrorDisplay';
+import { DebugLogger } from '@/utils/debugLogger';
 
 export interface Tenant {
   id: string;
@@ -50,6 +51,8 @@ interface TenantContextType {
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
 export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+  DebugLogger.log("🏢 TenantProvider: Component initialization started");
+  
   const navigate = useNavigate();
   const { user } = useAuth();
   const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
@@ -61,8 +64,10 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
 
   // Función para cargar tenants con logs detallados
   const loadTenantsCore = async () => {
+    DebugLogger.log("🏢 TenantContext: loadTenantsCore function started");
+    
     if (!user) {
-      console.log("TenantContext: No user found, clearing tenant data");
+      DebugLogger.log("❌ TenantContext: No user found, clearing tenant data");
       setTenants([]);
       setCurrentTenant(null);
       setError(null);
@@ -70,12 +75,11 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
       return;
     }
 
-    console.log(`TenantContext: Starting to load tenants for user: ${user.id}`);
+    DebugLogger.log(`🔍 TenantContext: Starting to load tenants for user: ${user.id}`);
     
     try {
-      // Log del inicio de la consulta
-      console.log("TenantContext: About to execute tenant query");
-      console.log("TenantContext: Query details:", {
+      DebugLogger.log("🔍 TenantContext: About to execute tenant query");
+      DebugLogger.log("📋 TenantContext: Query details:", {
         table: 'tenant_users',
         user_id: user.id,
         select_clause: 'tenant_id, role, tenants!inner(id, name, slug, logo_url, primary_color, secondary_color, active, trial_ends_at)'
@@ -100,17 +104,17 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
         `)
         .eq('user_id', user.id);
 
-      // Log detallado del resultado
-      console.log("TenantContext: Query completed");
-      console.log("TenantContext: Query result data:", data);
-      console.log("TenantContext: Query error:", tenantsError);
+      DebugLogger.log("✅ TenantContext: Query completed successfully");
+      DebugLogger.log("📊 TenantContext: Query result data:", data);
+      DebugLogger.log("❌ TenantContext: Query error:", tenantsError);
 
       if (tenantsError) {
-        console.error("TenantContext: Detailed error information:", {
+        DebugLogger.log("💥 TenantContext: CRITICAL ERROR - Detailed error information:", {
           code: tenantsError.code,
           message: tenantsError.message,
           details: tenantsError.details,
-          hint: tenantsError.hint
+          hint: tenantsError.hint,
+          fullError: tenantsError
         });
         
         const errorDetails = handleError(tenantsError, 'loading tenants');
@@ -118,7 +122,7 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
       }
 
       if (!data || data.length === 0) {
-        console.log("TenantContext: No tenants found for user");
+        DebugLogger.log("📭 TenantContext: No tenants found for user");
         setTenants([]);
         setCurrentTenant(null);
         setError("No tienes organizaciones asignadas. Contacta al administrador o crea una nueva organización.");
@@ -126,43 +130,43 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
         return;
       }
 
-      console.log("TenantContext: Processing tenant data:", data);
+      DebugLogger.log("🔄 TenantContext: Processing tenant data:", data);
 
       const userTenants = data
         .filter(item => {
-          console.log("TenantContext: Processing item:", item);
+          DebugLogger.log("🔍 TenantContext: Processing item:", item);
           return item.tenants && typeof item.tenants === 'object';
         })
         .map(item => {
-          console.log("TenantContext: Mapping tenant:", item.tenants);
+          DebugLogger.log("🗺️ TenantContext: Mapping tenant:", item.tenants);
           return item.tenants;
         }) as Tenant[];
       
-      console.log("TenantContext: Final processed tenants:", userTenants);
+      DebugLogger.log("✅ TenantContext: Final processed tenants:", userTenants);
       setTenants(userTenants);
 
       // Get previously selected tenant from localStorage or use first tenant
       const savedTenantId = localStorage.getItem('currentTenantId');
-      console.log("TenantContext: Saved tenant ID from localStorage:", savedTenantId);
+      DebugLogger.log("💾 TenantContext: Saved tenant ID from localStorage:", savedTenantId);
       
       const initialTenant = savedTenantId 
         ? userTenants.find(t => t.id === savedTenantId) 
         : userTenants[0] || null;
 
-      console.log("TenantContext: Initial tenant selected:", initialTenant);
+      DebugLogger.log("🎯 TenantContext: Initial tenant selected:", initialTenant);
 
       if (initialTenant) {
-        console.log("TenantContext: Setting initial tenant:", initialTenant.name);
+        DebugLogger.log(`✅ TenantContext: Setting initial tenant: ${initialTenant.name}`);
         await switchTenant(initialTenant.id);
       } else {
-        console.log("TenantContext: No valid initial tenant found");
+        DebugLogger.log("❌ TenantContext: No valid initial tenant found");
         setCurrentTenant(null);
       }
       
       setError(null);
-      console.log("TenantContext: Tenant loading completed successfully");
+      DebugLogger.log("🎉 TenantContext: Tenant loading completed successfully");
     } catch (error: any) {
-      console.error("TenantContext: Critical error during tenant loading:", {
+      DebugLogger.log("💥 TenantContext: CRITICAL ERROR during tenant loading:", {
         error_name: error.name,
         error_message: error.message,
         error_stack: error.stack,
@@ -395,12 +399,12 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
 
   // Load tenants when user changes
   useEffect(() => {
-    console.log("TenantContext: useEffect triggered - user changed:", !!user);
+    DebugLogger.log("🔄 TenantContext: useEffect triggered - user changed:", !!user);
     if (user) {
-      console.log("TenantContext: User exists, loading tenants for:", user.id);
+      DebugLogger.log(`✅ TenantContext: User exists, loading tenants for: ${user.id}`);
       loadTenants();
     } else {
-      console.log("TenantContext: No user, clearing tenant data");
+      DebugLogger.log("❌ TenantContext: No user, clearing tenant data");
       setTenants([]);
       setCurrentTenant(null);
       setSubscription(null);
@@ -412,7 +416,7 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
 
   // Si hay un error crítico, mostrar el componente de error
   if (error && (error.includes('configuración') || error.includes('recursion') || error.includes('infinite'))) {
-    console.log("TenantContext: Showing error display for critical error:", error);
+    DebugLogger.log("🚨 TenantContext: Showing error display for critical error:", error);
     return (
       <TenantErrorDisplay 
         error={error} 
