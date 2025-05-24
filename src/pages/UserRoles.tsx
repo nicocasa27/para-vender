@@ -1,225 +1,75 @@
 
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { UserRolesTable } from "@/components/users/UserRolesTable";
-import { useUsersAndRoles } from "@/hooks/useUsersAndRoles";
-import { Button } from "@/components/ui/button";
-import { RefreshCw, Shield, Trash2, UsersRound, Loader2, Eraser } from "lucide-react";
-import { useAuth } from "@/contexts/auth";
-import { toast } from "sonner";
-import { useEffect } from "react";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useState } from "react";
-import { UserWithRoles } from "@/types/auth";
-import { useSyncUsers } from "@/hooks/users/useSyncUsers";
+import { useAuth } from "@/hooks/auth/useAuth";
+import { useSimpleUserManagement } from "@/hooks/users/useSimpleUserManagement";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, Shield } from "lucide-react";
 
 const UserRoles = () => {
-  const { hasRole } = useAuth();
-  const isAdmin = hasRole("admin");
-  const [userToDelete, setUserToDelete] = useState<UserWithRoles | null>(null);
+  const { user, hasRole } = useAuth();
+  const isAdmin = hasRole('admin');
   
-  const { 
-    users, 
-    loading, 
-    error, 
-    fetchUsers, 
-    deleteRole,
-    addRole,
-    deleteUser
-  } = useUsersAndRoles(isAdmin);
+  const {
+    users,
+    loading,
+    error,
+    refetch,
+    deleteRole
+  } = useSimpleUserManagement(isAdmin);
 
-  const { syncUsers, cleanupOrphanedUsers, syncing } = useSyncUsers();
-
-  useEffect(() => {
-    fetchUsers();
-    console.log("UserRoles component mounted, fetching users...");
-  }, [fetchUsers]);
-
-  const handleRefresh = async () => {
-    try {
-      console.log("Manual refresh triggered");
-      await fetchUsers();
-      toast.success("Datos de usuarios actualizados correctamente");
-    } catch (err) {
-      console.error("Error during refresh:", err);
-      toast.error("Error al actualizar datos de usuarios");
-    }
+  const handleRefresh = () => {
+    refetch();
   };
 
-  const handleDeleteUser = async () => {
-    if (!userToDelete) return;
-    
-    try {
-      console.log("Deleting user:", userToDelete.id);
-      await deleteUser(userToDelete.id);
-      setUserToDelete(null);
-    } catch (error) {
-      console.error("Error al eliminar usuario:", error);
-      toast.error("Error al eliminar usuario");
-    }
-  };
-
-  const handleSyncUsers = async () => {
-    try {
-      toast.info("Iniciando sincronización completa...", {
-        description: "Esto actualizará todos los usuarios, incluyendo los recién creados"
-      });
-      
-      const result = await syncUsers();
-      if (result) {
-        await fetchUsers();
-        toast.success("¡Sincronización completa! Lista de usuarios actualizada");
-      }
-    } catch (error) {
-      console.error("Error en sincronización:", error);
-    }
-  };
-
-  const handleCleanupOrphanedUsers = async () => {
-    try {
-      toast.info("Eliminando usuarios huérfanos...", {
-        description: "Esto eliminará usuarios que no existen en Supabase Auth"
-      });
-      
-      const result = await cleanupOrphanedUsers();
-      if (result) {
-        await fetchUsers();
-        toast.success("¡Limpieza completa! Solo quedan usuarios válidos de Supabase");
-      }
-    } catch (error) {
-      console.error("Error en limpieza:", error);
-    }
-  };
+  if (!user) {
+    return (
+      <DashboardLayout title="Gestión de Usuarios">
+        <div className="text-center py-8">
+          <p>Debes iniciar sesión para acceder a esta página</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (!isAdmin) {
     return (
-      <div className="container mx-auto py-6">
-        <div className="bg-destructive/20 text-destructive p-4 rounded-md">
-          <h2 className="text-lg font-semibold">Acceso denegado</h2>
-          <p>No tienes permisos para acceder a esta sección.</p>
+      <DashboardLayout title="Gestión de Usuarios">
+        <div className="text-center py-8">
+          <Shield className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
+          <p>No tienes permisos para acceder a esta página</p>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Shield className="h-6 w-6" /> 
-            Roles de Usuario
-          </h1>
-          <p className="text-muted-foreground">
-            Gestione los permisos y roles de los usuarios del sistema.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleSyncUsers}
-            disabled={syncing || loading}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-          >
-            <Loader2 className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-            {syncing ? "Sincronizando..." : "SINCRONIZAR USUARIOS"}
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleCleanupOrphanedUsers}
-            disabled={syncing || loading}
-            className="flex items-center gap-2"
-          >
-            <Eraser className="h-4 w-4" />
-            Eliminar Huérfanos
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={loading}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            {loading ? "Cargando..." : "Actualizar"}
-          </Button>
-        </div>
+    <DashboardLayout title="Gestión de Usuarios">
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Usuarios y Roles del Sistema
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {error && (
+              <div className="text-red-600 mb-4">
+                Error: {error}
+              </div>
+            )}
+            
+            <UserRolesTable
+              users={users}
+              loading={loading}
+              onDeleteRole={deleteRole}
+              onRefresh={handleRefresh}
+            />
+          </CardContent>
+        </Card>
       </div>
-
-      {error ? (
-        <div className="bg-destructive/20 text-destructive p-4 rounded-md">
-          <p className="font-medium">Error al cargar los usuarios</p>
-          <p className="text-sm">{typeof error === 'object' ? (error as Error).message : String(error)}</p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRefresh} 
-            className="mt-2"
-          >
-            Reintentar
-          </Button>
-        </div>
-      ) : (
-        <UserRolesTable
-          users={users} 
-          loading={loading}
-          onDeleteRole={deleteRole}
-          onRefresh={handleRefresh}
-          onDeleteUser={(user) => setUserToDelete(user)}
-        />
-      )}
-
-      <div className="text-xs text-muted-foreground mt-2">
-        Total de usuarios cargados: {users.length}
-      </div>
-
-      {/* Mensaje destacado para sincronizar usuarios */}
-      <div className="p-4 bg-blue-100 border-l-4 border-blue-500 rounded-md">
-        <h3 className="font-medium text-blue-800 text-lg mb-1 flex items-center gap-2">
-          <UsersRound className="h-4 w-4" />
-          Información sobre usuarios
-        </h3>
-        <p className="text-sm text-blue-700 mb-2">
-          Solo se mostrarán los usuarios que existen en Supabase. Si acabas de crear nuevos usuarios
-          y no aparecen en la lista, haz clic en <strong>"SINCRONIZAR USUARIOS"</strong>.
-        </p>
-        <p className="text-sm text-blue-700">
-          Si necesitas eliminar usuarios que no existen en Supabase Auth pero tienen perfiles en la base de datos,
-          haz clic en <strong>"Eliminar Huérfanos"</strong>.
-        </p>
-      </div>
-
-      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción eliminará al usuario <strong>{userToDelete?.full_name || userToDelete?.email}</strong> y todos sus roles asociados. 
-              Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteUser}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+    </DashboardLayout>
   );
 };
 

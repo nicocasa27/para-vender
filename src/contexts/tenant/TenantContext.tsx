@@ -62,7 +62,7 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Función simplificada para cargar tenants
+  // Función simplificada para cargar tenants usando las nuevas funciones de seguridad
   const loadTenantsCore = async () => {
     DebugLogger.log("🏢 TenantContext: loadTenantsCore function started");
     
@@ -78,26 +78,24 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
     DebugLogger.log(`🔍 TenantContext: Starting to load tenants for user: ${user.id}`);
     
     try {
-      DebugLogger.log("🔍 TenantContext: About to execute tenant query");
+      DebugLogger.log("🔍 TenantContext: Using new security function to get tenant IDs");
 
-      // SIMPLIFICADO: Usar una consulta más directa sin joins complejos
-      const { data: userTenantData, error: userTenantError } = await supabase
-        .from('tenant_users')
-        .select('tenant_id, role')
-        .eq('user_id', user.id);
+      // Usar la nueva función de seguridad para obtener los tenant IDs
+      const { data: tenantIds, error: tenantIdsError } = await supabase
+        .rpc('get_user_tenant_ids');
 
-      DebugLogger.log("✅ TenantContext: User-tenant query completed", {
-        data: userTenantData,
-        error: userTenantError
+      DebugLogger.log("✅ TenantContext: get_user_tenant_ids completed", {
+        data: tenantIds,
+        error: tenantIdsError
       });
 
-      if (userTenantError) {
-        DebugLogger.log("💥 TenantContext: ERROR in user-tenant query:", userTenantError);
-        throw userTenantError;
+      if (tenantIdsError) {
+        DebugLogger.log("💥 TenantContext: ERROR in get_user_tenant_ids:", tenantIdsError);
+        throw tenantIdsError;
       }
 
-      if (!userTenantData || userTenantData.length === 0) {
-        DebugLogger.log("📭 TenantContext: No tenant assignments found for user");
+      if (!tenantIds || tenantIds.length === 0) {
+        DebugLogger.log("📭 TenantContext: No tenant IDs found for user");
         setTenants([]);
         setCurrentTenant(null);
         setError("No tienes organizaciones asignadas. Contacta al administrador.");
@@ -106,7 +104,6 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
       }
 
       // Obtener información de los tenants por separado
-      const tenantIds = userTenantData.map(ut => ut.tenant_id);
       DebugLogger.log("🎯 TenantContext: Fetching tenant details for IDs:", tenantIds);
 
       const { data: tenantsData, error: tenantsError } = await supabase
