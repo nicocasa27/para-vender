@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { UserWithRoles } from '@/types/auth';
+import { UserWithRoles, RoleWithStore, castToUserRole } from '@/hooks/users/types/userManagementTypes';
 import { toast } from 'sonner';
 import { DebugLogger } from '@/utils/debugLogger';
 
@@ -50,19 +50,21 @@ export function useSimpleUserManagement(isAdmin: boolean) {
       const usersWithRoles: UserWithRoles[] = profiles?.map(profile => {
         const userRoles = allRoles?.filter(role => role.user_id === profile.id) || [];
         
+        const processedRoles: RoleWithStore[] = userRoles.map(role => ({
+          id: role.id,
+          user_id: role.user_id,
+          role: castToUserRole(role.role),
+          almacen_id: role.almacen_id,
+          created_at: role.created_at,
+          almacen_nombre: role.almacenes?.nombre || null
+        }));
+        
         return {
           id: profile.id,
           email: profile.email || "",
           full_name: profile.full_name || "Usuario sin nombre",
           created_at: profile.created_at,
-          roles: userRoles.map(role => ({
-            id: role.id,
-            user_id: role.user_id,
-            role: role.role,
-            almacen_id: role.almacen_id,
-            created_at: role.created_at,
-            almacen_nombre: role.almacenes?.nombre || null
-          }))
+          roles: processedRoles
         };
       }) || [];
 
