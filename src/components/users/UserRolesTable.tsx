@@ -37,6 +37,15 @@ export function UserRolesTable({
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
+  // Early return for loading state
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  
   // Handler para eliminar rol
   const handleDeleteRole = async (roleId: string) => {
     if (window.confirm("¿Estás seguro de que quieres eliminar este rol?")) {
@@ -75,16 +84,8 @@ export function UserRolesTable({
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-8">
-        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
   // For profile page showing just roles
-  if (roles.length > 0) {
+  if (roles && roles.length > 0) {
     return (
       <Table>
         <TableHeader>
@@ -123,7 +124,8 @@ export function UserRolesTable({
   }
 
   // For user management page showing users with their roles
-  if (users.length === 0) {
+  // Safely check users array length with null/undefined protection
+  if (!users || users.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         <Users className="h-10 w-10 mx-auto mb-2 opacity-50" />
@@ -178,7 +180,7 @@ export function UserRolesTable({
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-2">
-                  {user.roles.map(role => (
+                  {(user.roles || []).map(role => (
                     <Badge 
                       key={role.id}
                       variant={getRoleBadgeVariant(role.role)}

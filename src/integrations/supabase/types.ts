@@ -625,9 +625,17 @@ export type Database = {
       }
     }
     Functions: {
+      get_user_tenant_ids: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
       get_user_tenants: {
         Args: Record<PropertyKey, never>
         Returns: string[]
+      }
+      is_tenant_admin: {
+        Args: { tenant_uuid: string }
+        Returns: boolean
       }
       is_tenant_admin_direct: {
         Args: { tenant_uuid: string }
