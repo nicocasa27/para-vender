@@ -62,7 +62,7 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Función para cargar tenants con logs detallados
+  // Función simplificada para cargar tenants
   const loadTenantsCore = async () => {
     DebugLogger.log("🏢 TenantContext: loadTenantsCore function started");
     
@@ -79,69 +79,52 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
     
     try {
       DebugLogger.log("🔍 TenantContext: About to execute tenant query");
-      DebugLogger.log("📋 TenantContext: Query details:", {
-        table: 'tenant_users',
-        user_id: user.id,
-        select_clause: 'tenant_id, role, tenants!inner(id, name, slug, logo_url, primary_color, secondary_color, active, trial_ends_at)'
-      });
 
-      // Usar una consulta directa y simple
-      const { data, error: tenantsError } = await supabase
+      // SIMPLIFICADO: Usar una consulta más directa sin joins complejos
+      const { data: userTenantData, error: userTenantError } = await supabase
         .from('tenant_users')
-        .select(`
-          tenant_id,
-          role,
-          tenants!inner(
-            id,
-            name,
-            slug,
-            logo_url,
-            primary_color,
-            secondary_color,
-            active,
-            trial_ends_at
-          )
-        `)
+        .select('tenant_id, role')
         .eq('user_id', user.id);
 
-      DebugLogger.log("✅ TenantContext: Query completed successfully");
-      DebugLogger.log("📊 TenantContext: Query result data:", data);
-      DebugLogger.log("❌ TenantContext: Query error:", tenantsError);
+      DebugLogger.log("✅ TenantContext: User-tenant query completed", {
+        data: userTenantData,
+        error: userTenantError
+      });
 
-      if (tenantsError) {
-        DebugLogger.log("💥 TenantContext: CRITICAL ERROR - Detailed error information:", {
-          code: tenantsError.code,
-          message: tenantsError.message,
-          details: tenantsError.details,
-          hint: tenantsError.hint,
-          fullError: tenantsError
-        });
-        
-        const errorDetails = handleError(tenantsError, 'loading tenants');
-        throw new Error(errorDetails.message);
+      if (userTenantError) {
+        DebugLogger.log("💥 TenantContext: ERROR in user-tenant query:", userTenantError);
+        throw userTenantError;
       }
 
-      if (!data || data.length === 0) {
-        DebugLogger.log("📭 TenantContext: No tenants found for user");
+      if (!userTenantData || userTenantData.length === 0) {
+        DebugLogger.log("📭 TenantContext: No tenant assignments found for user");
         setTenants([]);
         setCurrentTenant(null);
-        setError("No tienes organizaciones asignadas. Contacta al administrador o crea una nueva organización.");
+        setError("No tienes organizaciones asignadas. Contacta al administrador.");
         setLoading(false);
         return;
       }
 
-      DebugLogger.log("🔄 TenantContext: Processing tenant data:", data);
+      // Obtener información de los tenants por separado
+      const tenantIds = userTenantData.map(ut => ut.tenant_id);
+      DebugLogger.log("🎯 TenantContext: Fetching tenant details for IDs:", tenantIds);
 
-      const userTenants = data
-        .filter(item => {
-          DebugLogger.log("🔍 TenantContext: Processing item:", item);
-          return item.tenants && typeof item.tenants === 'object';
-        })
-        .map(item => {
-          DebugLogger.log("🗺️ TenantContext: Mapping tenant:", item.tenants);
-          return item.tenants;
-        }) as Tenant[];
-      
+      const { data: tenantsData, error: tenantsError } = await supabase
+        .from('tenants')
+        .select('id, name, slug, logo_url, primary_color, secondary_color, active, trial_ends_at')
+        .in('id', tenantIds);
+
+      DebugLogger.log("✅ TenantContext: Tenants details query completed", {
+        data: tenantsData,
+        error: tenantsError
+      });
+
+      if (tenantsError) {
+        DebugLogger.log("💥 TenantContext: ERROR in tenants query:", tenantsError);
+        throw tenantsError;
+      }
+
+      const userTenants = tenantsData || [];
       DebugLogger.log("✅ TenantContext: Final processed tenants:", userTenants);
       setTenants(userTenants);
 
@@ -157,7 +140,9 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
 
       if (initialTenant) {
         DebugLogger.log(`✅ TenantContext: Setting initial tenant: ${initialTenant.name}`);
-        await switchTenant(initialTenant.id);
+        setCurrentTenant(initialTenant);
+        localStorage.setItem('currentTenantId', initialTenant.id);
+        await loadSubscriptionDetails(initialTenant.id);
       } else {
         DebugLogger.log("❌ TenantContext: No valid initial tenant found");
         setCurrentTenant(null);
@@ -187,7 +172,7 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
   // Load subscription and plan limits con logs
   const loadSubscriptionDetails = async (tenantId: string) => {
     try {
-      console.log("TenantContext: Loading subscription details for tenant:", tenantId);
+      DebugLogger.log("TenantContext: Loading subscription details for tenant:", tenantId);
       
       const { data: subData, error: subError } = await supabase
         .from('subscriptions')
@@ -195,10 +180,10 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
         .eq('tenant_id', tenantId)
         .maybeSingle();
 
-      console.log("TenantContext: Subscription query result:", { subData, subError });
+      DebugLogger.log("TenantContext: Subscription query result:", { subData, subError });
 
       if (subError) {
-        console.error("TenantContext: Error loading subscription:", subError);
+        DebugLogger.log("TenantContext: Error loading subscription:", subError);
         // Don't throw, just use defaults
       }
 
@@ -220,10 +205,10 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
           .eq('plan', planValue)
           .maybeSingle();
 
-        console.log("TenantContext: Plan limits query result:", { limitData, limitError });
+        DebugLogger.log("TenantContext: Plan limits query result:", { limitData, limitError });
 
         if (limitError) {
-          console.error("TenantContext: Error loading plan limits:", limitError);
+          DebugLogger.log("TenantContext: Error loading plan limits:", limitError);
         }
 
         setPlanLimits(limitData || {
@@ -236,7 +221,7 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
         });
       } else {
         // Set basic plan defaults
-        console.log("TenantContext: No subscription found, using defaults");
+        DebugLogger.log("TenantContext: No subscription found, using defaults");
         setPlanLimits({
           max_products: 100,
           max_users: 5,
@@ -251,7 +236,7 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
         });
       }
     } catch (error: any) {
-      console.error("TenantContext: Critical error loading subscription details:", {
+      DebugLogger.log("TenantContext: Critical error loading subscription details:", {
         error_name: error.name,
         error_message: error.message,
         error_stack: error.stack,
@@ -277,21 +262,21 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
   // Switch to a different tenant with error handling
   const switchTenant = async (tenantId: string) => {
     try {
-      console.log("TenantContext: Attempting to switch to tenant:", tenantId);
+      DebugLogger.log("TenantContext: Attempting to switch to tenant:", tenantId);
       const tenant = tenants.find(t => t.id === tenantId);
       if (!tenant) {
-        console.error("TenantContext: Tenant not found:", tenantId);
+        DebugLogger.log("TenantContext: Tenant not found:", tenantId);
         toast.error("Organización no encontrada");
         return;
       }
 
-      console.log("TenantContext: Switching to tenant:", tenant.name);
+      DebugLogger.log("TenantContext: Switching to tenant:", tenant.name);
       localStorage.setItem('currentTenantId', tenantId);
       setCurrentTenant(tenant);
       await loadSubscriptionDetails(tenantId);
-      console.log("TenantContext: Successfully switched to tenant:", tenant.name);
+      DebugLogger.log("TenantContext: Successfully switched to tenant:", tenant.name);
     } catch (error: any) {
-      console.error("TenantContext: Error switching tenant:", {
+      DebugLogger.log("TenantContext: Error switching tenant:", {
         error_name: error.name,
         error_message: error.message,
         error_stack: error.stack,
@@ -306,7 +291,7 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
 
   // Refresh tenants
   const refreshTenants = async () => {
-    console.log("TenantContext: Manual refresh requested");
+    DebugLogger.log("TenantContext: Manual refresh requested");
     setError(null);
     setLoading(true);
     await loadTenants();
@@ -325,7 +310,7 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
     }
 
     try {
-      console.log("TenantContext: Creating new tenant:", name);
+      DebugLogger.log("TenantContext: Creating new tenant:", name);
       
       // Create the tenant
       const { data: tenantData, error: tenantError } = await supabase
@@ -371,7 +356,7 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
         }]);
 
       if (subscriptionError) {
-        console.warn("TenantContext: Could not create subscription:", subscriptionError);
+        DebugLogger.log("TenantContext: Could not create subscription:", subscriptionError);
         // Don't fail tenant creation for subscription issues
       }
 
@@ -388,7 +373,7 @@ export const TenantProvider: React.FC<{children: React.ReactNode}> = ({ children
       toast.success("Organización creada con éxito");
       return newTenant;
     } catch (error: any) {
-      console.error("TenantContext: Error creating tenant:", error);
+      DebugLogger.log("TenantContext: Error creating tenant:", error);
       const errorDetails = handleError(error, 'creating tenant');
       toast.error("Error al crear la organización", {
         description: errorDetails.message

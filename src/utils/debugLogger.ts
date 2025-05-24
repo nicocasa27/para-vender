@@ -23,6 +23,17 @@ export class DebugLogger {
     } catch (e) {
       console.error('Error saving to localStorage:', e);
     }
+
+    // NUEVO: Intentar mostrar como toast también
+    try {
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('debug-log', { 
+          detail: { message, data, timestamp } 
+        }));
+      }
+    } catch (e) {
+      // Ignorar errores de toast
+    }
   }
   
   static getLogs() {
